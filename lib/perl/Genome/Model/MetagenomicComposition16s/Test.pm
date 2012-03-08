@@ -41,7 +41,7 @@ sub _instrument_data_dir_for_sequencing_platform {
 #<>#
 
 #< Library Sample Taxon >#
-our($taxon, $sample, $library);
+our($taxon, $source, $sample, $library);
 sub _taxon_sample_and_library {
     my $self = shift; 
 
@@ -60,11 +60,18 @@ sub _taxon_sample_and_library {
         Carp::confess('Cannot create taxon');
     }
 
+    $source = Genome::Individual->create(
+        name => '__TEST_SOURCE__',
+        taxon => $taxon,
+    );
+    if ( not $source ) {
+        Carp::confess('Cannot create source');
+    }
+
     $sample = Genome::Sample->create(
         id => -1234,
-        #name => 'HUMET-TEST-000',
         name => 'H_GV-933124G-S.MOCK',
-        taxon_id => $taxon->id,
+        source => $source,
     );
     if ( not $sample ) {
         Carp::confess('Cannot create sample');

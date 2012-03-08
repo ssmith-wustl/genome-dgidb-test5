@@ -46,7 +46,6 @@ my $sample = Genome::Sample->create(
     id => '-1',
     name => 'AQID-test-sample',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
 );
 
@@ -337,7 +336,6 @@ my $mouse_sample = Genome::Sample->create(
     id => '-1111',
     name => 'AQID-mouse_test-sample',
     common_name => 'normal',
-    taxon_id => $mouse_taxon->id,
     source_id => $mouse_individual->id,
 );
 
@@ -397,7 +395,6 @@ my $rna_sample = Genome::Sample->create(
     id => '-1001',
     name => 'AQID-rna-test-sample',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
     extraction_type => 'rna',
 );
@@ -521,7 +518,6 @@ my $sample_pool = Genome::Sample->create(
     id => '-10001',
     name => 'AQID-test-sample-pooled',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
 );
 
@@ -667,7 +663,6 @@ my $de_novo_sample = Genome::Sample->create(
     id => '-22',
     name => 'AQID-test-sample-ze',
     common_name => 'normal',
-    taxon_id => $de_novo_taxon->id,
     source_id => $de_novo_individual->id,
 );
 
@@ -751,7 +746,6 @@ my $sample_2 = Genome::Sample->create(
     id => '-70',
     name => 'TCGA-TEST-SAMPLE-01A-01D',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
     extraction_label => 'TCGA-Test',
 );
@@ -761,7 +755,6 @@ my $sample_3 = Genome::Sample->create(
     id => '-71',
     name => 'TCGA-TEST-SAMPLE-10A-01D',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
     extraction_label => 'TCGA-Test',
 );
@@ -878,7 +871,6 @@ my $sample_4 = Genome::Sample->create(
     id => '-80',
     name => 'TCGA-TEST-SAMPLE2-01A-01D',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
     extraction_label => 'TCGA-Test',
 );
@@ -888,7 +880,6 @@ my $sample_5 = Genome::Sample->create(
     id => '-81',
     name => 'TCGA-TEST-SAMPLE2-10A-01D',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
     extraction_label => 'TCGA-Test',
 );

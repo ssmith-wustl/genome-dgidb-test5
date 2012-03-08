@@ -151,29 +151,6 @@ sub help_detail {
 EOS
 }
 
-sub get_organism_taxon {
-    my $sample = shift;
-    my $population = get_population($sample);
-    if ($population){
-        return $population->taxon;
-    }
-    if(!$sample->taxon_id){
-        return $sample->patient->taxon if $sample->patient;
-    }
-    return $sample->taxon;
-}
-
-sub get_population {
-    my $sample = shift;
-    my $source_type = $sample->source_type;
-    if($source_type &&
-            ($source_type eq 'organism individual' ||
-             $source_type eq 'population group')){
-        return $sample->source;
-    }
-    return;
-}
-
 sub execute {
     $DB::single = $DB::stopper;
     my $self = shift;
@@ -1414,15 +1391,14 @@ sub add_processing_profiles_to_pses{
             my $subject_class_name = 'Genome::Sample';
             my $subject_id         = $sample_id;
 
-            my $organism_sample = Genome::Sample->get($sample_id);
+            my $sample = Genome::Sample->get($sample_id);
 
-            unless (defined($organism_sample)) {
+            unless (defined($sample)) {
                 $self->error_message('failed to get a Genome::Sample for id ' . $instrument_data_id);
                 die $self->error_message;
             }
 
-            my $taxon = get_organism_taxon($organism_sample);;
-
+            my $taxon = $sample->taxon;
             unless (defined($taxon)) {
                 $self->error_message('failed to get taxon via Genome::Taxon for id ' . $instrument_data_id);
                 die $self->error_message;
@@ -1507,7 +1483,7 @@ sub add_processing_profiles_to_pses{
                      #Do not create ref-align models--will try to assign to existing SomaticValidation models.
                 } elsif ($taxon->species_latin_name =~ /homo sapiens/i) {
                     if ($self->_is_pcgp($pse)) {
-                        my $individual = $organism_sample->patient;
+                        my $individual = $sample->patient;
                         my $pp_id = '2644306';
                         my $common_name = $individual ? $individual->common_name : '';
 

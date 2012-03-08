@@ -132,9 +132,9 @@ class Genome::Sample {
             doc => 'ID of the source of this sample, either a Genome::Individual or Genome::PopulationGroup',
         },
         source => { 
-            is => 'Genome::Subject',
+            is => 'Genome::SampleSource',
             id_by => 'source_id',
-            doc => 'The patient/individual organism from which the sample was taken, or the population for pooled samples.',
+            doc => 'The patient/individual organism or group from which the sample was taken, or the population for pooled samples.',
         },
         source_type => { 
             is => 'Text',
@@ -195,25 +195,21 @@ class Genome::Sample {
             is_mutable => 1,
             doc => 'TCGA name of the sample, if available',
         },
-        taxon_id => {
-            is => 'Number',
-            via => 'attributes',
-            to => 'attribute_value',
-            where => [ attribute_label => 'taxon_id' ],
-            is_mutable => 1,
-            doc => 'ID of the sample taxon',
-        },
         taxon => {
             is => 'Genome::Taxon',
-            id_by => 'taxon_id',
-            doc => 'Relevant taxon object for this sample',
+            via => 'source',
+            to => 'taxon',
+            doc => 'Taxon for this sample via the source.',
+        },
+        taxon_id => {
+            is => 'Number',
+            via => 'source',
+            to => 'taxon_id',
+            doc => 'Taxon id for this sample via the source.',
         },
         species_name => { 
-            calculate_from => 'taxon',
-            calculate => q{ 
-                return unless $taxon;
-                return $taxon->name; 
-            },
+            via => 'taxon',
+            to =>  'name',
             doc => 'Name of the species of the sample source\'s taxonomic category' 
         },
         sub_type => { 
