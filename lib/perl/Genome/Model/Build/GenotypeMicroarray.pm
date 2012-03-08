@@ -132,7 +132,16 @@ sub gold2geno_file_path {
     shift->formatted_genotype_file_path . '.gold2geno';
 }
 
-sub formatted_genotype_file_path {
+sub genotype_file_path {
+    my $self = shift;
+    return $self->data_directory.'/'.$self->model->subject->id.'.genotype';
+}
+
+sub copy_number_file_path {
+    return $_[0]->data_directory.'/'.$_[0]->model->subject->id.'.copynumber';
+}
+
+sub formatted_genotype_file_path { # gold snp
     shift->data_directory . '/formatted_genotype_file_path.genotype';
 }
 
@@ -143,14 +152,6 @@ sub snvs_bed {
 sub filtered_snvs_bed {
     shift->data_directory . '/gold_snp.v2.bed';
 }
-
-sub genotype_file_path {
-    my $self = shift;
-    my @instrument_data = $self->instrument_data;
-    Carp::confess 'Found no instrument data for build ' . $self->id unless @instrument_data;
-    Carp::confess 'Found more than one instrument data assigned to build ' . $self->id if @instrument_data > 1;
-    return $instrument_data[0]->genotype_microarray_file_for_subject_and_version($self->subject_name, $self->reference_sequence_build->version);
-}    
 
 1;
 
