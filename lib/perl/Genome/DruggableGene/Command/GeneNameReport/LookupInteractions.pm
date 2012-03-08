@@ -294,15 +294,21 @@ sub _chunk_in_clause_list{
         push @chunked_values, [splice(@values,0,249)];
     }
 
-    my ($boolexpr, %extra) = UR::BoolExpr->resolve_for_string(
-        $target_class,
-        '(' . join(' or ', map($property_name . (scalar(@$_) > 1 ? ':' : '=') . join('/', map('"' . $_ . '"', @$_)), @chunked_values)) . ')'
-        . ($filter ? ' and ' . $filter : '')
-        ,
-    );
+    my $filter_bx;
+    if($filter) {
+        my %extra;
+        ($filter_bx, %extra) = UR::BoolExpr->resolve_for_string($target_class, $filter);
 
-    $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
-        and return if %extra;
+        $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
+            and return if %extra;
+    }
+
+    my @filter_params = ($filter_bx? $filter_bx->params_list : ());
+    my $boolexpr = $target_class->define_boolexpr(
+        '-or' => [
+            map([$property_name => $_, @filter_params], @chunked_values)
+        ],
+    );
 
     return $boolexpr;
 }
