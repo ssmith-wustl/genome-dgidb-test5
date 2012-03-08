@@ -118,15 +118,18 @@ sub help_detail {
     Tool to run Ensembl VEP (Variant Effect Predictor).  For documentation on input format, see:
     http://useast.ensembl.org/info/docs/variation/vep/vep_formats.html
 
-    It is recommended that the input file is in Ensembl's format:
+    It is recommended that the input file is in Ensembl format:
     1    881907    881906    -/C    +
     5    140532    140532    T/C    +
     8    12600     12602     CGT/-  -
 
     The 5th column must always be a '+' because we always call variants on the forward strand.
     Any additional columns after the '+' strand column will not change the resulting annotation.
+
+    If a bed file is input, it will be converted to ensembl format, then annotated.
 EOS
 }
+
 
 sub execute {
     my $self = shift;
@@ -249,7 +252,6 @@ sub execute {
 
         $format = "ensembl";
         $input_file = $tmpfile;
-        `cp $tmpfile /tmp/`;
     }
 
 

@@ -204,6 +204,11 @@ class Genome::Model::Tools::Music::Play {
             calculate_from => ['output_dir'],
             calculate => q{ $output_dir . '/smg'; },
         },
+        input_clinical_correlation_matrix_file => {
+            is => 'Text',
+            is_optional => 1,
+            doc => "Instead of calculating this from the MAF, input the sample-vs-gene matrix used internally during calculations.",
+        },
         ],
         has_constant => [
         cmd_list_file => { #If a workflow version of this tool is written, these parameters might be more useful

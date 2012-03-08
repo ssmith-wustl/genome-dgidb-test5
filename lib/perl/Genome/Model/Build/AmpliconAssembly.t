@@ -17,24 +17,10 @@ use Test::More;
 # use
 use_ok('Genome::Model::Build::AmpliconAssembly') or die;
 
-# taxon, sample, lib
-my $taxon = Genome::Taxon->create(
-    name => 'Human Metagenome TEST',
-    domain => 'Unknown',
-    current_default_org_prefix => undef,
-    estimated_genome_size => undef,
-    current_genome_refseq_id => undef,
-    ncbi_taxon_id => undef,
-    ncbi_taxon_species_name => undef,
-    species_latin_name => 'Human Metagenome',
-    strain_name => 'TEST',
-);
-ok($taxon, 'create taxon');
-
+# sample, lib
 my $sample = Genome::Sample->create(
     id => -1234,
     name => 'H_GV-933124G-S.MOCK',
-    taxon_id => $taxon->id,
 );
 ok($sample, 'create sample');
 

@@ -40,12 +40,19 @@ my $taxon = Genome::Taxon->__define__(
     name => 'TEST-taxon',
     estimated_genome_size => 200000,
 );
+ok($taxon, 'define taxon');
+
+my $source = Genome::Individual->__define__(
+    name => 'TEST-ind',
+    taxon => $taxon,
+);
+ok($source, 'define source');
 
 # sample
 my $sample = Genome::Sample->__define__(
     id => -1234,
     name => 'TEST-000',
-    taxon => $taxon,
+    source => $source,
 );
 ok($sample, 'define sample') or die;
 

@@ -24,8 +24,6 @@ sub GSC::PSE::get { return @pses; }
 sub GSC::PSEParam::get { return @pse_params; }
 use warnings;
 
-my $taxon = Genome::Taxon->get(name => 'Human Metagenome');
-ok($taxon, 'got human metagenome taxon');
 my $pp = Genome::ProcessingProfile->get(2571784);
 ok($pp, 'got mc16s pp');
 for my $i (1..2) {
@@ -151,7 +149,6 @@ sub _qidfgm {
         $sample_cnt++;
         $sample = Genome::Sample->create(
             name => 'AQID-testsample'.$sample_cnt,
-            taxon_id => $taxon->id,
             extraction_type => 'genomic',
         );
     }
