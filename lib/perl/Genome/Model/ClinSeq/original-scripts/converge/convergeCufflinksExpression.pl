@@ -64,9 +64,9 @@ my $usage=<<INFO;
   convergeCufflinksExpression.pl  --model_group_id='25134'  --target_file_name='isoforms.merged.fpkm.expsort.tsv'  --join_column_name='tracking_id'  --data_column_name='FPKM'  --annotation_column_names='mapped_gene_name,CancerGeneCensus'  --outfile=Cufflinks_GeneLevel_Malat1Mutants.tsv  --verbose=1
 
   Specify *one* of the following as input (each model/build should be a ClinSeq model)
-  --build_ids            Comma separated list of specific build IDs
-  --model_ids            Comma separated list of specific model IDs
-  --model_group_id       A singe genome model group ID
+  --build_ids                Comma separated list of specific build IDs
+  --model_ids                Comma separated list of specific model IDs
+  --model_group_id           A singe genome model group ID
 
   Combines Cufflinks expression results from a group of Clinseq models into a single report:
   --target_file_name         The files to be joined across multiple ClinSeq models
@@ -76,21 +76,255 @@ my $usage=<<INFO;
   --outfile                  Path of the output file to be written
   --verbose                  More descriptive stdout messages
 
+  Test Clinseq model groups:
+  25307                      BRAF inhibitor resistant cell lines
+  25134                      MALAT1 mutant vs. wild type BRCs
+  30176                      LUC RNA-seq vs. RNA-cap
+
 INFO
 
-unless (($build_ids || $model_ids || $model_group_id) && $target_file_name && $data_column_name && $annotation_column_names && $outfile){
+unless (($build_ids || $model_ids || $model_group_id) && $target_file_name && $join_column_name && $data_column_name && $outfile){
   print RED, "\n\nRequired parameter missing", RESET;
   print GREEN, "\n\n$usage", RESET;
   exit(1);
 }
 
+#Get the models/builds
+print BLUE, "\n\nGet genome models/builds for supplied list", RESET;
+my $models_builds;
+if ($build_ids){
+  my @build_ids = split(",", $build_ids);
+  $models_builds = &getModelsBuilds('-builds'=>\@build_ids);
+}elsif($model_ids){
+  my @model_ids = split(",", $model_ids);
+  $models_builds = &getModelsBuilds('-models'=>\@model_ids);
+}elsif($model_group_id){
+  $models_builds = &getModelsBuilds('-model_group_id'=>$model_group_id);
+}else{
+  print RED, "\n\nCould not obtains models/builds - check input to convergeCufflinksExpression.pl\n\n", RESET;
+  exit();
+}
+
+#Get the annotation columns specified by the user:
+my @annotation_columns;
+if (defined($annotation_column_names)){
+  @annotation_columns = split(",", $annotation_column_names);
+}
+
+#Get the desired files from each model
+my %files = %{&getCufflinksFiles('-models_builds'=>$models_builds, '-target_file_name'=>$target_file_name)};
+
+#Get the list of distinct data columns that will be written
+my %data_list;
+foreach my $fc (keys %files){
+  my $column_name = $files{$fc}{column_name};
+  $data_list{$column_name}=1;
+}
+
+#Parse each file and build a hash keyed on the join id and output column name.  Store target data as a value.  Store annotation values
+print BLUE, "\n\nParse all files found for data '$data_column_name' joining on '$join_column_name", RESET;
+my $exp = &parseCufflinksFiles('-files'=>\%files, '-data_column_name'=>$data_column_name, '-join_column_name'=>$join_column_name, '-annotation_columns'=>\@annotation_columns);
+
+#Print the output file
 
 
-
-
-
+print "\n\n";
 
 exit();
+
+
+#######################################################################################################################
+#Get the desired files from each model                                                                                #
+#######################################################################################################################
+sub getCufflinksFiles{
+  my %args = @_;
+  my $models_builds = $args{'-models_builds'};
+  my $target_file_name = $args{'-target_file_name'};
+
+  my %files;
+  my $fc = 0;
+  print BLUE, "\n\nGet all Cufflinks files within these builds that match $target_file_name", RESET;
+  my %mb = %{$models_builds->{cases}};
+  foreach my $c (keys %mb){
+    my $b = $mb{$c}{build};
+    my $m = $mb{$c}{model};
+    my $data_directory = $b->data_directory;
+    my $subject_name = $b->subject->name;
+    my $subject_common_name = $b->subject->common_name;
+    my $build_id = $b->id;
+
+    #If the subject name is not defined, die
+    unless ($subject_name){
+      print RED, "\n\nCould not determine subject name for build: $build_id\n\n", RESET;
+      exit(1);
+    }
+
+    my $final_name = "Unknown";
+    if ($subject_name){$final_name = $subject_name;}
+    if ($subject_common_name){$final_name = $subject_common_name;}
+
+    print BLUE, "\n\t$final_name\t$build_id\t$data_directory", RESET;
+
+    #/gscmnt/gc8002/info/model_data/2881869913/build120828540/BRC18/rnaseq/tumor/cufflinks_absolute/isoforms_merged
+    my $ls_cmd = "ls $data_directory/*/rnaseq/*/cufflinks_absolute/isoforms_merged/*";
+    my @result = `$ls_cmd`;
+    chomp(@result);
+    my @files;
+    foreach my $result (@result){
+      if ($result =~ /$target_file_name$/){
+        push(@files, $result);
+      }
+    }
+
+    #Get the common name and subtype (e.g. tumor/normal) from the path
+    foreach my $file (@files){
+      if ($file =~ /$data_directory\/(.*)\/rnaseq\/(.*)\/cufflinks.*/){
+        $fc++;
+        $files{$fc}{path} = $file;
+        $files{$fc}{subtype} = $2;
+        $files{$fc}{final_name} = $final_name;
+        $files{$fc}{subject_name} = $subject_name;
+        $files{$fc}{build_id} = $build_id;
+      }else{
+        print RED, "\n\nCould not obtain subtype from file path:\n$file\n\n", RESET;
+        exit(1);
+      }
+    }
+  }
+
+  #Determine a suitable name for data columns in the output file.  It must be distinct accross the builds.  Try these combinations in order:
+  # final_name
+  # final_name + subtype
+  # final_name + subtype + subject_name
+  # final_name + subtype + subject_name + build_id
+  my $file_count =  keys %files;
+  unless ($file_count > 1){
+    print RED, "\n\nFound $file_count files to join (need at least 2 ...)\n\n", RESET;
+    exit(1);
+  }
+  my %finalnames;
+  my %finalnames_subtypes;
+  my %finalnames_subtypes_subjectnames;
+  my %finalnames_subtypes_subjectnames_buildids;
+  foreach my $fc (keys %files){
+    my $final_name = $files{$fc}{final_name};
+    my $subtype = $files{$fc}{subtype};
+    my $subject_name = $files{$fc}{subject_name};
+    my $build_id = $files{$fc}{build_id};
+    my $id1 = $final_name;
+    my $id2 = "$final_name"."_"."$subtype";
+    my $id3 = "$final_name"."_"."$subtype"."_"."$subject_name";
+    my $id4 = "$final_name"."_"."$subtype"."_"."$subject_name"."_"."$build_id";
+    $finalnames{$id1}=1;
+    $finalnames_subtypes{$id2}=1;
+    $finalnames_subtypes_subjectnames{$id3}=1;
+    $finalnames_subtypes_subjectnames_buildids{$id4}=1;
+    $files{$fc}{id1} = $id1;
+    $files{$fc}{id2} = $id2;
+    $files{$fc}{id3} = $id3;
+    $files{$fc}{id4} = $id4;
+  }
+
+  my $id_choice;
+  if ($file_count == keys %finalnames){
+    $id_choice = "id1";
+  }elsif($file_count == keys %finalnames_subtypes){
+    $id_choice = "id2";
+  }elsif($file_count == keys %finalnames_subtypes_subjectnames){
+    $id_choice = "id3";
+  }elsif($file_count == keys %finalnames_subtypes_subjectnames_buildids){
+    $id_choice = "id4";
+  }else{
+    print RED, "\n\nCould not generate a suitable set of distinct labels for the data files to be joined...\n\n", RESET;
+    exit();
+  }
+
+  foreach my $fc (keys %files){
+    $files{$fc}{column_name} = $files{$fc}{"$id_choice"};
+  }
+
+  return(\%files);
+}
+
+
+#######################################################################################################################
+#parseCufflinksFiles                                                                                                  #
+#######################################################################################################################
+sub parseCufflinksFiles{
+  my %args = @_;
+  my %files = %{$args{'-files'}};
+  my $data_column_name = $args{'-data_column_name'};
+  my $join_column_name = $args{'-join_column_name'};
+  my @annotation_columns = @{$args{'-annotation_columns'}};
+
+  my %exp;
+  my $first_file = 1;
+  foreach my $fc (keys %files){
+    my $path = $files{$fc}{path};
+    my $column_name = $files{$fc}{column_name};
+    print BLUE, "\n\tProcess: $path ($column_name)", RESET;
+    my %columns;
+    my $header = 1;
+    my $line_count = 0;
+    open (IN, "$path") || die "\n\nCould not open input file: $path\n\n";
+    while(<IN>){
+      chomp($_);
+      my @line = split("\t", $_);
+      if ($header){
+        my $p = 0;
+        foreach my $name (@line){
+          $columns{$name}{p} = $p;
+          $p++;
+        }
+        #Check for requested columns
+        unless(defined ($columns{$join_column_name})){print RED, "\n\nCould not find required join column: $join_column_name", RESET; exit(1);}
+        unless(defined ($columns{$data_column_name})){print RED, "\n\nCould not find required data column: $data_column_name", RESET; exit(1);}
+        foreach my $annotation_column (@annotation_columns){unless(defined ($columns{$annotation_column})){print RED, "\n\nCould not find required annotation column: $annotation_column", RESET; exit(1);}}
+        $header = 0;
+        next();
+      }
+      $line_count++;
+      my $id = $line[$columns{$join_column_name}{p}];
+      my $data = $line[$columns{$data_column_name}{p}];
+
+      #Unless this is the first file parsed, the id must already be defined but the id-column_name value must not be
+      unless ($first_file){
+        unless (defined($exp{$id})){
+          print RED, "\n\nFound an ID in a file that was not present in the first file parsed. ID: $id\n\n", RESET;
+          exit(1);
+        }
+        if (defined($exp{$id}{$column_name})){
+          print RED, "\n\nFound a duplicate ID: $id\n\n", RESET;
+          exit(1);
+        }
+      }
+
+      $exp{$id}{$column_name}{data} = $data;
+
+      if ($annotation_column_names){
+        my @annotation_values;
+        foreach my $annotation_column (@annotation_columns){
+          my $annotation = $line[$columns{$annotation_column}{p}];
+          push(@annotation_values, $annotation);
+        }
+        my $annotation_string = join("\t", @annotation_values);
+        $exp{$id}{annotation} = $annotation_string;
+      }
+    }
+    close(IN);
+
+    #Check that the total number of records stored equals the total number of data lines in the input file (i.e. there were no duplicate IDs)
+    my $data_count = keys %exp;
+    unless ($data_count == $line_count){
+      print RED, "\n\nData count did not match the expected line count!\n\n", RESET;
+      exit(1);
+    }
+    $first_file = 0;
+  }
+
+  return(\%exp);
+}
+
 
 
 

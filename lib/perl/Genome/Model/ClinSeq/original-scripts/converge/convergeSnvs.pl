@@ -157,7 +157,7 @@ foreach my $m (@models){
     $exome_sample_list{$final_name} = 1;
   }
 
-  #Store model objects and value for later
+  #Store model objects and values for later
   $model_list{$model_id}{model_name} = $model_name;
   $model_list{$model_id}{data_directory} = $data_directory;
   $model_list{$model_id}{patient} = $patient;

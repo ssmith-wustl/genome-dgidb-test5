@@ -142,14 +142,21 @@ sub getModelsBuilds{
       print RED, "\n\tDid not find the correct number of successful models/builds", RESET;
       exit(1);
     }
-
   }
-
   print "\n\tFound $b_count builds and $m_count models";
+
+  #Build a hash that groups each model/build pair together
+  my %mb;
+  for (my $i = 1; $i <= $b_count; $i++){
+    $mb{$i}{model} = $models[$i-1];
+    $mb{$i}{build} = $builds[$i-1];
+  }
 
   my %models_builds;
   $models_builds{models} = \@models;
   $models_builds{builds} = \@builds;
+  $models_builds{cases} = \%mb;
+
   return(\%models_builds);
 }
 
