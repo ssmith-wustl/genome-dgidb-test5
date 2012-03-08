@@ -83,6 +83,7 @@
 #  - Overlap of observed mutations with TGI recurrent sites
 #  - Run snpEff on all variants
 #  - Run the Ensembl variant effect predictor on all variants
+#  - Run regulatory annotation on Tier2 variants using: gmt annotate regulatory-features
 #- Summarize gene annotation results (i.e. for each gene list, each gene is marked as Kinase, RTK, trancription factor, etc.)
 #  - Summarize for each event list, how many genes belong to each catergory
 
