@@ -20,6 +20,7 @@ class Genome::Model::Tools::Germline::BurdenAnalysis {
     permutations => { is => 'Text', doc => "The number of permutations to perform, typically from 100 to 10000, larger number gives more accurate p-value, but needs more time", default => '10000' },
     covariates => { is => 'Text', doc => "\"\+\"-delimited list \(example: PC1+PC2+PC3+PC4+PC5\) of the covariates to use from the phenotype file or \"NONE\" if none", default => 'NONE' },
     trv_types => { is => 'Text', doc => "colon-delimited list of which trv types to use as significant rare variants or \"ALL\" if no exclusions", default => 'NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING:NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING,SPLICE_SITE:NMD_TRANSCRIPT,STOP_LOST:NON_SYNONYMOUS_CODING:NON_SYNONYMOUS_CODING,SPLICE_SITE:STOP_GAINED:STOP_GAINED,SPLICE_SITE' },
+    select_phenotypes => { is => 'Text', doc => "If specified, don't use all phenotypes from phenotype file, but instead only use these from a comma-delimited list"},
   ],
 };
 
@@ -62,14 +63,13 @@ sub execute {                               # replace with real execution logic.
     my $mutation_file = $self->mutation_file;
     my $phenotype_file = $self->phenotype_file;
     my $VEP_annotation_file = $self->VEP_annotation_file;
-
     my $base_R_commands = $self->base_R_commands;
-
     my $output_directory = $self->output_directory;
 
     my $project_name = $self->project_name;
     my $maf_cutoff = $self->maf_cutoff;
     my $permutations = $self->permutations;
+
     my $covariates = $self->covariates;
 
     my $trv_types = $self->trv_types;
@@ -78,12 +78,33 @@ sub execute {                               # replace with real execution logic.
 
     my $pheno_fh = new IO::File $phenotype_file,"r";
     my $pheno_header = $pheno_fh->getline;
+    chomp($pheno_header);
     close($pheno_fh);
     my @pheno_headers = split(/\t/, $pheno_header);
     my $subject_column_header = shift(@pheno_headers);
+    my @pheno_minus_covariates;
+    if (defined($self->select_phenotypes)) {
+        my @selected_phenotypes = split(/,/, $self->select_phenotypes);
+        @pheno_minus_covariates = @selected_phenotypes;
+    }
+    else {
+        my @covariate_options = split(/\+/, $covariates);
+        foreach my $phead (@pheno_headers) {
+            my $match = 0;
+            foreach my $cov (@covariate_options) {
+                if ($phead eq $cov) {
+                    $match = 1;
+                }
+            }
+            unless ($match) {
+                push(@pheno_minus_covariates,$phead);
+            }
+        }
+    }
 
     my $annot_fh = new IO::File $VEP_annotation_file,"r";
     my $annot_header = $annot_fh->getline;
+    chomp($annot_header);
     my @annot_headers = split(/\t/, $annot_header);
     my $gene_name_in_header = 'Gene_Name';
     my $trv_name_in_header = 'Trv_Type';
@@ -102,6 +123,7 @@ sub execute {                               # replace with real execution logic.
     }
     my %gene_names_hash;
     while (my $line = $annot_fh->getline) {
+        chomp($line);
         my @line_stuff = split(/\t/, $line);
         my $gene_name = $line_stuff[$annot_header_hash{$gene_name_in_header}];
         $gene_names_hash{$gene_name}++;
@@ -161,13 +183,19 @@ _END_OF_R_
 
     #now create bsub commands
     #bsub -e err 'R --no-save < burdentest.R option_file_asms Q trigRES ABCA1 10000'
-
-    my $bsub_base = "bsub -e err 'R --no-save < $base_R_commands $R_path_option";
-
-    foreach my $phenotype (@pheno_headers) {
+    my $user = $ENV{USER};
+    my $bsub_base = "bsub -u $user\@genome.wustl.edu -e err 'R --no-save \< $base_R_commands $R_path_option";
+system("cp $R_path_option /gscuser/wschierd/Deleteme/R_option_file.txt");
+    foreach my $phenotype (@pheno_minus_covariates) {
         foreach my $gene (@gene_names) {
             my $trait_type = 'Q'; #THIS SHOULD BE A HASH KEY THING
-            print "$bsub_base $trait_type $phenotype $gene $permutations";
+            if ($gene eq '-' || $gene eq 'NA' ) {
+                next;
+            }
+            my $bsub_cmd = "$bsub_base $trait_type $phenotype $gene $permutations\'";
+            print "$bsub_cmd\n";
+exit;
+            system($bsub_cmd);
         }
     }
 
