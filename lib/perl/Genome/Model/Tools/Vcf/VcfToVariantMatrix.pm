@@ -31,6 +31,11 @@ class Genome::Model::Tools::Vcf::VcfToVariantMatrix {
         is_optional => 1,
         doc => "Limit Variant Matrix to Sites Within an ROI - Bed format chr\\tstart\\tstop\\tref\\talt",
     },
+    sample_list_file => {
+        is => 'Text',
+        is_optional => 1,
+        doc => "Limit Samples in the Variant Matrix to Samples Within this File - Sample_Id should be the first column of a tab-delimited file, all other columns are ignored",
+    },
     project_name => {
         is => 'Text',
         is_optional => 1,
@@ -77,7 +82,19 @@ sub execute {                               # replace with real execution logic.
     my $output_file = $self->output_file;
     my $project_name = $self->project_name;
     my $roi_bed = $self->bed_roi_file;
-  
+
+    my %sample_name_hash;
+    if(defined($self->sample_list_file)) {
+        my $sample_list_file = $self->sample_list_file;
+        my $sample_list_inFh = Genome::Sys->open_file_for_reading($sample_list_file);
+        while(my $sample_line = $sample_list_inFh->getline ) {
+            chomp($sample_line);
+            my @line_stuff = split(/\t/, $sample_line);
+            my $sample_name = $line_stuff[0];
+            $sample_name_hash{$sample_name}++;
+        }
+    }
+
     my $inFh_positions;
     my %positions_selection_hash;
     if ($self->positions_file) {
@@ -117,6 +134,7 @@ sub execute {                               # replace with real execution logic.
 #########prep done begin main vcf parsing loop############
 
     my @finished_file;
+    my %sample_inclusion_hash;
     while(my $line = $inFh->getline ) {
         chomp($line);
         if ($line =~ m/^\#\#/) {
@@ -124,7 +142,20 @@ sub execute {                               # replace with real execution logic.
         }
         elsif ($line =~ /^\#CHROM/) { #grab sample names off of the header line
             my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @samples) = split(/\t/, $line);
-            my @sample_names = @samples;
+            my @sample_names;
+            if(defined($self->sample_list_file)) {
+                my $sample_count = 0;
+                foreach my $sname (@samples) {
+                    if (defined($sample_name_hash{$sname})) {
+                        push(@sample_names,$sname);
+                        $sample_inclusion_hash{$sample_count}++;
+                    }
+                    $sample_count++;
+                }
+            }
+            else {
+                @sample_names = @samples;
+            }
             if($self->transpose) {
                 push @finished_file, [$project_name, @sample_names];
             }
@@ -144,7 +175,23 @@ sub execute {                               # replace with real execution logic.
             print "Skipping $chr:$pos:$ref/$alt for having filter status of $filter\n";
             next;
         }
-    
+
+        my @sample_list;
+        if(defined($self->sample_list_file)) {
+            my $sample_count = 0;
+            my @included_samples;
+            foreach my $sincluded (@samples) {
+                if (defined($sample_inclusion_hash{$sample_count})) {
+                    push(@included_samples,$sincluded);
+                }
+                $sample_count++;
+            }
+            @sample_list = @included_samples;
+        }
+        else {
+            @sample_list = @samples;
+        }
+
         #parse format line to find out where our pattern of interest is in the ::::: system
         my (@format_fields) = split(/:/, $format);
         my $gt_location; #genotype
@@ -177,10 +224,10 @@ sub execute {                               # replace with real execution logic.
         }
         my $line;
         if($self->matrix_genotype_version=~ m/numerical/i) {
-            $line = $self->format_numeric_output($chr, $pos, $ref, $alt, $gt_location, $ft_location, \@samples);    
+            $line = $self->format_numeric_output($chr, $pos, $ref, $alt, $gt_location, $ft_location, \@sample_list);    
         }
         elsif($self->matrix_genotype_version=~ m/bases/i) {
-           $line = $self->format_basic_output($chr, $pos, $ref, $alt, $gt_location, $ft_location, \@samples);   
+           $line = $self->format_basic_output($chr, $pos, $ref, $alt, $gt_location, $ft_location, \@sample_list);   
         }
         else {
             die "Please specify a proper matrix_genotype_version of either \"Bases\" or \"Numerical\"";
