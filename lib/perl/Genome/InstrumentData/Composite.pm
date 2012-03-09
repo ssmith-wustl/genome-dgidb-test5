@@ -47,23 +47,39 @@ class Genome::InstrumentData::Composite {
 sub get_or_create {
     my $class = shift;
 
-    my $self = $class->SUPER::create(@_);
+    #my $self = $class->SUPER::create(@_);
+    my $self; # = $class->SUPER::create(@_);
+    if (!ref($_[0])) {
+        # not passed a boolexpr
+        my %params = @_;
+        my $inputs_from_args;
+        $inputs_from_args = delete $params{'inputs'};
+        $self = $class->SUPER::create(%params);
+        $self->{'inputs'} = $inputs_from_args if $inputs_from_args;
+    } else {
+        $self = $class->SUPER::create(@_);
+    }
+
     $self->status_message('Get or create composite instrument data...');
 
     my $inputs = $self->inputs;
+    $inputs->{force_fragment} = $self->force_fragment;
     my $strategy = $self->strategy;
 
+$DB::single=1;
     $self->status_message('Create composite workflow...');
     my $generator = Genome::InstrumentData::Composite::Workflow->create(
-        inputs => {
-            %{ $self->inputs },
-            force_fragment => $self->force_fragment,
-        },
+#        inputs => {
+#            #%{ $self->inputs },
+#            (map { $_ => $inputs->{$_}} keys %$inputs),
+#            force_fragment => $self->force_fragment,
+#        },
         strategy => $self->strategy,
         merge_group => $self->merge_group,
         log_directory => $self->log_directory,
     );
     $self->status_message('Create composite workflow...OK');
+    $generator->{inputs} = $inputs;
 
     $self->status_message('Execute composite workflow...OK');
     $generator->dump_status_messages(1);
