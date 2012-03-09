@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 #Written by Malachi Griffith
 #For a group of ClinSeq models, converge various types of Tophat expression values together
-#For example, allow for merging at the level of isoforms and genes
+#For example, allow for merging at the level of junctions, isoforms, and genes
 #Make it as generic as possible
 #Deal with SampleType.  i.e. get both 'tumor' and 'normal' files if available
 
@@ -9,15 +9,14 @@
 #A list of Clinseq builds, models, or a Clinseq model-group
 
 #Parameters:
-#1.) the name of the file to be joined. e.g. 'isoforms.merged.fpkm.expsort.tsv'
-#2.) the join column name (unique ID).  e.g. 'tracking_id'
-#3.) the data column name containing the data to be used for the matrix.  e.g. 'FPKM'
+#1.) the name of the file to be joined. e.g. 'observed.junctions.anno.ALL.gid.tsv', 'observed.junctions.anno.Ensembl.gid.tsv', 'Ensembl.Junction.TranscriptExpression.tsv', 'Ensembl.Junction.GeneExpression.tsv'
+#2.) the join column name (unique ID).  e.g. 'JID'
+#3.) the data column name containing the data to be used for the matrix.  e.g. 'Read_Count', 'JPM', 'read_count', 'jpjm'
 #4.) a list of annotation column names.  Values from these will be taken from only file and appended to the end of the resulting matrix file
 
 #Sanity checks:
 #Make sure each file found has the neccessary columns specified by the user
-#Make sure each file found has the same number of IDs, only unique IDs, and all the same IDs as every other file
-#Make sure all values are defined.  If there are empty cells allow an option for these to be converted to NAs
+#Make sure all values are defined.  If there are empty cells allow an option for these to be converted to 0s
 
 #Output:
 #A single expression matrix file
@@ -63,11 +62,14 @@ GetOptions ('build_ids=s'=>\$build_ids, 'model_ids=s'=>\$model_ids, 'model_group
 my $usage=<<INFO;
   Example usage: 
 
-  Gene-level using isoforms merged to each gene
-  convergeCufflinksExpression.pl  --model_group_id='25134'  --target_file_name='isoforms.merged.fpkm.expsort.tsv'  --expression_subdir='isoforms_merged'  --join_column_name='tracking_id'  --data_column_name='FPKM'  --annotation_column_names='ensg_name,mapped_gene_name,locus'  --outfile=Cufflinks_GeneLevel_Malat1Mutants.tsv  --verbose=1
+  Gene-level using isoforms merged to each gene (use data_column_name: 'jpjm' or 'read_count')
+  convergeTophatExpression.pl  --model_group_id='25134'  --target_file_name='Ensembl.Junction.GeneExpression.tsv'  --expression_subdir='tophat_junctions_absolute'  --join_column_name='fid'  --data_column_name='jpjm'  --annotation_column_names='gene_name,mapped_gene_name,chromosome,known_junction_count'  --outfile=Tophat_GeneLevel_JPJM_Malat1Mutants.tsv  --verbose=1
 
-  Transcript-level using isoforms individually
-  convergeCufflinksExpression.pl  --model_group_id='25134'  --target_file_name='isoforms.fpkm.expsort.tsv'  --expression_subdir='isoforms'  --join_column_name='tracking_id'  --data_column_name='FPKM'  --annotation_column_names='gene_id,mapped_gene_name,locus'  --outfile=Cufflinks_IsoformLevel_Malat1Mutants.tsv  --verbose=1
+  Transcript-level using isoforms individually (use data_column_name: 'jpjm' or 'read_count')
+  convergeTophatExpression.pl  --model_group_id='25134'  --target_file_name='Ensembl.Junction.TranscriptExpression.tsv'  --expression_subdir='tophat_junctions_absolute'  --join_column_name='fid'  --data_column_name='jpjm'  --annotation_column_names='gene_name,mapped_gene_name,chromosome,known_junction_count'  --outfile=Tophat_IsoformLevel_JPJM_Malat1Mutants.tsv  --verbose=1
+
+  Exon-junction level (use data_column_name: 'JPM' or 'Read_Count')
+  convergeTophatExpression.pl  --model_group_id='25134'  --target_file_name='observed.junctions.anno.Ensembl.tsv'  --expression_subdir='tophat_junctions_absolute'  --join_column_name='JID'  --data_column_name='JPM'  --annotation_column_names='Intron_Size,Splice_Site,Anchored,Exons_Skipped,Gene_Name'  --outfile=Tophat_JunctionLevel_JPM_Malat1Mutants.tsv  --verbose=1
 
   Specify *one* of the following as input (each model/build should be a ClinSeq model)
   --build_ids                Comma separated list of specific build IDs
@@ -76,7 +78,7 @@ my $usage=<<INFO;
 
   Combines Cufflinks expression results from a group of Clinseq models into a single report:
   --target_file_name         The files to be joined across multiple ClinSeq models
-  --expression_subdir        The expression subdir of Clinseq to use: ('genes', 'isoforms', 'isoforms_merged')
+  --expression_subdir        The expression subdir of Clinseq to use: ('tophat_junctions_absolute')
 
   --join_column_name         The primary ID to be used for joining values (IDs must be unique and occur in all files to be joined)
   --data_column_name         The data column to be used to create an expression matrix across the samples of the ClinSeq models
@@ -110,7 +112,7 @@ if ($build_ids){
 }elsif($model_group_id){
   $models_builds = &getModelsBuilds('-model_group_id'=>$model_group_id, '-verbose'=>$verbose);
 }else{
-  print RED, "\n\nCould not obtains models/builds - check input to convergeCufflinksExpression.pl\n\n", RESET;
+  print RED, "\n\nCould not obtains models/builds - check input to convergeTophatExpression.pl\n\n", RESET;
   exit();
 }
 
@@ -122,7 +124,7 @@ if ($annotation_column_names){
 my $annotation_columns_string = join("\t", @annotation_columns);
 
 #Get the desired files from each model
-my %files = %{&getCufflinksFiles('-models_builds'=>$models_builds, '-target_file_name'=>$target_file_name, '-expression_subdir'=>$expression_subdir)};
+my %files = %{&getTophatFiles('-models_builds'=>$models_builds, '-target_file_name'=>$target_file_name, '-expression_subdir'=>$expression_subdir)};
 
 #Get the list of distinct data columns that will be written
 my %data_list;
@@ -135,7 +137,7 @@ my $data_list_string = join("\t", @data_list_sort);
 
 #Parse each file and build a hash keyed on the join id and output column name.  Store target data as a value.  Store annotation values
 if ($verbose){print BLUE, "\n\nParse all files found for data '$data_column_name' joining on '$join_column_name", RESET;}
-my $exp = &parseCufflinksFiles('-files'=>\%files, '-data_column_name'=>$data_column_name, '-join_column_name'=>$join_column_name, '-annotation_columns'=>\@annotation_columns);
+my $exp = &parseTophatFiles('-files'=>\%files, '-data_column_name'=>$data_column_name, '-join_column_name'=>$join_column_name, '-annotation_columns'=>\@annotation_columns);
 
 #Print the output file
 if ($verbose){print BLUE, "\n\nPrinting output to: $outfile", RESET;}
@@ -150,7 +152,12 @@ print OUT "$header\n";
 foreach my $id (sort keys %{$exp}){
   my @data;
   foreach my $data_col (@data_list_sort){
-    push(@data, $exp->{$id}->{$data_col}->{data});
+    #If the data value is not defined for this combination of IDs and sample: set it to 0
+    my $data_value = 0;
+    if (defined($exp->{$id}->{$data_col}->{data})){
+      $data_value = $exp->{$id}->{$data_col}->{data};
+    }
+    push(@data, $data_value);
   }
   my $data_string = join("\t", @data);
   if ($annotation_column_names){
@@ -174,7 +181,7 @@ exit();
 #######################################################################################################################
 #Get the desired files from each model                                                                                #
 #######################################################################################################################
-sub getCufflinksFiles{
+sub getTophatFiles{
   my %args = @_;
   my $models_builds = $args{'-models_builds'};
   my $target_file_name = $args{'-target_file_name'};
@@ -182,7 +189,7 @@ sub getCufflinksFiles{
 
   my %files;
   my $fc = 0;
-  if ($verbose){print BLUE, "\n\nGet all Cufflinks files within these builds that match $target_file_name", RESET;}
+  if ($verbose){print BLUE, "\n\nGet all Tophat files within these builds that match $target_file_name", RESET;}
   my %mb = %{$models_builds->{cases}};
   foreach my $c (keys %mb){
     my $b = $mb{$c}{build};
@@ -205,7 +212,7 @@ sub getCufflinksFiles{
     if ($verbose){print BLUE, "\n\t$final_name\t$build_id\t$data_directory", RESET;}
 
     #/gscmnt/gc8002/info/model_data/2881869913/build120828540/BRC18/rnaseq/tumor/cufflinks_absolute/isoforms_merged
-    my $ls_cmd = "ls $data_directory/*/rnaseq/*/cufflinks_absolute/$expression_subdir/*";
+    my $ls_cmd = "ls $data_directory/*/rnaseq/*/$expression_subdir/*";
     my @result = `$ls_cmd`;
     chomp(@result);
     my @files;
@@ -217,7 +224,7 @@ sub getCufflinksFiles{
 
     #Get the common name and subtype (e.g. tumor/normal) from the path
     foreach my $file (@files){
-      if ($file =~ /$data_directory\/(.*)\/rnaseq\/(.*)\/cufflinks.*/){
+      if ($file =~ /$data_directory\/(.*)\/rnaseq\/(.*)\/tophat.*/){
         $fc++;
         $files{$fc}{path} = $file;
         $files{$fc}{subtype} = $2;
@@ -287,9 +294,9 @@ sub getCufflinksFiles{
 
 
 #######################################################################################################################
-#parseCufflinksFiles                                                                                                  #
+#parseTophatFiles                                                                                                  #
 #######################################################################################################################
-sub parseCufflinksFiles{
+sub parseTophatFiles{
   my %args = @_;
   my %files = %{$args{'-files'}};
   my $data_column_name = $args{'-data_column_name'};
@@ -304,7 +311,6 @@ sub parseCufflinksFiles{
     if ($verbose){print BLUE, "\n\tProcess: $path ($column_name)", RESET;}
     my %columns;
     my $header = 1;
-    my $line_count = 0;
     open (IN, "$path") || die "\n\nCould not open input file: $path\n\n";
     while(<IN>){
       chomp($_);
@@ -322,16 +328,11 @@ sub parseCufflinksFiles{
         $header = 0;
         next();
       }
-      $line_count++;
       my $id = $line[$columns{$join_column_name}{p}];
       my $data = $line[$columns{$data_column_name}{p}];
 
-      #Unless this is the first file parsed, the id must already be defined but the id-column_name value must not be
+      #Unless this is the first file parsed, the id-column_name value must not be defined already
       unless ($first_file){
-        unless (defined($exp{$id})){
-          print RED, "\n\nFound an ID in a file that was not present in the first file parsed. ID: $id\n\n", RESET;
-          exit(1);
-        }
         if (defined($exp{$id}{$column_name})){
           print RED, "\n\nFound a duplicate ID: $id\n\n", RESET;
           exit(1);
@@ -351,13 +352,6 @@ sub parseCufflinksFiles{
       }
     }
     close(IN);
-
-    #Check that the total number of records stored equals the total number of data lines in the input file (i.e. there were no duplicate IDs)
-    my $data_count = keys %exp;
-    unless ($data_count == $line_count){
-      print RED, "\n\nData count did not match the expected line count!\n\n", RESET;
-      exit(1);
-    }
     $first_file = 0;
   }
 
