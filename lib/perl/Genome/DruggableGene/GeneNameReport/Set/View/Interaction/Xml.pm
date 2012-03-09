@@ -83,9 +83,11 @@ sub get_interactions_node {
         my $item = $doc->createElement('item');
         $interactions->addChild($item);
         my $drug = $doc->createElement('drug');
+        $drug->addChild($doc->createAttribute('key', 'drug_name'));
         $drug->addChild($doc->createTextNode($interaction->drug_name));
         $item->addChild($drug);
         my $gene = $doc->createElement('gene');
+        $gene->addChild($doc->createAttribute('key', 'gene_name'));
         $gene->addChild($doc->createTextNode($interaction->gene_name));
         $item->addChild($gene);
         my $interaction_types = $doc->createElement('interaction_type');

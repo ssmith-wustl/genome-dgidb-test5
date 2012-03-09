@@ -100,16 +100,7 @@
                     <th>
                       <xsl:call-template name='object_link_button'>
                         <xsl:with-param name='type' select="'Genome::DruggableGene::DrugGeneInteractionReport::Set'"/>
-                        <xsl:with-param name="keys">
-                          <item>
-                            <key><xsl:value-of select="drug_name" /></key>
-                            <id><xsl:value-of select="drug" /></id>
-                          </item>
-                          <item>
-                            <key><xsl:value-of select="gene_name" /></key>
-                            <id><xsl:value-of select="gene" /></id>
-                          </item>
-                        </xsl:with-param>
+                        <xsl:with-param name="keys" select='.'/>
                         <xsl:with-param name="linktext" select="interaction_type"/>
                       </xsl:call-template>
                     </th>

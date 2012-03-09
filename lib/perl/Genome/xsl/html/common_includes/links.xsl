@@ -9,6 +9,7 @@
     <xsl:param name="rest" select="$rest" />
     <xsl:param name="type" select="./@type"/>
     <xsl:param name="key" select="'id'"/>
+    <xsl:param name="keys" select="''"/>
     <xsl:param name="id" select="./@id"/>
     <xsl:param name="perspective" select="'status'"/>
     <xsl:param name="toolkit" select="'html'"/>
@@ -21,9 +22,37 @@
     <xsl:text>.</xsl:text>
     <xsl:value-of select="$toolkit"/>
     <xsl:text>?</xsl:text>
-    <xsl:value-of select="$key"/>
-    <xsl:text>=</xsl:text>
-    <xsl:value-of select="$id"/>
+
+    <!-- Can pass in a xml node with children having key/value pairs for URL generation.
+    Each child with a key attribute will be used.
+    The url will be generated with the key value as key and content of the tag as value
+    Example:
+        <keys>
+          <pair1 key='status'>Completed</key>
+          <pair2 key='user'>guest</key>
+        </keys>
+    Turns into:
+        ?status=Completed&user=guest
+    -->
+    <xsl:choose>
+      <xsl:when test='$keys'>
+        <xsl:for-each select="$keys/*">
+          <xsl:choose>
+            <xsl:when test="@key">
+              <xsl:value-of select="@key"/>
+              <xsl:text>=</xsl:text>
+              <xsl:value-of select="."/>
+              <xsl:text>&amp;</xsl:text>
+            </xsl:when>
+          </xsl:choose>
+        </xsl:for-each>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:value-of select="$key"/>
+        <xsl:text>=</xsl:text>
+        <xsl:value-of select="$id"/>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <xsl:template name="object_link">
@@ -72,6 +101,7 @@
     <xsl:param name="type" select="./@type"/>
     <xsl:param name="id" select="./@id"/>
     <xsl:param name="key" select="'id'"/>
+    <xsl:param name="keys" select="''"/>
     <xsl:param name="perspective" select="'status'"/>
     <xsl:param name="toolkit" select="'html'"/>
     <xsl:param name="linktext" select="./aspect[@name='name']/value"/>
@@ -84,6 +114,7 @@
         <xsl:call-template name="object_link_href">
           <xsl:with-param name="type" select="$type"/>
           <xsl:with-param name="key" select="$key"/>
+          <xsl:with-param name="keys" select="$keys"/>
           <xsl:with-param name="id" select="$id"/>
           <xsl:with-param name="perspective" select="$perspective"/>
           <xsl:with-param name="toolkit" select="$toolkit"/>
