@@ -47,6 +47,11 @@ class Genome::Model::Tools::Allpaths::DeNovoAssemble {
             doc => 'name of the reference',
             default_value => 'sample',
         },
+        haploidify => {
+            is => 'Boolean',
+            doc => 'Run Allpaths with haploidify option',
+            default_value => 0,
+        },
     ],
 };
 
@@ -99,7 +104,14 @@ sub execute {
     else {
         $overwrite = "False";
     }
-    my $cmd = 'ulimit -s 100000 && '.$self->executable_for_version("RunAllPathsLG").' PRE='.$self->pre.' REFERENCE_NAME='.$self->reference_name.' DATA_SUBDIR=data RUN='.$self->run.' SUBDIR='.$self->sub_dir.' TARGETS=standard OVERWRITE='.$overwrite;
+    my $haploidify;
+    if ($self->haploidify) {
+        $haploidify="True";
+    }
+    else {
+        $haploidify="False";
+    }
+    my $cmd = 'ulimit -s 100000 && '.$self->executable_for_version("RunAllPathsLG").' PRE='.$self->pre.' REFERENCE_NAME='.$self->reference_name.' DATA_SUBDIR=data RUN='.$self->run.' SUBDIR='.$self->sub_dir.' TARGETS=standard OVERWRITE='.$overwrite.' HAPLOIDIFY='.$haploidify;
 
     $self->status_message("Run ALLPATHS de novo");
     Genome::Sys->shellcmd(cmd => $cmd);
