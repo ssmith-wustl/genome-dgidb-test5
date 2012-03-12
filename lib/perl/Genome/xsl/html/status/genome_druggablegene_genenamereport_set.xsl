@@ -45,7 +45,15 @@
               <br />
               <ul>
                 <xsl:for-each select="no_interaction_genes/item">
-                  <li><xsl:value-of select='.' /></li>
+                  <li>
+                    <xsl:call-template name='object_link_button'>
+                      <xsl:with-param name='type' select="'Genome::DruggableGene::GeneNameReport::Set'"/>
+                      <xsl:with-param name="key" select="'name'"/>
+                      <xsl:with-param name="id" select="gene"/>
+                      <xsl:with-param name="linktext" select="gene"/>
+                    </xsl:call-template>
+                    <xsl:value-of select='identifiers' />
+                  </li>
                 </xsl:for-each>
               </ul>
             </div>
@@ -81,7 +89,7 @@
               <thead>
                 <tr>
                   <th>Drug</th>
-                  <th>Interaction Type</th>
+                  <th>Interaction</th>
                   <th>Gene</th>
                   <th>Search Term</th>
                 </tr>
