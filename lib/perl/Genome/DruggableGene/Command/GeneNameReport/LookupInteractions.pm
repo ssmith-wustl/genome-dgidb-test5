@@ -73,7 +73,25 @@ sub help_synopsis {
 
 }
 
-sub help_detail { help_brief() }
+sub help_detail {
+    return <<EOS
+LookupInteractions expects a gene-file consisting of a list of gene identifiers one per line and outputs one interaction per line.
+
+Example Syntax:
+
+genome druggable-gene gene-name-report lookup-interactions --gene-file=gene_names.txt --filter='drug.is_approved=1,drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_attributes.name=is_known_action,interaction_attributes.value=yes,is_potentiator=0'
+
+genome druggable-gene gene-name-report lookup-interactions --gene-file=gene_names.txt --filter='drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_attributes.name=is_known_action,interaction_attributes.value=yes,is_potentiator=0'
+
+genome druggable-gene gene-name-report lookup-interactions --gene-file=gene_names.txt --filter='drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,(is_untyped=0 or is_known_action=1)';
+
+genome druggable-gene gene-name-report lookup-interactions --gene-file=gene_names.txt --filter='drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,is_inhibitor=1,(is_untyped=0 or is_known_action=1)';
+
+genome druggable-gene gene-name-report lookup-interactions --gene-file=gene_names.txt --filter='drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,gene.is_kinase=1,(is_untyped=0 or is_known_action=1)';
+
+genome druggable-gene gene-name-report lookup-interactions --gene-file=gene_names.txt --filter='drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,drug.is_antineoplastic=1,(is_untyped=0 or is_known_action=1)';
+EOS
+}
 
 sub execute {
     my $self = shift;
