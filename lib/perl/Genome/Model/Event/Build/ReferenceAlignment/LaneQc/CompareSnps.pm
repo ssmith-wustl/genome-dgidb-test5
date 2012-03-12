@@ -80,14 +80,9 @@ sub resolve_geno_path_for_build {
 
     my $geno_path;
     if ($build->region_of_interest_set_name) {
-        my $feature_list = Genome::FeatureList->get(name => $build->region_of_interest_set_name);
-        unless ($feature_list) {
-            die $self->error_message("Unable to get FeatureList (name => " . $build->region_of_interest_set_name . ")");
-        }
         my $output_dir = $build->qc_directory;
 
-        my $sorted_feature_list_path = "$output_dir/sorted_feature_list.bed";
-        system(join(' ', 'sort -V', $feature_list->file_path, '>', $sorted_feature_list_path));
+        my $roi_bed_path = $build->region_of_interest_set_bed_file;
 
         # Convert original gold2geno file into a BED for easy intersection with FeatureList
         my $gold2geno_bed_path = UR::Value::FilePath->get("$output_dir/genotype.gold2geno.bed");
@@ -110,7 +105,7 @@ sub resolve_geno_path_for_build {
         my $intersected_gold2geno_bed_path = UR::Value::FilePath->get("$intersected_gold2geno_path.bed");
         my $intersect_cmd = Genome::Model::Tools::Joinx::Intersect->create(
             input_file_a => "$gold2geno_bed_path", # genotype first
-            input_file_b => "$sorted_feature_list_path",
+            input_file_b => "$roi_bed_path",
             output_file  => "$intersected_gold2geno_bed_path",
         );
         unless ($intersect_cmd->execute) {
