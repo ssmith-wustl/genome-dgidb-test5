@@ -21,7 +21,7 @@ my $DEFAULT_PRINT_MIN_MAX = 0;
 my $DEFAULT_PRINT_HEADERS = 0;
 my $DEFAULT_RELATIVE_COVERAGE = 0;
 my $DEFAULT_EMBED_BED = 0;
-my $DEFAULT_NORMALIZE_WITH_FORMULA = '$X';
+my $DEFAULT_NORMALIZE_WITH_FORMULA = 0;
 
 # Coverage Parameters
 my $DEFAULT_MINIMUM_MAPPING_QUALITY = 0;
@@ -987,7 +987,7 @@ sub resolve_stats_file_headers {
     }
     if ($self->normalize_with_formula()) {
         push( @headers, 'norm_ave_cov_depth' );
-	if ($self->print_min_max()) {
+	if ($self->normalize_with_formula() && $self->print_min_max()) {
 	    push( @headers, 'norm_minimum_coverage_depth', 'norm_maximum_coverage_depth' );
 	}
     }
@@ -1269,7 +1269,7 @@ sub print_roi_coverage {
 		my $ave_depth_x = $stat->ave_cov_depth();
 		$ave_formula =~ s/\$X/$ave_depth_x/g;
 		$data->{'norm_ave_cov_depth'} = eval( $ave_formula );
-		if ($self->print_min_max()) {
+		if ($self->normalize_with_formula() && $self->print_min_max()) {
 		    # Min Depth (normalization)
 		    my $min_formula = $self->normalize_with_formula();
 		    my $min_depth_x = $stat->minimum_coverage_depth();

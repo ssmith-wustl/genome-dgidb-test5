@@ -212,6 +212,12 @@ sub print_grouped_interactions{
     my @headers = qw/
     drug_name_report
     drug_nomenclature
+    drug_primary_name
+    drug_alternate_names
+    drug_brands
+    drug_types
+    drug_groups
+    drug_categories
     drug_source_db_name
     drug_source_db_version
     gene_name_report
@@ -247,9 +253,15 @@ sub _build_interaction_line {
     my $drug = $interaction->drug;
     my $gene = $interaction->gene;
     my $gene_alternate_names = join(':', map($_->alternate_name, $gene->gene_alt_names));
+    my ($drug_primary_name) = map($_->alternate_name, grep($_->nomenclature =~ /primary/i, $drug->drug_alt_names));
+    my $drug_alternate_names = join(':', map($_->alternate_name, grep($_->nomenclature !~ /primary/i && $_->nomenclature ne 'drug_brand', $drug->drug_alt_names)));
+    my $drug_brands = join(':', map($_->alternate_name, grep($_->nomenclature eq 'drug_brand', $drug->drug_alt_names)));
+    my $drug_types = join(';', map($_->category_value, grep($_->category_name eq 'drug_type', $drug->drug_categories)));
+    my $drug_groups = join(';', map($_->category_value, grep($_->category_name eq 'drug_group', $drug->drug_categories)));
+    my $drug_categories = join(';', map($_->category_value, grep($_->category_name eq 'drug_category', $drug->drug_categories)));
     my $interaction_types = join(':', $interaction->interaction_types);
-    my $interaction_line = join("\t", $drug->name,
-        $drug->nomenclature, $drug->source_db_name, $drug->source_db_version,
+    my $interaction_line = join("\t", $drug->name, $drug->nomenclature, $drug_primary_name,
+        $drug_alternate_names, $drug_brands, $drug_types, $drug_groups, $drug_categories, $drug->source_db_name, $drug->source_db_version,
         $gene->name, $gene->nomenclature, $gene_alternate_names,
         $gene->source_db_name, $gene->source_db_version, $interaction_types);
     return $interaction_line;
@@ -294,15 +306,21 @@ sub _chunk_in_clause_list{
         push @chunked_values, [splice(@values,0,249)];
     }
 
-    my ($boolexpr, %extra) = UR::BoolExpr->resolve_for_string(
-        $target_class,
-        '(' . join(' or ', map($property_name . (scalar(@$_) > 1 ? ':' : '=') . join('/', map('"' . $_ . '"', @$_)), @chunked_values)) . ')'
-        . ($filter ? ' and ' . $filter : '')
-        ,
-    );
+    my $filter_bx;
+    if($filter) {
+        my %extra;
+        ($filter_bx, %extra) = UR::BoolExpr->resolve_for_string($target_class, $filter);
 
-    $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
-        and return if %extra;
+        $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
+            and return if %extra;
+    }
+
+    my @filter_params = ($filter_bx? $filter_bx->params_list : ());
+    my $boolexpr = $target_class->define_boolexpr(
+        '-or' => [
+            map([$property_name => $_, @filter_params], @chunked_values)
+        ],
+    );
 
     return $boolexpr;
 }
