@@ -315,12 +315,26 @@ sub _chunk_in_clause_list{
             and return if %extra;
     }
 
+    my $boolexpr;
     my @filter_params = ($filter_bx? $filter_bx->params_list : ());
-    my $boolexpr = $target_class->define_boolexpr(
-        '-or' => [
+    if(@filter_params and $filter_params[0] eq '-or') {
+        #This should be unnecessary, but UR's handling of "or"s is currently inelegant
+        $boolexpr = $target_class->define_boolexpr(
+            '-or' => [
+                map {
+                    my $filter_param = $_;
+                    map([$property_name => $_, @$filter_param], @chunked_values);
+                } @{$filter_params[1]},
+            ]
+        );
+
+    } else {
+        $boolexpr = $target_class->define_boolexpr(
+            '-or' => [
             map([$property_name => $_, @filter_params], @chunked_values)
-        ],
-    );
+            ],
+        );
+    }
 
     return $boolexpr;
 }
