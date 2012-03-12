@@ -42,7 +42,8 @@ sub build_by_version {
     my $self = shift;
     my $version = shift;
 
-    my @builds =  grep { $_->version eq $version } $self->completed_builds;
+    my @builds =  grep { $_->version eq $version } $self->builds;
+    @builds = grep{ $_->status eq 'Succeeded' || $_->status eq 'Running' } @builds;
     if (@builds > 1) {
         my $versions_string = join("\n", map { "model_id ".$_->model_id." build_id ".$_->build_id." version ".$_->version } @builds);
         $self->error_message("Multiple builds for version $version of model " . $self->genome_model_id.", ".$self->name."\n".$versions_string."\n");
