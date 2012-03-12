@@ -274,6 +274,9 @@ sub execute {
             $start =~ s/NotListed/ /;
             $stop =~ s/NotListed/ /;
 
+            $chr =~ s/23/X/;
+            $chr =~ s/24/Y/;
+
             $amino = $parser[$amino_col];
             $nucleo = $parser[$nucleo_col];
             $somatic = $parser[$somatic_col];
