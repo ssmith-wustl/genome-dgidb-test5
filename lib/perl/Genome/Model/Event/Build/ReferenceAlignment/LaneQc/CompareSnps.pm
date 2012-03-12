@@ -101,11 +101,22 @@ sub resolve_geno_path_for_build {
             die "Converted gold2geno BED ($gold2geno_bed_path) line count does not match original gold2geno line count ($original_gold2geno_path)";
         }
 
+        my $sorted_bed_path = Genome::Sys->create_temp_file_path();
+
+        my $sort_cmd = Genome::Model::Tools::Joinx::Sort->create(
+            input_files => [$roi_bed_path],
+            output_file => "$sorted_bed_path",
+        );
+
+        unless ($sort_cmd->execute) {
+            die $self->error_message("Failed to sort feature list BED.");
+        }
+
         my $intersected_gold2geno_path = UR::Value::FilePath->get("$output_dir/intersected_genotype.gold2geno");
         my $intersected_gold2geno_bed_path = UR::Value::FilePath->get("$intersected_gold2geno_path.bed");
         my $intersect_cmd = Genome::Model::Tools::Joinx::Intersect->create(
             input_file_a => "$gold2geno_bed_path", # genotype first
-            input_file_b => "$roi_bed_path",
+            input_file_b => "$sorted_bed_path",
             output_file  => "$intersected_gold2geno_bed_path",
         );
         unless ($intersect_cmd->execute) {
