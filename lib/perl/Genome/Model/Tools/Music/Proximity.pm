@@ -11,7 +11,7 @@ class Genome::Model::Tools::Music::Proximity {
   has_input => [
     maf_file => { is => 'Text', doc => "List of mutations using TCGA MAF specifications v2.2" },
     output_dir => { is => 'Text', doc => "Directory where output files will be written" },
-    max_proximity => { is => 'Text', doc => "Maximum allowed AA distance between 2 mutations", is_optional => 1, default => 10 },
+    max_proximity => { is => 'Text', doc => "Maximum allowed AA distance between 2 mutations", is_optional => 1, default => 7 },
   ],
   has_output => [
     output_file => {is => 'Text', doc => "TODO"},
