@@ -574,8 +574,8 @@ sub annotation_file {
     if (-s $file_name) {
         return $file_name;
     }
-    # This is to allow the path for a transcriptome index prefix to return
-    if (defined($suffix)) {
+    if (defined($suffix) && $suffix eq '') {
+        # This is to allow the path for a transcriptome index prefix to return
         return $file_name;
     }
     return undef;
