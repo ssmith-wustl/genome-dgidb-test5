@@ -81,17 +81,31 @@ sub get_interactions_node {
 
     for my $interaction ($self->interactions){
         my $item = $doc->createElement('item');
-        my $line = $interaction->__display_name__;
+        $interactions->addChild($item);
+        my $drug = $doc->createElement('drug');
+        $drug->addChild($doc->createAttribute('key', 'drug_name'));
+        $drug->addChild($doc->createTextNode($interaction->drug_name));
+        $item->addChild($drug);
+        my $gene = $doc->createElement('gene');
+        $gene->addChild($doc->createAttribute('key', 'gene_name'));
+        $gene->addChild($doc->createTextNode($interaction->gene_name));
+        $item->addChild($gene);
+        my $interaction_types = $doc->createElement('interaction_type');
+        $interaction_types->addChild($doc->createTextNode(join(', ', $interaction->interaction_types)));
+        $item->addChild($interaction_types);
+        my $identifier = $doc->createElement('identifier');
+        $item->addChild($identifier);
+
+        my @identifiers;
         IDENTIFIER: while (my ($identifier, $genes) = each %{$self->identifier_to_genes}){
             for my $identified_gene (@$genes){
                 if($identified_gene == $interaction->gene){
-                    $line .= ' ( ' . $identifier . ' ) ';
+                    push @identifiers, $identifier;
                     next IDENTIFIER;
                 }
             }
         }
-        $item->addChild($doc->createTextNode($line));
-        $interactions->addChild($item);
+        $identifier->addChild($doc->createTextNode(join(', ', @identifiers)));
     }
 
     return $interactions;

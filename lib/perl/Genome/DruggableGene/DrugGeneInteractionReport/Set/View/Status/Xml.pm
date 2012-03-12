@@ -18,8 +18,8 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Status::Xml {
                     toolkit => 'xml',
                     subject_class_name => 'Genome::DruggableGene::DrugGeneInteractionReport',
                     aspects => [
-                        'drug_name_report_name',
-                        'gene_name_report_name',
+                        'drug_name',
+                        'gene_name',
                         'interaction_types'
                     ],
                },

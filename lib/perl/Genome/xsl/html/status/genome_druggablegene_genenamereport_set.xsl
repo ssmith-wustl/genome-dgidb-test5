@@ -6,6 +6,7 @@
     <script type='text/javascript' src='/res/js/pkg/boxy/javascripts/jquery.boxy.js'></script>
     <link rel="stylesheet" href="/res/js/pkg/boxy/stylesheets/boxy.css" type="text/css" />
     <script type='text/javascript' src='/res/js/app/genome_model_build_list.js'></script>
+    <script class="jsbin" src="http://datatables.net/download/build/jquery.dataTables.nightly.js"></script>
 
     <xsl:call-template name="control_bar_view"/>
 
@@ -76,16 +77,66 @@
           <div class="box_content rounded-bottom span-24 last">
 
             <br />
-            <ul>
-              <xsl:for-each select="interactions/item">
-                <li><xsl:value-of select='.' /></li>
-              </xsl:for-each>
-            </ul>
+            <table class='dataTable' id='interactions'>
+              <thead>
+                <tr>
+                  <th>Drug</th>
+                  <th>Interaction Type</th>
+                  <th>Gene</th>
+                  <th>Search Term</th>
+                </tr>
+              </thead>
+              <tbody>
+                <xsl:for-each select="interactions/item">
+                  <tr>
+                    <th>
+                      <xsl:call-template name='object_link_button'>
+                        <xsl:with-param name='type' select="'Genome::DruggableGene::DrugNameReport::Set'"/>
+                        <xsl:with-param name="key" select="'name'"/>
+                        <xsl:with-param name="id" select="drug"/>
+                        <xsl:with-param name="linktext" select="drug"/>
+                      </xsl:call-template>
+                    </th>
+                    <th>
+                      <xsl:call-template name='object_link_button'>
+                        <xsl:with-param name='type' select="'Genome::DruggableGene::DrugGeneInteractionReport::Set'"/>
+                        <xsl:with-param name="keys" select='.'/>
+                        <xsl:with-param name="linktext" select="interaction_type"/>
+                      </xsl:call-template>
+                    </th>
+                    <th>
+                      <xsl:call-template name='object_link_button'>
+                        <xsl:with-param name='type' select="'Genome::DruggableGene::GeneNameReport::Set'"/>
+                        <xsl:with-param name="key" select="'name'"/>
+                        <xsl:with-param name="id" select="gene"/>
+                        <xsl:with-param name="linktext" select="gene"/>
+                      </xsl:call-template>
+                    </th>
+                    <th><xsl:value-of select='identifier' /></th>
+                  </tr>
+                </xsl:for-each>
+              </tbody>
+            </table>
           </div>
         </div>
 
       </div> <!-- end container -->
     </div> <!-- end content -->
+
+
+    <script type="text/javascript">
+      $(document).ready(function(){
+      $('#interactions').dataTable({
+      "sScrollX": "100%",
+      "sScrollInner": "110%",
+      "bJQueryUI": true,
+      "sPaginationType": "full_numbers",
+      "bStateSave": true,
+      "iDisplayLength": 25
+      });
+      }
+      );
+    </script>
 
     <xsl:call-template name="footer">
       <xsl:with-param name="footer_text">
