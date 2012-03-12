@@ -58,17 +58,22 @@ sub get_no_interaction_genes_node {
 
     for my $gene ($self->no_interaction_genes){
         my $item = $doc->createElement('item');
-        my $line = $gene->name;
+        $no_interaction_genes->addChild($item);
+        my $gene_name = $doc->createElement('gene');
+        $gene_name->addChild($doc->createTextNode($gene->name));
+        $item->addChild($gene_name);
+        my $identifiers = $doc->createElement('identifiers');
+        $item->addChild($identifiers);
+        my @search_terms;
         IDENTIFIER: while (my ($identifier, $genes) = each %{$self->identifier_to_genes}){
             for my $identified_gene (@$genes){
                 if($identified_gene == $gene){
-                    $line .= ' ( ' . $identifier . ' ) ';
+                    push @search_terms, $identifier;
                     next IDENTIFIER;
                 }
             }
         }
-        $item->addChild($doc->createTextNode($line));
-        $no_interaction_genes->addChild($item);
+        $identifiers->addChild($doc->createTextNode('(' . join(' , ', @search_terms) . ')')) if @search_terms;
     }
 
     return $no_interaction_genes;
