@@ -54,12 +54,12 @@ sub execute {
     my @builds;
     my $annotation_build;
     my $reference_build;
-    my %subject_metrics;
+    my %model_metrics;
     my @metric_headers = qw/LABEL TOTAL_READS TOTAL_READS_MAPPED TOTAL_READS_UNMAPPED PCT_READS_MAPPED/;
     my @model_metric_keys;
     for my $model (@models) {
-        if ( defined($subject_metrics{$model->subject_name}) ) {
-            die('Multiple models for subject: '. $model->subject_name);
+        if ( defined($model_metrics{$model->name}) ) {
+            die('Multiple models with name: '. $model->name);
         }
         my $build = $model->last_succeeded_build;
         unless ($build) {
@@ -72,7 +72,8 @@ sub execute {
         my $model_reference_sequence_build = $model->reference_sequence_build;
         if ($reference_build) {
             unless ($reference_build->id eq $model_reference_sequence_build->id) {
-                die('Mis-match reference sequence builds!');
+                $self->error_message('Mis-match reference sequence builds!');
+                die($self->error_message);
             }
         } else {
             $reference_build = $model_reference_sequence_build;
@@ -80,18 +81,21 @@ sub execute {
         my $model_annotation_build = $model->annotation_build;
         if ($annotation_build) {
             unless ($annotation_build->id eq $model_annotation_build->id) {
-                die('Mis-match annotation builds!');
+                $self->error_message('Mis-match annotation builds!');
+                die($self->error_message);
             }
         } else {
             $annotation_build = $model_annotation_build;
         }
         my $metrics_directory = $build->data_directory .'/metrics';
         unless (-d $metrics_directory) {
-            die('Missing metrics directory: '. $metrics_directory);
+            $self->error_message('Missing metrics directory: '. $metrics_directory);
+            die($self->error_message);
         }
         my $metrics_file = $metrics_directory .'/PicardRnaSeqMetrics.txt';
         unless (-e $metrics_file) {
-            die('Missing Picard RNAseq metrics file: '. $metrics_file);
+            $self->error_message('Missing Picard RNAseq metrics file: '. $metrics_file);
+            die($self->error_message);
         }
         my $metrics = Genome::Model::Tools::Picard::CollectRnaSeqMetrics->parse_file_into_metrics_hashref($metrics_file);
         unless ($metrics) {
@@ -103,11 +107,11 @@ sub execute {
         } else {
             #TODO: Check that all metrics files have the same headers...
         }
-        $subject_metrics{$model->subject_name}{metrics} = $metrics;
+        $model_metrics{$model->name}{metrics} = $metrics;
         my $histo = Genome::Model::Tools::Picard::CollectRnaSeqMetrics->parse_metrics_file_into_histogram_hashref($metrics_file);
         # This is only available in picard v1.52 or greater
         if ($histo) {
-            $subject_metrics{$model->subject_name}{histogram} = $histo;
+            $model_metrics{$model->name}{histogram} = $histo;
         }
     }
 
@@ -119,8 +123,8 @@ sub execute {
 
     my %transcript_coverage;
     for my $build (@builds) {
-        my $subject_name = $build->model->subject_name;
-        my $metrics = $subject_metrics{$subject_name}{'metrics'};
+        my $name = $build->model->name;
+        my $metrics = $model_metrics{$name}{'metrics'};
 
         my $tophat_stats =  $build->data_directory .'/alignments/alignment_stats.txt';
         my $tophat_fh = Genome::Sys->open_file_for_reading($tophat_stats);
@@ -137,7 +141,7 @@ sub execute {
             die('Metrics not parsed correctly: '. Data::Dumper::Dumper(%tophat_metrics));
         }
         my %summary = (
-            LABEL => $subject_name,
+            LABEL => $name,
             TOTAL_READS => $tophat_metrics{'TOTAL_READS'},
             TOTAL_READS_MAPPED => $tophat_metrics{'TOTAL_READS_MAPPED'},
             TOTAL_READS_UNMAPPED => ($tophat_metrics{'TOTAL_READS'} - $tophat_metrics{'TOTAL_READS_MAPPED'}),
@@ -150,17 +154,17 @@ sub execute {
             }
         }
         $metrics_writer->write_one(\%summary);
-        if (defined($subject_metrics{$subject_name}{'histogram'}) ) {
-            my $histo = $subject_metrics{$subject_name}{'histogram'};
+        if (defined($model_metrics{$name}{'histogram'}) ) {
+            my $histo = $model_metrics{$name}{'histogram'};
             for my $position (keys %{$histo}) {
-                $transcript_coverage{$position}{$subject_name} = $histo->{$position}{normalized_coverage};
+                $transcript_coverage{$position}{$name} = $histo->{$position}{normalized_coverage};
             }
         }
     }
 
     if ($self->normalized_transcript_coverage_file) {
-        my @subjects = sort keys %subject_metrics;
-        my @coverage_headers = ('POSITION',@subjects);
+        my @models = sort keys %model_metrics;
+        my @coverage_headers = ('POSITION',@models);
         my $coverage_writer = Genome::Utility::IO::SeparatedValueWriter->create(
             output => $self->normalized_transcript_coverage_file,
             separator => "\t",
@@ -170,7 +174,7 @@ sub execute {
             my %data = (
                 POSITION => $position,
             );
-            for my $label (@subjects) {
+            for my $label (@models) {
                 $data{$label} = $transcript_coverage{$position}{$label};
             }
         $coverage_writer->write_one(\%data);
