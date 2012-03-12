@@ -64,10 +64,15 @@ class Genome::Model::PhenotypeCorrelation {
             is => 'Genome::Model::Build::ReferenceSequence',
             doc => 'the reference sequence against which alignment and variant detection are done',
         },
+        previous_variant_detection_results => {
+            is => 'FilesystemPath',
+            is_optional => 1,
+            doc => 'path to a VCF of previous: skip variant detection and use this',
+        },
         nomenclature => {
             is => 'Genome::Nomenclature',
             doc => 'nomenclature used to access clinical data'
-        }
+        },
     ],
     has_optional_input => [
         roi_list => {
@@ -219,24 +224,11 @@ sub _execute_build {
     warn "The logic for building this model is only partly functional!  Contact Human Genomics or put in an APIPE-support ticket..";
 
     #
-    # get the subject (population group), the individual members and their samples
+    # the subject is a population group
     #
 
     my $population_group = $build->model->subject;
     $build->status_message("subject is " . $population_group->__display_name__);
-
-    my @patients = $population_group->members();
-    $build->status_message("found " . scalar(@patients) . " patients");
-
-    my @samples = $population_group->samples;
-    $build->status_message("found " . scalar(@samples) . " samples");
-
-    my @instdata_assn = $build->inputs(name => 'instrument_data');
-    $build->status_message("found " . scalar(@instdata_assn) . " assignments for the current build");
-
-    #my @instdata = Genome::InstrumentData->get(id => [ map { $_->value_id } @instdata_assn ]);
-    my @instdata = map { $_->value } @instdata_assn;
-    $build->status_message("found " . scalar(@instdata) . " instdata");
 
     #
     # get the reference sequence
@@ -252,124 +244,162 @@ sub _execute_build {
     $build->status_message("reference sequence fasta: " . $reference_fasta);
 
     #
-    # get the alignment results for each sample
-    # this will only work right now if the per-sample model has already run
-    # once Tom's new alignment thing is in place, it would actually generate them in parallel
+    # get or create the vcf
     #
-    
-    my $actually_gather_alignment_results = 1;
 
-    my @per_sample_alignment_results;
-    my @bams;
+    my $multisample_vcf;
     my @builds;
-    
-    if ($SHORTCUT_ALIGNMENT_QUERY) {
-        # shortcut to speed testing
-        @per_sample_alignment_results = Genome::SoftwareResult->get(
-            [
-                '116553088',
-                '116553238',
-                '116553281'
-            ]
-        );
-        
-        @builds = Genome::Model::Build->get(
-            [
-                '116552788',
-                '116552996',
-                '116553031'
-            ]
-        );
+    my @samples;
+    if (! $build->previous_variant_detection_results) {
+        # generate a multisample VCF
 
-        @bams = (
-          '/gscmnt/gc7001/info/build_merged_alignments/merged-alignment-blade13-4-10.gsc.wustl.edu-rlong-14103-116553088/116553088.bam',
-          '/gscmnt/gc7001/info/build_merged_alignments/merged-alignment-blade13-4-10.gsc.wustl.edu-rlong-17210-116553238/116553238.bam',
-          '/gscmnt/ams1152/info/build_merged_alignments/merged-alignment-blade13-4-7.gsc.wustl.edu-rlong-12110-116553281/116553281.bam'
-        );
+        #
+        # get the subject (population group), the individual members and their samples
+        #
+
+        my @patients = $population_group->members();
+        $build->status_message("found " . scalar(@patients) . " patients");
+
+        @samples = $population_group->samples;
+        $build->status_message("found " . scalar(@samples) . " samples");
+
+        my @instdata_assn = $build->inputs(name => 'instrument_data');
+        $build->status_message("found " . scalar(@instdata_assn) . " assignments for the current build");
+
+        #my @instdata = Genome::InstrumentData->get(id => [ map { $_->value_id } @instdata_assn ]);
+        my @instdata = map { $_->value } @instdata_assn;
+        $build->status_message("found " . scalar(@instdata) . " instdata");
+
+        #
+        # get the alignment results for each sample
+        # this will only work right now if the per-sample model has already run
+        # once Tom's new alignment thing is in place, it would actually generate them in parallel
+        #
+        
+        my $actually_gather_alignment_results = 1;
+
+        my @per_sample_alignment_results;
+        my @bams;
+        
+        if ($SHORTCUT_ALIGNMENT_QUERY) {
+            # shortcut to speed testing
+            @per_sample_alignment_results = Genome::SoftwareResult->get(
+                [
+                    '116553088',
+                    '116553238',
+                    '116553281'
+                ]
+            );
+            
+            @builds = Genome::Model::Build->get(
+                [
+                    '116552788',
+                    '116552996',
+                    '116553031'
+                ]
+            );
+
+            @bams = (
+            '/gscmnt/gc7001/info/build_merged_alignments/merged-alignment-blade13-4-10.gsc.wustl.edu-rlong-14103-116553088/116553088.bam',
+            '/gscmnt/gc7001/info/build_merged_alignments/merged-alignment-blade13-4-10.gsc.wustl.edu-rlong-17210-116553238/116553238.bam',
+            '/gscmnt/ams1152/info/build_merged_alignments/merged-alignment-blade13-4-7.gsc.wustl.edu-rlong-12110-116553281/116553281.bam'
+            );
+        }
+        else {
+            $self->status_message('Gathering alignments...');    
+            my $overall_alignment_result = Genome::InstrumentData::Composite->get_or_create(
+                inputs => {
+                    instrument_data => \@instdata,
+                    reference_sequence_build => $reference_build,
+                },
+                strategy => $self->alignment_strategy,
+                log_directory => $build->log_directory,
+            );
+
+            # used by the updated DV2 API
+            @per_sample_alignment_results = $overall_alignment_result->_merged_results;
+            for my $r (@per_sample_alignment_results) {
+                $r->add_user(label => 'uses', user => $build);
+            }
+            $self->status_message('Found ' . scalar(@per_sample_alignment_results) . ' per-sample alignmnet results.');
+
+            # used directly by the merge tool until we switch to using the above directly
+            @bams = $overall_alignment_result->bam_paths;
+            $self->status_message('Found ' . scalar(@bams) . ' merged BAMs.');
+            for my $bam (@bams){
+                unless (-e $bam){
+                    die $self->error_message("Bam file could not be reached at: ".$bam);
+                }
+            }
+
+            # this is used by the old, non-DV2 code, but is also used by vcf2maf, 
+            # which reliese on annotation having been run on the original samples
+            @builds = $self->_get_builds(\@per_sample_alignment_results);
+        
+            my @ar_ids = map { $_->id } @per_sample_alignment_results;
+            my @build_ids = map { $_->id } @builds; 
+            print Data::Dumper::Dumper(\@ar_ids, \@build_ids, \@bams);
+        }
+
+        #
+        # Detect Variants
+        #
+        # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
+        # _internally_ it will (for the first pass):
+        #  notice it's running on multiple BAMs
+        #  get the single-BAM results
+        #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
+        #  run bamreadcount to fill-in the blanks
+        #
+
+        $self->status_message("Executing detect variants step");        
+
+        my %params;
+        $params{snv_detection_strategy} = $self->snv_detection_strategy if $self->snv_detection_strategy;
+        $params{indel_detection_strategy} = $self->indel_detection_strategy if $self->indel_detection_strategy;
+        $params{sv_detection_strategy} = $self->sv_detection_strategy if $self->sv_detection_strategy;
+        $params{cnv_detection_strategy} = $self->cnv_detection_strategy if $self->cnv_detection_strategy;
+
+        $params{reference_build_id} = $reference_build->id;
+
+        my $output_dir = $build->data_directory."/variants";
+        $params{output_directory} = $output_dir;
+
+        # instead of setting {control_,}aligned_reads_{input,sample}
+        # set alignment_results and control_alignment_results
+
+        $params{alignment_results} = \@per_sample_alignment_results;
+        $params{control_alignment_results} = [];
+        $params{pedigree_file_path} = $build->pedigree_file_path;
+        $params{roi_list} = $build->roi_list;
+        $params{roi_wingspan} = $self->roi_wingspan;
+
+        my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
+        unless ($command){
+            die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);
+        }
+
+        my $rv = $command->execute;
+        my $err = $@;
+        unless ($rv){
+            die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
+        }
+
+        $self->status_message("detect variants command completed successfully");
+
+        $multisample_vcf = $output_dir . '/snvs.merged.vcf.gz';
+
     }
     else {
-        $self->status_message('Gathering alignments...');    
-        my $overall_alignment_result = Genome::InstrumentData::Composite->get_or_create(
-            inputs => {
-                instrument_data => \@instdata,
-                reference_sequence_build => $reference_build,
-            },
-            strategy => $self->alignment_strategy,
-            log_directory => $build->log_directory,
-        );
-
-        # used by the updated DV2 API
-        @per_sample_alignment_results = $overall_alignment_result->_merged_results;
-        for my $r (@per_sample_alignment_results) {
-            $r->add_user(label => 'uses', user => $build);
-        }
-        $self->status_message('Found ' . scalar(@per_sample_alignment_results) . ' per-sample alignmnet results.');
-
-        # used directly by the merge tool until we switch to using the above directly
-        @bams = $overall_alignment_result->bam_paths;
-        $self->status_message('Found ' . scalar(@bams) . ' merged BAMs.');
-        for my $bam (@bams){
-            unless (-e $bam){
-                die $self->error_message("Bam file could not be reached at: ".$bam);
-            }
-        }
-
-        # this is used by the old, non-DV2 code, but is also used by vcf2maf, 
-        # which reliese on annotation having been run on the original samples
-        @builds = $self->_get_builds(\@per_sample_alignment_results);
-    
-        my @ar_ids = map { $_->id } @per_sample_alignment_results;
-        my @build_ids = map { $_->id } @builds; 
-        print Data::Dumper::Dumper(\@ar_ids, \@build_ids, \@bams);
+        $multisample_vcf = $self->previous_variant_detection_results;
+        $build->status_message("using pre-made VCF: $multisample_vcf");
+        
+        @samples = $population_group->samples;
+        $build->status_message("found " . scalar(@samples) . " samples");
+   
+        # TODO: don't dependin on underlying builds, for polymutt etc there won't be any
+        @builds = ();
     }
-
-    #
-    # Detect Variants
-    #
-    # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
-    # _internally_ it will (for the first pass):
-    #  notice it's running on multiple BAMs
-    #  get the single-BAM results
-    #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
-    #  run bamreadcount to fill-in the blanks
-    #
-
-    $self->status_message("Executing detect variants step");        
-
-    my %params;
-    $params{snv_detection_strategy} = $self->snv_detection_strategy if $self->snv_detection_strategy;
-    $params{indel_detection_strategy} = $self->indel_detection_strategy if $self->indel_detection_strategy;
-    $params{sv_detection_strategy} = $self->sv_detection_strategy if $self->sv_detection_strategy;
-    $params{cnv_detection_strategy} = $self->cnv_detection_strategy if $self->cnv_detection_strategy;
-
-    $params{reference_build_id} = $reference_build->id;
-
-    my $output_dir = $build->data_directory."/variants";
-    $params{output_directory} = $output_dir;
-
-    # instead of setting {control_,}aligned_reads_{input,sample}
-    # set alignment_results and control_alignment_results
-
-    $params{alignment_results} = \@per_sample_alignment_results;
-    $params{control_alignment_results} = [];
-    $params{pedigree_file_path} = $build->pedigree_file_path;
-    $params{roi_list} = $build->roi_list;
-    $params{roi_wingspan} = $self->roi_wingspan;
-
-    my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
-    unless ($command){
-        die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);
-    }
-
-    my $rv = $command->execute;
-    my $err = $@;
-    unless ($rv){
-        die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
-    }
-
-    $self->status_message("detect variants command completed successfully");
-
-    my $multisample_vcf = $output_dir . '/snvs.merged.vcf.gz';
 
     #
     # Continue with analysis of the multisample_vcf
