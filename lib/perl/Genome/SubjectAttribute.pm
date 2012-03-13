@@ -41,6 +41,10 @@ class Genome::SubjectAttribute {
             via => 'nomenclature_field',
              to => 'name'
         },
+        nomenclature_field_type => {
+            via => 'nomenclature_field',
+             to => 'type'
+        },
         nomenclature_name => {
             via => 'nomenclature_field',
              to => 'nomenclature_name',

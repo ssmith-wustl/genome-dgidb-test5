@@ -1,17 +1,16 @@
 package Genome::Model::SmallRna::Command::StatsGenerator;
-
 #based on input from ClusterCoverage(JW) instead of ClusterGenerator(JH)#
 #also merged sub-clustering
 #Additional parameter added to take in minimum % map score for subclustering 
 # FUNCTIONALITY FOR NORMALIZATION USING FLAGSTAT FILES
 	#a) added new parameter for taking in flagstat from 17-70 bp bam
 	#b) Other flagstat for the respective size-fraction will be intuitively determined
-	
-	
 # 2012-01-06 Tracking strandedness, changing headers
 # 2012-01-13 Make Normalization log transformed
 # 2012-01-13 Also added LSF params from the current version of StatsGen
 # 2012-02-20 Added error handling to ignore blank entries in cluster coverage
+# 2012-03-07 Added Major loci functionality
+# 2012-03-07 Multiplied %Map Zero *100 to represent 'Percent'
 
 use strict;
 use warnings;
@@ -127,29 +126,29 @@ sub execute {
 	
 	my $index    =  Bio::DB::Bam->index_open($bamfile);
 	
-	my	$output_cluster_bed = $self->output_clusters_file;
-    my  $output_cluster_fh = Genome::Sys->open_file_for_writing($output_cluster_bed);
-    my 	$sub_output_fh = Genome::Sys->open_file_for_writing($sub_output);
+	my $output_cluster_bed = $self->output_clusters_file;
+    	my  $output_cluster_fh = Genome::Sys->open_file_for_writing($output_cluster_bed);
+    	my 	$sub_output_fh = Genome::Sys->open_file_for_writing($sub_output);
     
-    ###  SORTING CLUSTERS FROM CLUSTER-COVERAGE STATS FILE AND WRITING ENTRIES TO A NEW "SORTED" FILE##
+	###  SORTING CLUSTERS FROM CLUSTER-COVERAGE STATS FILE AND WRITING ENTRIES TO A NEW "SORTED" FILE##
     
-    my ($sorted_temp_fh, $sorted_temp_name) = Genome::Sys->create_temp_file();
-    my $cmd = 'sort -nrk 2 '.$coverage.' > '.$sorted_temp_name;
+    	my ($sorted_temp_fh, $sorted_temp_name) = Genome::Sys->create_temp_file();
+    	my $cmd = 'sort -nrk 2 '.$coverage.' > '.$sorted_temp_name;
     
-    Genome::Sys->shellcmd(
-        cmd => $cmd,
-        input_files => [$self->coverage_stats_file],
-        output_files => [$sorted_temp_name],
-        skip_if_output_is_present => 0,
-    );
+    	Genome::Sys->shellcmd(
+        	cmd => $cmd,
+        	input_files => [$self->coverage_stats_file],
+        	output_files => [$sorted_temp_name],
+        	skip_if_output_is_present => 0,
+    		);
   
     ##OPENING "SORTED" COVERAGE FILE##
     my $coverage_fh = Genome::Sys->open_file_for_reading($sorted_temp_name);
-	my $i   = 0;
+    my $i   = 0;
     
     ### WRITING TO ALIGNMENT STATS FILE####
     my $output_fh = Genome::Sys->open_file_for_writing($output);
-	print $output_fh join("\t","Cluster",
+    print $output_fh join("\t","Cluster",
 		"Chr",
 		"Start",
 		"Stop",
@@ -170,7 +169,8 @@ sub execute {
 		"Avg MapQ",
 		"Std Dev Map Q",
 		"%Zero MapQ",
-		"Avg BaseQ")
+		"Avg BaseQ",
+		"Major Subcluster Loci")
 		."\n"	;
 		
 		
@@ -207,7 +207,7 @@ sub execute {
 		my $zenith_depth = $cov_arr[5];
 		my @line_arr = split ("-", $id);
 		my $chrom_start = $line_arr[0];
-	    $stop = $line_arr[1];
+	    	$stop = $line_arr[1];
 		
 		my @name_arr = split (':', $chrom_start);
 		my $chr  = $name_arr[0];
@@ -233,14 +233,14 @@ sub execute {
 		my $lookup   = $chr_to_id{$chr};
 		
 		####FIRST CALLBACK SUB-ROUTINE FOR ALIGNMENT STATS###	
-	   sub log_base {
+	   	sub log_base {
     					my ($base, $value) = @_;
    				 		return log($value)/log($base);
 					}
 	   	
 		my $callback = sub {
-			my $alignment = shift;
-            my $flag = $alignment->flag;
+		my $alignment = shift;
+            	my $flag = $alignment->flag;
 			
 			#### LOOKING AT ONLY MAPPED ALIGNMENTS FOR ALIGNMENT STATISTICS #####	
 			if ($flag != 4) 		
@@ -298,9 +298,9 @@ sub execute {
 		my $mean_mapQ  = $cluster_stats{mapping_quality}->mean();
 		my $stdev_mapQ = $cluster_stats{mapping_quality}->standard_deviation();
 		my $mean_baseQ = $cluster_stats{base_quality}->mean();
-	    my $total_alignments = $cluster_stats{mapping_quality}->count();
+	    	my $total_alignments = $cluster_stats{mapping_quality}->count();
 	   
-	    my $Percent_map_z = ($CountZeroMapQ / $total_alignments) * 100;
+	    	my $Percent_map_z = ($CountZeroMapQ / $total_alignments) * 100;
 		my $Percent_map_z_rounded = sprintf("%.2f", $Percent_map_z);
 	   
 		my $min_mismatch     = $cluster_stats{mismatches}->min();
@@ -312,7 +312,8 @@ sub execute {
 		my $log_normalization_bin 	= log_base(2,$normalization_bin );
 		
 		#print $name."\t"."Positive=".$positive_strand."\t"."Negative=".$negative_strand."\n";
-		print $output_fh join("\t",$name,$chr,$start,$stop,$depth,$zenith_depth,$cluster_length,$positive_strand,$negative_strand,$log_normalization_17_70,$log_normalization_bin). "\t";
+		print $output_fh 
+		join("\t",$name,$chr,$start,$stop,$depth,$zenith_depth,$cluster_length,$positive_strand,$negative_strand,$log_normalization_17_70,$log_normalization_bin). "\t";
 		
 		################## CALCULATING MISMATCH STATISTICS###
 		my $totalMM = 0;
@@ -342,21 +343,27 @@ sub execute {
 		
 		my $first_position_mm_percent;
 		if ($totalMM != 0)
-        {
-        	 $first_position_mm_percent = $first_position_mm/$totalMM;
-        }
-        else 
-        {
-        	 $first_position_mm_percent = 0;
-        	
-        }
-        print $output_fh  sprintf("%.2f", $first_position_mm_percent *100) . "\t";
+        	{
+        	 	$first_position_mm_percent = $first_position_mm/$totalMM;
+       		}
+        	else 
+        	{
+        	 	$first_position_mm_percent = 0;  	
+        	}
+        	print $output_fh  sprintf("%.2f", $first_position_mm_percent *100) . "\t";
 		####################################
 
 		print $output_fh sprintf("%.2f",$mean_mapQ) . "\t"
 		  . sprintf("%.2f", $stdev_mapQ) . "\t"
-		  . sprintf("%.2f", $CountZeroMapQ / $total_alignments) . "\t"
-		  . sprintf("%.2f", $mean_baseQ) . "\n";
+		  . sprintf("%.2f", $Percent_map_z_rounded) . "\t"
+  	  	  . sprintf("%.2f", $mean_baseQ) ; #added tab instead of new line to accomodate major loci field
+		
+		#if ( $Percent_map_z_rounded < $cutoff)
+
+                 #       {
+		#		print $output_fh "\n";
+		#	}
+
 
 ############ SECOND CALLBACK - LOOKING FOR SUB-CLUSTERS############
 
@@ -372,8 +379,7 @@ sub execute {
 				my $subclusters_fh = Genome::Sys->open_file_for_appending($bed_temp_name);	
 				my %Xa_hash;
 				my $XA_tag = $alignment->aux_get("XA");
-				
-			    my @XA_splitArr = split( ';', $XA_tag );
+			    	my @XA_splitArr = split( ';', $XA_tag );
 				foreach my $arr (@XA_splitArr) 
 				{
 				 	my @Tag = split( ',', $arr );
@@ -391,14 +397,14 @@ sub execute {
 				}
 				print $subclusters_fh join("\t", $Xa_hash{'chrom'},$Xa_hash{'start'},$Xa_hash{'stop'},$id ) . "\n";
 			}
-
 		};
-	$index->fetch( $bam, $lookup, $start, $stop, $second_callback );
+		$index->fetch( $bam, $lookup, $start, $stop, $second_callback );
 		
 	
-	######## MERGING BED FILE TO GET A SUBCLUSTERS BED FILE OF ENTRIES########
+######## MERGING BED FILE TO GET A SUBCLUSTERS BED FILE OF ENTRIES########
 
-		if ( -s $bed_temp_name ) {
+		if ( -s $bed_temp_name ) 
+		{
 			my $merged_bed_temp_name = Genome::Sys->create_temp_file_path();
 			unless (
 				Genome::Model::Tools::BedTools::Merge->execute(
@@ -406,16 +412,11 @@ sub execute {
 					output_file   => $merged_bed_temp_name,
 					report_number => 1 )
 					)
-			{
-				die;
-			}
-			
-			
+			{die;}
 			my $total_sub_depth=0;
 			my $j = 0;
-			
-			my $merged_bed_temp_fh = Genome::Sys->open_file_for_reading($merged_bed_temp_name);
-			
+			my @major_locus_array;
+			my $merged_bed_temp_fh = Genome::Sys->open_file_for_reading($merged_bed_temp_name);		
 			while ( my $line = $merged_bed_temp_fh->getline ) 
 			{
 				chomp $line;
@@ -431,13 +432,28 @@ sub execute {
 				chomp $line_new;
 				my ($sub_chr,$sub_start,$sub_stop,$raw_depth) = split( /\t/, $line_new );				
 				print $sub_output_fh $line_new ."\t".sprintf("%.2f",(($raw_depth/$total_sub_depth) * 100))."\t".$name . "." . $j . "\n";
+				my $percent_contribution = (($raw_depth/$total_sub_depth) * 100);
+				
+				if ($percent_contribution > 10)
+				{
+					#print $output_fh "\t".join("\t",$name . "." . $j,$percent_contribution). "\t";
+					my $sub_cluster_name = $name . "." . $j;
+					push (@major_locus_array,$sub_cluster_name);					
+				}				
 			}
-
 			unlink $bed_temp_name;
 			unlink $merged_bed_temp_name;
+			print $output_fh "\t".scalar(@major_locus_array)."\n";			
+		}
+		else
+		{
+			print $output_fh "\t"."0"."\n";
 		}
 
-	 }} #### CLOSING COVERAGE FILE
+	 }
+	 
+#	 print $output_fh "\n";
+	 } #### CLOSING COVERAGE FILE
 	 
 	if ( -s $sub_output ) {
 		unless (Genome::Model::Tools::BedTools::Intersect->execute(

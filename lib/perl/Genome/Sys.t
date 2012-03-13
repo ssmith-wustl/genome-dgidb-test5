@@ -47,6 +47,8 @@ change_rollback_removes_symlink_for_create_symlink_and_log_change();
 
 test_sudo_username();
 
+test_file_operations();
+
 done_testing();
 
 sub change_rollback_removes_symlink_for_create_symlink_and_log_change {
@@ -105,4 +107,31 @@ sub test_sudo_username {
     }
 
     use warnings qw(redefine);
+}
+
+sub test_file_operations {
+    my $gzip_path = Genome::Sys->create_temp_file_path;
+    ok ($gzip_path, "Got a tmp path");
+    my $gzip_fh = Genome::Sys->open_gzip_file_for_writing($gzip_path);
+    ok ($gzip_fh, "got a gzip fh");
+
+    $gzip_fh->print("Testing");
+    $gzip_fh->close;
+
+    my $gzip_type = Genome::Sys->_file_type($gzip_path);
+    is($gzip_type, "gzip", "The file type is gzip");
+
+    my $symlink_path = Genome::Sys->create_temp_file_path;
+    ok($symlink_path, "Got first level symlink path");
+    ok(Genome::Sys->create_symlink($gzip_path, $symlink_path), "Created first level symlink");
+
+    my $second_symlink_path = Genome::Sys->create_temp_file_path;
+    ok($second_symlink_path, "Got second level symlink path");
+    ok(Genome::Sys->create_symlink($symlink_path, $second_symlink_path), "Created second level symlink");
+
+    my $first_symlink_type = Genome::Sys->_file_type($symlink_path);
+    is($first_symlink_type, "gzip", "The symlink type is gzip");
+
+    my $second_symlink_type = Genome::Sys->_file_type($second_symlink_path);
+    is($second_symlink_type, "gzip", "The second level symlink type is gzip");
 }

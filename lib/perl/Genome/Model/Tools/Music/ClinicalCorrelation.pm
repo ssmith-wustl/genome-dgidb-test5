@@ -31,6 +31,11 @@ class Genome::Model::Tools::Music::ClinicalCorrelation {
         is_optional => 1,
         doc => "Optionally store the sample-vs-gene matrix used internally during calculations.",
     },
+    input_clinical_correlation_matrix_file => {
+        is => 'Text',
+        is_optional => 1,
+        doc => "Instead of calculating this from the MAF, input the sample-vs-gene matrix used internally during calculations.",
+    },
     genetic_data_type => {
         is => 'Text',
         doc => "Correlate clinical data to \"gene\" or \"variant\" level data",
@@ -268,7 +273,7 @@ sub execute {
             $samples{$sample}++;
         }
         #create correlation matrix unless it's glm analysis without using a maf file
-        unless ($datatype =~ /glm/i && !$self->use_maf_in_glm) {
+        unless (($datatype =~ /glm/i && !$self->use_maf_in_glm) || $self->input_clinical_correlation_matrix_file) {
 
             if ($genetic_data_type =~ /^gene$/i) {
                 $matrix_file = create_sample_gene_matrix_gene($samples,$clinical_data{$datatype},$maf_file,$output_matrix,@all_sample_names);
@@ -281,6 +286,11 @@ sub execute {
                 return;
             }
         }
+
+        if ($self->input_clinical_correlation_matrix_file) {
+            $matrix_file = $self->input_clinical_correlation_matrix_file;
+        }
+
         unless (defined $matrix_file) { $matrix_file = "'*'"; }
 
         #set up R command

@@ -29,7 +29,6 @@ my $sample = Genome::Sample->create(
     id => '-1',
     name => 'AQID-test-sample',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
 );
 
@@ -140,7 +139,6 @@ my $sample1a = Genome::Sample->create(
     id => '-11',
     name => 'Pooled_Library_test-sample',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
 );
 

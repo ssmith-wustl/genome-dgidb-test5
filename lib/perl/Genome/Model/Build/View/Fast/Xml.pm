@@ -12,12 +12,21 @@ class Genome::Model::Build::View::Fast::Xml {
             is => 'ARRAY',
             value => [
                 'id',
-                'master_event_status',
                 'data_directory',
-                'notes',
                 'run_by',
                 'software_revision',
                 '_newest_workflow_instance',
+                {
+                    'name' => 'the_master_event',
+                    'perspective' => 'default',
+                    'toolkit' => 'xml',
+                    'aspects' => ['genome_model_event_id', 'event_status']
+                },
+                {
+                    'name' => 'notes',
+                    'perspective' => 'default',
+                    'toolkit' => 'xml',
+                },
                 {
                     'name' => 'the_master_event',
                     'perspective' => 'default',
@@ -40,7 +49,8 @@ class Genome::Model::Build::View::Fast::Xml {
                         {
                             'name' => 'subject',
                             'perspective' => 'default',
-                            'toolkit' => 'xml'
+                            'toolkit' => 'xml',
+                            'aspects' => ['id'],
                         }
                     ],
                 },
@@ -48,12 +58,27 @@ class Genome::Model::Build::View::Fast::Xml {
                     'name' => 'inputs',
                     'perspective' => 'default',
                     'toolkit' => 'xml',
-                    'aspect' => ['name']
+                    'aspects' => ['name','value_id','value_class_name']
                 },
             ]
         }
     ]
 };
+
+
+sub _generate_content {
+
+    my ($self) = @_;
+    my $b = $self->subject();
+
+    # get this stuff now so we dont have to later
+    Genome::Model::Build::Input->get(
+        'build_id' => $b->id,
+        '-hint' => ['value_model','value_build','value_inst_data']
+    );
+ 
+    return $self->SUPER::_generate_content();
+}
 
 
 

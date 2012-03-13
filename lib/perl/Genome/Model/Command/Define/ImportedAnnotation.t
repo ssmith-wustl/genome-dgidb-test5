@@ -39,8 +39,8 @@ ok($existing_cmd, 'Successfully created ImportedAnnotation definition command');
 ok(!$existing_cmd->execute, 'Failed to create a build for existing 58_37c');
 
 #This should succeed nicely
-$build_name = 'NCBI-human.ensemb/65_37j';
-$version = '65_37j';
+$build_name = 'NCBI-human.ensemb/64_37i';
+$version = '64_37i';
 $reference_sequence_build = Genome::Model::Build->get(106942997); #GRCh37-lite-build37
 
 my $good_cmd = Genome::Model::Command::Define::ImportedAnnotation->create(
@@ -78,8 +78,8 @@ ok($cmd, 'Successfully created ImportedAnnotation definition command');
 # ok($cmd->result_build_id < 0, 'Created a new imported annotation build');
 
 #try a mouse model
-$build_name = 'NCBI-mouse.ensembl/65_37r';
-$version = '65_37r';
+$build_name = 'NCBI-mouse.ensembl/64_37q';
+$version = '64_37q';
 $reference_sequence_build = Genome::Model::Build->get(107494762); #UCSC-mouse-buildmm9
 $species = 'mouse';
 $model_name = 'NCBI-mouse.ensembl';

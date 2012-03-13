@@ -20,8 +20,9 @@ use_ok($cmd_class);
 
 my $data_dir = File::Temp::tempdir('ImportedAnnotationTest-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $pp = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_ref_pp');
-my $patient = Genome::Individual->create(name => "test-patient", common_name => 'testpat');
-my $sample = Genome::Sample->create(name => "test-patient", species_name => 'human', common_name => 'tumor', source => $patient);
+my $taxon = Genome::Taxon->get(name => 'human');
+my $patient = Genome::Individual->create(name => "test-patient", common_name => 'testpat', taxon => $taxon);
+my $sample = Genome::Sample->create(name => "test-patient", common_name => 'tumor', source => $patient);
 ok($sample, 'created sample');
 
 my $sequence_uri = "http://genome.wustl.edu/foo/bar/test.fa.gz";

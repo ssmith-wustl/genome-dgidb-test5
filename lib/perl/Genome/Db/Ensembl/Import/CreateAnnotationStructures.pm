@@ -93,6 +93,11 @@ sub execute
     foreach my $slice ( @slices )
     {
         my $chromosome = $slice->seq_region_name();
+        my $bases_file = $self->reference_build->get_bases_file($chromosome);
+        unless (-e $bases_file) {
+            $self->status_message("Transcript structures from chromosome $chromosome will not be imported because it doesn\'t exist in the reference sequence.");
+            next;
+        }
         my @ensembl_transcripts = @{ $transcript_adaptor->fetch_all_by_Slice($slice)};
         $self->status_message("Importing ".scalar @ensembl_transcripts." transcripts\n");
 
@@ -153,37 +158,37 @@ sub execute
                     reference_build_id => $self->reference_build->id,
                 );
                 push @genes, $gene;#logging
-            }
 
 
-            my %external_gene_ids = $self->get_external_gene_ids($ensembl_gene);
-            if ( defined($hugo_gene_name) )
-            {
-                $external_gene_ids{hugo_symbol} = $hugo_gene_name;
-            }
+                my %external_gene_ids = $self->get_external_gene_ids($ensembl_gene);
+                if ( defined($hugo_gene_name) )
+                {
+                    $external_gene_ids{hugo_symbol} = $hugo_gene_name;
+                }
 
-            if ( defined($entrez_id) )
-            {
-                $external_gene_ids{entrez} = $entrez_id;
-            }
-            $external_gene_ids{ensembl} = $ensembl_gene->stable_id;
+                if ( defined($entrez_id) )
+                {
+                    $external_gene_ids{entrez} = $entrez_id;
+                }
+                $external_gene_ids{ensembl} = $ensembl_gene->stable_id;
 
-            #external_gene_id columns
-            foreach my $type ( sort keys %external_gene_ids )
-            {
-                my $external_gene_id = Genome::ExternalGeneId->create(
-                    egi_id => $egi_id,
-                    gene_id => $gene->id,
-                    id_type => $type,
-                    id_value => $external_gene_ids{$type},
-                    data_directory => $self->data_directory,
-                    species => $species,
-                    source => $source,
-                    version => $version,
-                    reference_build_id => $self->reference_build->id,
-                ); 
+                #external_gene_id columns
+                foreach my $type ( sort keys %external_gene_ids )
+                {
+                    my $external_gene_id = Genome::ExternalGeneId->create(
+                        egi_id => $egi_id,
+                        gene_id => $gene->id,
+                        id_type => $type,
+                        id_value => $external_gene_ids{$type},
+                        data_directory => $self->data_directory,
+                        species => $species,
+                        source => $source,
+                        version => $version,
+                        reference_build_id => $self->reference_build->id,
+                    ); 
 
-                $egi_id++;
+                    $egi_id++;
+                }
             }
 
             #Transcript cols: transcript_id gene_id transcript_start transcript_stop transcript_name source transcript_status strand chrom_name

@@ -269,7 +269,11 @@ sub _load_genotyopes {
 
     $self->status_message('Load genotypes...');
     my $header_line;
-    do { $header_line = $genotype_fh->getline; } until $header_line =~ /,/;
+    do { $header_line = $genotype_fh->getline; } until not $header_line or $header_line =~ /,/;
+    if ( not $header_line ) {
+        $self->error_message('Failed to get header line for genotype file!');
+        return;
+    }
     chomp $header_line;
     my @headers = map { s/\s/_/g; s/_\-\_top$//i; lc } split(',', $header_line);
     $self->status_message('Genotype headers: '. join(', ', @headers));

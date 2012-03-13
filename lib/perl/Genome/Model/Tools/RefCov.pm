@@ -20,6 +20,8 @@ my $DEFAULT_ALIGNMENT_COUNT = 0;
 my $DEFAULT_PRINT_MIN_MAX = 0;
 my $DEFAULT_PRINT_HEADERS = 0;
 my $DEFAULT_RELATIVE_COVERAGE = 0;
+my $DEFAULT_EMBED_BED = 0;
+my $DEFAULT_NORMALIZE_WITH_FORMULA = 0;
 
 # Coverage Parameters
 my $DEFAULT_MINIMUM_MAPPING_QUALITY = 0;
@@ -43,6 +45,8 @@ my @GC_HEADERS = qw/
                    /;
 
 #Possibly replace with subroutine/CODEREF?
+# Note: ROI chrom|start|stop not supported in merging. (T. Wylie)
+# Wed Mar  7 15:49:02 CST 2012
 my %MERGE_STATS_OPERATION = (
     name => undef,
     percent_ref_bases_covered => undef,
@@ -198,6 +202,18 @@ class Genome::Model::Tools::RefCov {
             is_optional => 1,
             default_value => $DEFAULT_PRINT_HEADERS,
         },
+        embed_bed => {
+            is		  => 'Boolean',
+            doc		  => 'Include associated BED information (REF:START-STOP) per target ID when reporting. Returns 0-based BED coords.',
+            is_optional	  => 1,
+            default_value => $DEFAULT_EMBED_BED,
+        },
+        normalize_with_formula => {
+            is		  => 'String',
+            doc		  => 'Runs normalization on AVE DEPTH and MIN & MAX DEPTHs (opt) given a Perl compatible formula, replacing $X with depth value per ROI. EXAMPLE: --normalize-with-formula=\'log( ( $X / 250_000_000 ) * 1_000_000 ) / log( 2 )\'',
+            is_optional	  => 1,
+            default_value => $DEFAULT_NORMALIZE_WITH_FORMULA,
+        },
         merged_stats_file => {
             is => 'Text',
             doc => 'The final merged stats file only created if merge_by parameter defined',
@@ -288,7 +304,7 @@ sub help_detail {
  [13] Min. Depth Filter
  [14] Discarded Bases (Min. Depth Filter)
  [15] Percent Discarded Bases (Min. Depth Filter)
- 
+
  OPTIONAL GC FIELDS:
  [1] G+C Reference Base Pair
  [2] G+C Percent of Reference
@@ -296,79 +312,83 @@ sub help_detail {
  [4] G+C Percent of Reference Covered
  [5] G+C Uncovered Base Pair
  [6] G+C Percent of Reference Uncovered
- 
+
  OPTIONAL ROI NORMALIZED COVERAGE FIELD:
  [1] ROI Normalized Depth
- 
+
  OPTIONAL GENOME NORMALIZED COVERAGE FIELD:
  [1] Genome Normalized Depth
- 
+
  OPTIONAL ALIGNMENT COUNT FIELD:
  [1] Count of Overlapping Alignments
- 
+
  OPTIONAL MIN/MAX FIELD:
  [1] Minimum Coverage Depth
  [2] Maximum Coverage Depth
- 
- 
+
+ OPTIONAL BED EMBED FIELDS:
+ [1] ROI reference (chromosome/scaffold)
+ [2] ROI start
+ [3] ROI stop
+
  ------------------
  Useful Definitions
  ------------------
- 
+
  Target ID or Name:
  ID for the target reference space (region of interest) being
  evaluated, as determined by a corresponding BED file of target
  regions.
  Example Value:  NOTCH1.23
- 
+
  Percent of Reference Bases Covered:
  Breadth-of-coverage as a percent of total target length (total covered
  bases divided by target length).
  Example Value:  78.57%
- 
+
  Total Number of Reference Bases:
  Total nt bases in the target reference space.
  Example Value:  112
- 
+
  Total Number of Covered Bases:
  Total covered bases in the target reference space.
  Example Value:  88
- 
+
  Number of Missing Bases:
  Total uncovered bases in the target reference space (non-contiguous).
  Example Value:  24
- 
+
  Average Coverage Depth:
  Mean depth-of-coverage for the target reference space; calculated
  across all positions in the target reference space whether covered or
  uncovered.
  Example Value:  2.36x
- 
+
  Standard Deviation Average Coverage Depth:
  Standard deviation for mean depth-of-coverage; calculated across all
  positions in the target reference space whether covered or uncovered.
  Example Value:  1.62x
- 
+
  Median Coverage Depth:
  Median depth-of-coverage for the target reference space, non-contiguous in nature.
  Example Value:  3x
- 
+
  Number of Gaps:
  Number of gapped (uncovered) areas in the target reference space.
  Example Value:  1
- 
+
  Average Gap Length:
  Mean gap length for areas uncovered in the target reference space.
  Example Value:  24
- 
+
  Standard Deviation Average Gap Length:
  Standard deviation for mean gap length in the target reference space.
  Example Value:  0
- 
+
  Median Gap Length:
  Median gap length in context of all gap lengths in the target reference space.
  Example Value:  24
- 
+
  Min. Depth Filter:
  Minimum depth filter is a value passed to the coverage evaluation
  software which will limit the target reference postions contributing
@@ -378,42 +398,42 @@ sub help_detail {
  reference positions; any position < 10x would be considered 0x
  coverage.
  Example Value:  0
- 
+
  Discarded Bases (Min. Depth Filter):
  Number of target reference space positions affected by the minimum
  depth filter--i.e., the positions set to 0x coverage in subsequent
  calculations.
  Example Value:  0
- 
+
  Percent Discarded Bases (Min. Depth Filter):
  Percent of target reference space positions affected by the minimum
  depth filter.
  Example Value:  0
- 
+
  GC bp (reference length):
  A hard, non-contiguous value associated with the number of G and C
  nucleotides in the target reference space.
  Example Value:  69
- 
+
  GC percent (reference length):
  Percent of the target reference space comprised of G and C
  nucleotides.
  Example Value:  61.61%
- 
+
  GC bp (coverage length):
  Number of covered G and C nucleotides in the target reference space.
  Example Value:  55
- 
+
  GC percent (coverage length):
  Percent of all covered positions in the reference target space that
  are G and C nucleotides. Describes how much of covered sequence is G
  or C in nature.
  Example Value:  62.50%
- 
+
  GC bp (uncovered length):
  Number of uncovered G and C nucleotides in the target reference space.
  Example Value:  14
- 
+
  GC percent (uncovered length):
  Percent of all uncovered positions in the reference target space that
  are G and C nucleotides. Describes how much of uncovered sequence is G
@@ -962,6 +982,15 @@ sub resolve_stats_file_headers {
         push @headers, 'minimum_coverage_depth';
         push @headers, 'maximum_coverage_depth';
     }
+    if ($self->embed_bed()) {
+        push( @headers, 'ROI_ref', 'ROI_start', 'ROI_stop' );
+    }
+    if ($self->normalize_with_formula()) {
+        push( @headers, 'norm_ave_cov_depth' );
+	if ($self->normalize_with_formula() && $self->print_min_max()) {
+	    push( @headers, 'norm_minimum_coverage_depth', 'norm_maximum_coverage_depth' );
+	}
+    }
     return @headers;
 }
 
@@ -986,7 +1015,7 @@ sub generate_coverage_stats {
     my $self = shift;
     my $region = shift;
     my $min_depth = shift;
-    
+
     my $stat = $self->region_coverage_stat;
     my $length = $region->{length};
     if ($length < $self->maximum_roi_length) {
@@ -1014,7 +1043,7 @@ sub generate_coverage_stats {
             unless ($size_bin) {
                 $size_bin = 'gt_'. $total_size;
             }
-            
+
             my $relative_coverage_hash_ref = $self->_relative_coverage_hash_ref;
             unless (defined($relative_coverage_hash_ref)) {
                 $relative_coverage_hash_ref = {};
@@ -1156,7 +1185,7 @@ sub print_roi_coverage {
     if ($self->validate_chromosomes) {
         $self->validate_chromosome_names;
     }
-    
+
     my $temp_stats_file = Genome::Sys->create_temp_file_path;
     my @headers = $self->resolve_stats_file_headers;
     my $writer = Genome::Utility::IO::SeparatedValueWriter->create(
@@ -1227,6 +1256,32 @@ sub print_roi_coverage {
                 $data->{'minimum_coverage_depth'} = $stat->minimum_coverage_depth;
                 $data->{'maximum_coverage_depth'} = $stat->maximum_coverage_depth;
             }
+	    if ($self->embed_bed()) {
+		# REGION getter always returns 1-based BED. We will
+		# return 0-based BED by default.
+		$data->{'ROI_ref'}   = $region->{'chrom'};
+		$data->{'ROI_start'} = $region->{'start'} - 1; # TRUE BED
+		$data->{'ROI_stop'}  = $region->{'end'};       # TRUE BED
+	    }
+	    if ($self->normalize_with_formula()) {
+		# Ave Depth (normalization)
+		my $ave_formula = $self->normalize_with_formula();
+		my $ave_depth_x = $stat->ave_cov_depth();
+		$ave_formula =~ s/\$X/$ave_depth_x/g;
+		$data->{'norm_ave_cov_depth'} = eval( $ave_formula );
+		if ($self->normalize_with_formula() && $self->print_min_max()) {
+		    # Min Depth (normalization)
+		    my $min_formula = $self->normalize_with_formula();
+		    my $min_depth_x = $stat->minimum_coverage_depth();
+		    $min_formula =~ s/\$X/$min_depth_x/g;
+		    $data->{'norm_minimum_coverage_depth'} = eval( $min_formula );
+		    # Max Depth (normalization)
+		    my $max_formula = $self->normalize_with_formula();
+		    my $max_depth_x = $stat->maximum_coverage_depth();
+		    $max_formula =~ s/\$X/$max_depth_x/g;
+		    $data->{'norm_maximum_coverage_depth'} = eval( $max_formula );
+		}
+	    }
             unless ($writer->write_one($data)) {
                 die($writer->error_message);
             }

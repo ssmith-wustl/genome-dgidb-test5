@@ -125,12 +125,12 @@ sub process_updates {
         }
 
         my $apipe_current_value = $object->$column;
-        if ($apipe_current_value && $apipe_current_value eq $lims_new_value) {
+        if ($apipe_current_value and $apipe_current_value eq $lims_new_value) {
             $update->is_reconciled(1);
             next;
         }
 
-        if ( $lims_old_value && ($apipe_current_value ne $lims_old_value) ) {
+        if ( ! $lims_old_value or ($apipe_current_value ne $lims_old_value) ) {
             $self->warning_message("Object " . $object->__display_name__ . " property $column " . 
                 "currently has value '$apipe_current_value', but update claims value should be '$lims_old_value'. " . 
                 "Cannot safely apply update, marking for later review and skipping");

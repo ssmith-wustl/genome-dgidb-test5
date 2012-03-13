@@ -272,6 +272,8 @@ sub params_for_result {
     }
 
     my $variations_build = $build->previously_discovered_variations_build;
+    return unless $variations_build;
+
     my $accessor = $variant_type . '_result';
     my $previously_discovered_result = $variations_build->$accessor;
 

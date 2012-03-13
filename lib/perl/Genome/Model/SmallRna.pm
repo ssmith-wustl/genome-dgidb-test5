@@ -22,10 +22,14 @@ class Genome::Model::SmallRna {
     ],
     has_input => [
         ref_model => {
-
             is    => 'Genome::Model::ReferenceAlignment',
-            doc   => 'ref model for smallrna analysis',
+            doc   => 'Ref model with/without Coverage ROI for downstream smallrna analysis ',
         },
+        ref_model_coverage => {
+        	is_optional => 1,
+            	is    => 'Genome::Model::ReferenceAlignment',
+            	doc   => 'Ref model with coverage against second ROI list   ',
+        },        
     ],
     has_param => [
 		annotation_files => {
@@ -117,9 +121,47 @@ sub _resolve_workflow_for_build {
 
     my $log_directory = $build->log_directory;
     $operation->log_dir($log_directory);
-
+    
     $operation->name($build->workflow_name);
-
+  	
+    my $data_directory = $build->data_directory;    
+    my $ref_build      = $build->ref_build;
+  
+    if ($self->ref_model->region_of_interest_set_name)
+     {
+		my $coverage_dir_name=$ref_build->reference_coverage_directory;
+		unless (-e $coverage_dir_name) {
+        $self->error_message("Coverage dir $coverage_dir_name does not exist!");
+        die $self->error_message;
+    	}			
+		my $symlink = "ln -s ".$coverage_dir_name." ".$data_directory."/Coverage_".$self->ref_model->id;
+		print "Creating Symbolic Link to the Coverage dir for Model 1 "."\n";
+		print $symlink."\n";
+		system  ($symlink);
+     	}
+ 		else{
+                print "No Coverage info found for reference model 1"."\n";
+        	}
+        
+    if ($self->ref_model_coverage && $self->ref_model_coverage->region_of_interest_set_name)
+     {			
+     			my $second_ref_build =$self->ref_model_coverage->last_succeeded_build;
+                my $second_cov_dir = $second_ref_build->reference_coverage_directory;
+                
+                unless (-e $second_cov_dir) {
+       		    $self->error_message("Coverage dir $second_cov_dir does not exist!");
+        		die $self->error_message;
+    			}	
+                
+                my $symlink_2 = "ln -s ".$second_cov_dir." ".$data_directory."/Coverage_".$self->ref_model_coverage->id ;
+				print "Creating Symbolic Link to the Coverage dir for Model 2 "."\n";
+				print $symlink_2."\n";
+				system  ($symlink_2);
+     }
+ 	else
+ 	{
+               	print "No Coverage info found for reference model 2"."\n";
+    }
     return $operation;
 }
 
@@ -131,8 +173,8 @@ sub _map_workflow_inputs {
     unless ($self->subject)
     {
     my $subject = $self->_resolve_subject();
-    	
     }
+	
     my $data_directory = $build->data_directory;
     my $ref_build      = $build->ref_build;
     my $bam_file       = $ref_build->whole_rmdup_bam_file;
@@ -141,7 +183,7 @@ sub _map_workflow_inputs {
         $self->error_message("Bam file $bam_file does not exist!");
         die $self->error_message;
     }
-
+	
     my @size_array = split (',', $self->size_bins);
     my $bin = \@size_array;
     my $normalized_output_dir = $data_directory .'/'.$self->normalization_bin;

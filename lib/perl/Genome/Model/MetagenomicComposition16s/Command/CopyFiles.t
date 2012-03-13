@@ -14,7 +14,6 @@ use_ok('Genome::Model::MetagenomicComposition16s::Command::CopyFiles') or die;
 my $sample = Genome::Sample->create(
     id => -1234,
     name => 'H_GV-933124G-S.MOCK',
-    taxon_id => 2863615589,
 );
 ok($sample, 'create sample');
 
