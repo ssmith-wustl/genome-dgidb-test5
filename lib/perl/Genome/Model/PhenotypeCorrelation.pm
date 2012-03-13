@@ -584,21 +584,14 @@ print "starting annotation\n";
             }
         }
 
-        my ($tfh_annotation,$annotation_file_path) = Genome::Sys->create_temp_file;
-        unless($tfh_annotation) {
-            die $self->error_message("Unable to create temporary file $!");
-        }
-        $annotation_file_path =~ s/\:/\\\:/g;
+        my $annotation_file_path = "$multisample_vcf.annotated";
+        my $annotation_file_inFh = Genome::Sys->open_file_for_writing($annotation_file_path);
 
         foreach my $variant (sort keys %annotation_hash) {
-        	print $tfh_annotation "$variant\t$annotation_hash{$variant}\n";
+        	print $annotation_file_inFh "$variant\t$annotation_hash{$variant}\n";
         }
 
-        my ($tfh_vep_annotation,$vep_annotation_file_path) = Genome::Sys->create_temp_file;
-        unless($tfh_vep_annotation) {
-            die $self->error_message("Unable to create temporary file $!");
-        }
-        $vep_annotation_file_path =~ s/\:/\\\:/g;
+        my $vep_annotation_file_path = "$multisample_vcf.VEP_annotated";
 
         my $ensembl_VEP_cmd = Genome::Db::Ensembl::Vep->execute(
             input_file => $multisample_vcf,
@@ -609,17 +602,12 @@ print "starting annotation\n";
             sift => 'b',
             hgnc => 1,
             per_gene => 1,
-            force => 1,
         );
         unless($ensembl_VEP_cmd){
             die $self->error_message("Could not complete VEP annotation!");
         }
 
-        my ($tfh_vep_annotation_parsed,$vep_annotation_parsed_file_path) = Genome::Sys->create_temp_file;
-        unless($tfh_vep_annotation_parsed) {
-            die $self->error_message("Unable to create temporary file $!");
-        }
-        $vep_annotation_parsed_file_path =~ s/\:/\\\:/g;
+        my $vep_annotation_parsed_file_path = "$multisample_vcf.VEP_annotated.parsed";
 
         my $ensembl_VEP_parsed_cmd = Genome::Model::Tools::Annotate::ParseVep->execute(
             vep_input => $vep_annotation_file_path,
@@ -635,9 +623,10 @@ print "starting burden analysis\n";
         if ($id < 0) {
             $testing_mode = 1;
         }
-        my $burden_temp_path_output = Genome::Sys->create_temp_directory;
-        $burden_temp_path_output =~ s/\:/\\\:/g;
-        #burden analysis
+        my $burden_temp_path_output = "$temp_path/BurdenAnalysisResults/";
+        unless (-d $burden_temp_path_output) {
+            system("mkdir $burden_temp_path_output");
+        }
         my $burden_cmd = Genome::Model::Tools::Germline::BurdenAnalysis->execute(
             mutation_file => $mutation_matrix,
             phenotype_file => $clinical_data,
@@ -1026,21 +1015,14 @@ print "starting annotation\n";
             }
         }
 
-        my ($tfh_annotation,$annotation_file_path) = Genome::Sys->create_temp_file;
-        unless($tfh_annotation) {
-            die $self->error_message("Unable to create temporary file $!");
-        }
-        $annotation_file_path =~ s/\:/\\\:/g;
+        my $annotation_file_path = "$multisample_vcf.annotated";
+        my $annotation_file_inFh = Genome::Sys->open_file_for_writing($annotation_file_path);
 
         foreach my $variant (sort keys %annotation_hash) {
-        	print $tfh_annotation "$variant\t$annotation_hash{$variant}\n";
+        	print $annotation_file_inFh "$variant\t$annotation_hash{$variant}\n";
         }
 
-        my ($tfh_vep_annotation,$vep_annotation_file_path) = Genome::Sys->create_temp_file;
-        unless($tfh_vep_annotation) {
-            die $self->error_message("Unable to create temporary file $!");
-        }
-        $vep_annotation_file_path =~ s/\:/\\\:/g;
+        my $vep_annotation_file_path = "$multisample_vcf.VEP_annotated";
 
         my $ensembl_VEP_cmd = Genome::Db::Ensembl::Vep->execute(
             input_file => $multisample_vcf,
@@ -1051,17 +1033,12 @@ print "starting annotation\n";
             sift => 'b',
             hgnc => 1,
             per_gene => 1,
-            force => 1,
         );
         unless($ensembl_VEP_cmd){
             die $self->error_message("Could not complete VEP annotation!");
         }
 
-        my ($tfh_vep_annotation_parsed,$vep_annotation_parsed_file_path) = Genome::Sys->create_temp_file;
-        unless($tfh_vep_annotation_parsed) {
-            die $self->error_message("Unable to create temporary file $!");
-        }
-        $vep_annotation_parsed_file_path =~ s/\:/\\\:/g;
+        my $vep_annotation_parsed_file_path = "$multisample_vcf.VEP_annotated.parsed";
 
         my $ensembl_VEP_parsed_cmd = Genome::Model::Tools::Annotate::ParseVep->execute(
             vep_input => $vep_annotation_file_path,
@@ -1077,9 +1054,10 @@ print "starting burden analysis\n";
         if ($id < 0) {
             $testing_mode = 1;
         }
-        my $burden_temp_path_output = Genome::Sys->create_temp_directory;
-        $burden_temp_path_output =~ s/\:/\\\:/g;
-        #burden analysis
+        my $burden_temp_path_output = "$temp_path/BurdenAnalysisResults/";
+        unless (-d $burden_temp_path_output) {
+            system("mkdir $burden_temp_path_output");
+        }
         my $burden_cmd = Genome::Model::Tools::Germline::BurdenAnalysis->execute(
             mutation_file => $mutation_matrix,
             phenotype_file => $clinical_data,
