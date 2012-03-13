@@ -12,6 +12,8 @@ class Genome::Model::Tools::Music::Proximity {
     maf_file => { is => 'Text', doc => "List of mutations using TCGA MAF specifications v2.2" },
     output_dir => { is => 'Text', doc => "Directory where output files will be written" },
     max_proximity => { is => 'Text', doc => "Maximum allowed AA distance between 2 mutations", is_optional => 1, default => 7 },
+    skip_non_coding => { is => 'Boolean', doc => "Skip non-coding mutations from the provided MAF file", is_optional => 1, default => 1 },
+    skip_silent => { is => 'Boolean', doc => "Skip silent mutations from the provided MAF file", is_optional => 1, default => 1 },
   ],
   has_output => [
     output_file => {is => 'Text', doc => "TODO"},
@@ -61,6 +63,8 @@ sub execute {
   my $maf_file = $self->maf_file;
   my $output_dir = $self->output_dir;
   my $max_proximity = $self->max_proximity;
+  my $skip_non_coding = $self->skip_non_coding;
+  my $skip_silent = $self->skip_silent;
   $output_dir =~ s/(\/)+$//; # Remove trailing forward slashes if any
 
   # Check on all the input data before starting work
@@ -79,15 +83,15 @@ sub execute {
   chomp( $maf_header );
   unless( $maf_header =~ /^Hugo_Symbol/ )
   {
-    print STDERR "Could not find column headers in $maf_file\n";
-    return undef;
+      print STDERR "Could not find column headers in $maf_file\n";
+      return undef;
   }
 
   # Check whether the required additional MAF columns were included in the MAF
   unless( $maf_header =~ m/c_position/ and $maf_header =~ m/amino_acid_change/ and $maf_header =~ m/transcript_name/ )
   {
-    print STDERR "Could not find required additional columns in $maf_file\n";
-    return undef;
+      print STDERR "Could not find required additional columns in $maf_file\n";
+      return undef;
   }
 
   # Find the indexes of all the MAF columns
@@ -102,102 +106,113 @@ sub execute {
   # Load relevant data from MAF into hash
   while( my $line = $maf_fh->getline )
   {
-    chomp $line;
-    my @cols = split( /\t/, $line );
+      chomp $line;
+      my @cols = split( /\t/, $line );
 
-    # Fetch data from the generic MAF columns
-    my ( $gene, $chr, $start, $stop, $mut_class, $mutation_type, $ref_allele, $var_allele, $var2, $sample ) =
+      # Fetch data from the generic MAF columns
+      my ( $gene, $chr, $start, $stop, $mutation_class, $mutation_type, $ref_allele, $var_allele, $var2, $sample ) =
       ( $cols[0], $cols[4], $cols[5], $cols[6], $cols[8], $cols[9], $cols[10], $cols[11], $cols[12], $cols[15] );
-    $var_allele = $var2 if ( $var_allele eq $ref_allele ); # Different centers interpret the 2 variant columns differently
+      $var_allele = $var2 if ( $var_allele eq $ref_allele ); # Different centers interpret the 2 variant columns differently
 
-    # Fetch data from the required additional MAF columns
-    my ( $c_position, $aa_change, $transcript ) = ( $cols[$col_idx{c_position}], $cols[$col_idx{amino_acid_change}], $cols[$col_idx{transcript_name}] );
+      # Fetch data from the required additional MAF columns
+      my ( $c_position, $aa_change, $transcript ) = ( $cols[$col_idx{c_position}], $cols[$col_idx{amino_acid_change}], $cols[$col_idx{transcript_name}] );
 
-    # Create a key to uniquely identify each variant
-    my $variant_key = join( "\t", $gene, $chr, $start, $stop, $ref_allele, $var_allele, $sample );
+      # Create a key to uniquely identify each variant
+      my $variant_key = join( "\t", $gene, $chr, $start, $stop, $ref_allele, $var_allele, $sample );
 
-    # Determine amino acid position and load into hash
-    my @mutated_aa_positions = ();
-    unless( $mut_class =~ m/^(Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ )
-    {
-      @mutated_aa_positions = $self->get_amino_acid_pos( $variant_key, $mut_class, $c_position, $aa_change, $status );
-    }
-    else
-    {
-      $status{synonymous_mutations_skipped}++;
-    }
 
-    # Record data in hash if mutated aa position found
-    if( scalar( @mutated_aa_positions ) > 0 )
-    {
-      push( @{$aa_mutations{$transcript}{$variant_key}{mut_AAs}}, @mutated_aa_positions );
-    }
+      #check that the mutation class is acceptable
+      if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|In_Frame_Ins|Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ )
+      {
+          print STDERR "Unrecognized Variant_Classification \"$mutation_class\" in MAF file for gene $gene\n";
+          print STDERR "Please use TCGA MAF Specification v2.2.\n";
+          return undef;
+      }
+
+      # If user wants, skip Silent mutations, or those in Introns, RNA, UTRs, Flanks, IGRs, or the ubiquitous Targeted_Region
+      if(( $skip_non_coding && $mutation_class =~ m/^(Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ ) ||
+          ( $skip_silent && $mutation_class =~ m/^Silent$/ ))
+      {
+          print "Skipping $mutation_class mutation in gene $gene.\n";
+          $status{synonymous_mutations_skipped}++;
+          next;
+      }
+
+      # Determine amino acid position and load into hash
+      my @mutated_aa_positions = ();
+      @mutated_aa_positions = $self->get_amino_acid_pos( $variant_key, $mutation_class, $c_position, $aa_change, $status );
+
+      # Record data in hash if mutated aa position found
+      if( scalar( @mutated_aa_positions ) > 0 )
+      {
+          push( @{$aa_mutations{$transcript}{$variant_key}{mut_AAs}}, @mutated_aa_positions );
+      }
   }
   $maf_fh->close;
 
   # Evaluate proximity of mutated amino acids for each transcript
   for my $transcript ( keys %aa_mutations )
   {
-    # For each variant hitting that transcript
-    for my $variant ( keys %{$aa_mutations{$transcript}} )
-    {
-      # Initialize the search
-      my @affected_amino_acids = @{$aa_mutations{$transcript}{$variant}{mut_AAs}};
-      my $mutations_within_proximity = 0; # Variable for summing # of mutations within proximity
-      my $min_proximity = $max_proximity + 1; # Current minimum proximity
-
-      # For each OTHER variant hitting the transcript
-      for my $other_variant ( keys %{$aa_mutations{$transcript}} )
+      # For each variant hitting that transcript
+      for my $variant ( keys %{$aa_mutations{$transcript}} )
       {
-        # Ignore the current mutation
-        next if $variant eq $other_variant;
-        # Get affected amino acids from OTHER variant
-        my @other_affected_amino_acids = @{$aa_mutations{$transcript}{$other_variant}{mut_AAs}};
+          # Initialize the search
+          my @affected_amino_acids = @{$aa_mutations{$transcript}{$variant}{mut_AAs}};
+          my $mutations_within_proximity = 0; # Variable for summing # of mutations within proximity
+          my $min_proximity = $max_proximity + 1; # Current minimum proximity
 
-        # Compare distances between amino acids
-        my $found_close_one = 0;
-        for my $other_variant_aa ( @other_affected_amino_acids )
-        {
-          for my $variant_aa ( @affected_amino_acids )
+          # For each OTHER variant hitting the transcript
+          for my $other_variant ( keys %{$aa_mutations{$transcript}} )
           {
-            my $distance = abs($other_variant_aa - $variant_aa);
-            # If distance is within range
-            if( $distance <= $max_proximity )
-            {
-              $found_close_one++;
-              $min_proximity = $distance if $distance < $min_proximity;
-            }
+              # Ignore the current mutation
+              next if $variant eq $other_variant;
+              # Get affected amino acids from OTHER variant
+              my @other_affected_amino_acids = @{$aa_mutations{$transcript}{$other_variant}{mut_AAs}};
+
+              # Compare distances between amino acids
+              my $found_close_one = 0;
+              for my $other_variant_aa ( @other_affected_amino_acids )
+              {
+                  for my $variant_aa ( @affected_amino_acids )
+                  {
+                      my $distance = abs($other_variant_aa - $variant_aa);
+                      # If distance is within range
+                      if( $distance <= $max_proximity )
+                      {
+                          $found_close_one++;
+                          $min_proximity = $distance if $distance < $min_proximity;
+                      }
+                  }
+              }
+              # Note that this variant is within proximity if applicable
+              $mutations_within_proximity++ if $found_close_one;
           }
-        }
-        # Note that this variant is within proximity if applicable
-        $mutations_within_proximity++ if $found_close_one;
+          # Now, save results in hash if there are any
+          if ($mutations_within_proximity)
+          {
+              $aa_mutations{$transcript}{$variant}{muts_within_range} = $mutations_within_proximity;
+              $aa_mutations{$transcript}{$variant}{min_proximity} = $min_proximity;
+          }
       }
-      # Now, save results in hash if there are any
-      if ($mutations_within_proximity)
-      {
-        $aa_mutations{$transcript}{$variant}{muts_within_range} = $mutations_within_proximity;
-        $aa_mutations{$transcript}{$variant}{min_proximity} = $min_proximity;
-      }
-    }
   }
 
-  # Print results
+# Print results
   my $out_fh = IO::File->new( $out_file, ">" ) or die "Couldn't open $out_file. $!";
   $out_fh->print( "Mutations_Within_Proximity\tNearest_Mutation\tGene\tTranscript\tAffected_Amino_Acid(s)\tChr\tStart\tStop\tRef_Allele\tVar_Allele\tSample\n" );
   for my $transcript ( keys %aa_mutations )
   {
-    for my $variant ( keys %{$aa_mutations{$transcript}} )
-    {
-      if( exists $aa_mutations{$transcript}{$variant}{muts_within_range} )
+      for my $variant ( keys %{$aa_mutations{$transcript}} )
       {
-        my ( $gene, $chr, $start, $stop, $ref_allele, $var_allele, $sample ) = split( /\t/, $variant );
-        my $affected_amino_acids = join( ",", sort @{$aa_mutations{$transcript}{$variant}{mut_AAs}} );
-        my $line = join( "\t", $aa_mutations{$transcript}{$variant}{muts_within_range},
-          $aa_mutations{$transcript}{$variant}{min_proximity}, $gene, $transcript,
-          $affected_amino_acids, $chr, $start, $stop, $ref_allele, $var_allele, $sample );
-        $out_fh->print( "$line\n" );
+          if( exists $aa_mutations{$transcript}{$variant}{muts_within_range} )
+          {
+              my ( $gene, $chr, $start, $stop, $ref_allele, $var_allele, $sample ) = split( /\t/, $variant );
+              my $affected_amino_acids = join( ",", sort @{$aa_mutations{$transcript}{$variant}{mut_AAs}} );
+              my $line = join( "\t", $aa_mutations{$transcript}{$variant}{muts_within_range},
+                  $aa_mutations{$transcript}{$variant}{min_proximity}, $gene, $transcript,
+                  $affected_amino_acids, $chr, $start, $stop, $ref_allele, $var_allele, $sample );
+              $out_fh->print( "$line\n" );
+          }
       }
-    }
   }
   $out_fh->close();
   return 1;
@@ -214,96 +229,96 @@ This subroutine deducts the amino acid position within the transcript using the 
 ################################################################################
 
 sub get_amino_acid_pos {
-  # Parse arguments
-  my $self = shift;
-  my ( $variant_key, $mut_class, $c_position, $aa_change, $status ) = @_;
+    # Parse arguments
+    my $self = shift;
+    my ( $variant_key, $mut_class, $c_position, $aa_change, $status ) = @_;
 
-  # Initialize variables
-  my $tx_start = my $tx_stop = 0;
-  my $aa_position_start = my $aa_position_stop = 0;
-  my $inferred_aa_start = my $inferred_aa_stop = 0;
-  my $aa_pos = my $inferred_aa_pos = 0;
+    # Initialize variables
+    my $tx_start = my $tx_stop = 0;
+    my $aa_position_start = my $aa_position_stop = 0;
+    my $inferred_aa_start = my $inferred_aa_stop = 0;
+    my $aa_pos = my $inferred_aa_pos = 0;
 
-  # Amino acid position determination
-  if( $aa_change && $aa_change ne "NULL" && substr( $aa_change, 0, 1 ) ne "e" )
-  {
-    $aa_pos = $aa_change;
-    $aa_pos =~ s/[^0-9]//g;
-  }
-
-  # Parse out c_position if applicable ##
-  if( $c_position && $c_position ne "NULL" )
-  {
-    # If multiple results, parse both ##
-    if( $c_position =~ '_' && !( $mut_class =~ 'splice' ))
+    # Amino acid position determination
+    if( $aa_change && $aa_change ne "NULL" && substr( $aa_change, 0, 1 ) ne "e" )
     {
-      ($tx_start, $tx_stop) = split( /\_/, $c_position );
-      $tx_start =~ s/[^0-9]//g;
-      $tx_stop =~ s/[^0-9]//g;
-
-      if( $tx_stop < $tx_start )
-      {
-        $inferred_aa_start = $tx_stop / 3;
-        $inferred_aa_start = sprintf( "%d", $inferred_aa_start ) + 1 if( $tx_stop % 3 ) ;
-        $inferred_aa_stop = $tx_start / 3;
-        $inferred_aa_stop = sprintf( "%d", $inferred_aa_stop ) + 1 if( $tx_start % 3 );
-      }
-      else
-      {
-        $inferred_aa_start = $tx_start / 3;
-        $inferred_aa_start = sprintf( "%d", $inferred_aa_start ) + 1 if( $tx_start % 3 );
-        $inferred_aa_stop = $tx_stop / 3;
-        $inferred_aa_stop = sprintf( "%d", $inferred_aa_stop ) + 1 if( $tx_stop % 3 );
-      }
+        $aa_pos = $aa_change;
+        $aa_pos =~ s/[^0-9]//g;
     }
+
+    # Parse out c_position if applicable ##
+    if( $c_position && $c_position ne "NULL" )
+    {
+        # If multiple results, parse both ##
+        if( $c_position =~ '_' && !( $mut_class =~ 'splice' ))
+        {
+            ($tx_start, $tx_stop) = split( /\_/, $c_position );
+            $tx_start =~ s/[^0-9]//g;
+            $tx_stop =~ s/[^0-9]//g;
+
+            if( $tx_stop < $tx_start )
+            {
+                $inferred_aa_start = $tx_stop / 3;
+                $inferred_aa_start = sprintf( "%d", $inferred_aa_start ) + 1 if( $tx_stop % 3 ) ;
+                $inferred_aa_stop = $tx_start / 3;
+                $inferred_aa_stop = sprintf( "%d", $inferred_aa_stop ) + 1 if( $tx_start % 3 );
+            }
+            else
+            {
+                $inferred_aa_start = $tx_start / 3;
+                $inferred_aa_start = sprintf( "%d", $inferred_aa_start ) + 1 if( $tx_start % 3 );
+                $inferred_aa_stop = $tx_stop / 3;
+                $inferred_aa_stop = sprintf( "%d", $inferred_aa_stop ) + 1 if( $tx_stop % 3 );
+            }
+        }
+        else
+        {
+            my ( $tx_pos ) = split( /[\+\-\_]/, $c_position );
+            $tx_pos =~ s/[^0-9]//g;
+            $tx_start = $tx_stop = $tx_pos;
+            if($tx_pos)
+            {
+                $inferred_aa_pos = $tx_pos / 3;
+                $inferred_aa_pos = sprintf( "%d", $inferred_aa_pos ) + 1 if( $tx_pos % 3 );
+                $inferred_aa_start = $inferred_aa_stop = $inferred_aa_pos;
+            }
+        }
+    }
+
+    # If we inferred aa start stop, proceed with it ##
+    if( $inferred_aa_start && $inferred_aa_stop )
+    {
+        $aa_position_start = $inferred_aa_start;
+        $aa_position_stop = $inferred_aa_stop;
+        $status->{aa_position_inferred}++;
+    }
+    # Otherwise if we inferred aa position ##
+    elsif( $aa_pos )
+    {
+        $aa_position_start = $aa_pos;
+        $aa_position_stop = $aa_pos;
+        $status->{c_position_not_available}++;
+    }
+    # Otherwise we were unable to infer the info ##
     else
     {
-      my ( $tx_pos ) = split( /[\+\-\_]/, $c_position );
-      $tx_pos =~ s/[^0-9]//g;
-      $tx_start = $tx_stop = $tx_pos;
-      if($tx_pos)
-      {
-        $inferred_aa_pos = $tx_pos / 3;
-        $inferred_aa_pos = sprintf( "%d", $inferred_aa_pos ) + 1 if( $tx_pos % 3 );
-        $inferred_aa_start = $inferred_aa_stop = $inferred_aa_pos;
-      }
+        $status->{aa_position_not_found}++;
+        $self->status_message( "Amino acid position not found for variant: $variant_key" );
+        return;
     }
-  }
 
-  # If we inferred aa start stop, proceed with it ##
-  if( $inferred_aa_start && $inferred_aa_stop )
-  {
-    $aa_position_start = $inferred_aa_start;
-    $aa_position_stop = $inferred_aa_stop;
-    $status->{aa_position_inferred}++;
-  }
-  # Otherwise if we inferred aa position ##
-  elsif( $aa_pos )
-  {
-    $aa_position_start = $aa_pos;
-    $aa_position_stop = $aa_pos;
-    $status->{c_position_not_available}++;
-  }
-  # Otherwise we were unable to infer the info ##
-  else
-  {
-    $status->{aa_position_not_found}++;
-    $self->status_message( "Amino acid position not found for variant: $variant_key" );
-    return;
-  }
-
-  # Proceed if we have aa_position_start and stop ##
-  my %mutated_aa_positions;
-  if( $aa_position_start && $aa_position_stop )
-  {
-    for( my $this_aa_pos = $aa_position_start; $this_aa_pos <= $aa_position_stop; $this_aa_pos++ )
+    # Proceed if we have aa_position_start and stop ##
+    my %mutated_aa_positions;
+    if( $aa_position_start && $aa_position_stop )
     {
-      $mutated_aa_positions{$this_aa_pos}++;
+        for( my $this_aa_pos = $aa_position_start; $this_aa_pos <= $aa_position_stop; $this_aa_pos++ )
+        {
+            $mutated_aa_positions{$this_aa_pos}++;
+        }
     }
-  }
 
-  my @mutated_aa_positions = keys %mutated_aa_positions;
-  return @mutated_aa_positions;
+    my @mutated_aa_positions = keys %mutated_aa_positions;
+    return @mutated_aa_positions;
 }
 
 1;
