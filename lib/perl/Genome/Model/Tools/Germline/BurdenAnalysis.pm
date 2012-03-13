@@ -18,9 +18,10 @@ class Genome::Model::Tools::Germline::BurdenAnalysis {
     output_directory => { is => 'Text', doc => "Results of the Burden Analysis" },
     maf_cutoff => { is => 'Text', doc => "The cutoff to use to define which mutations are rare, 1 means no cutoff", default => '0.01' },
     permutations => { is => 'Text', doc => "The number of permutations to perform, typically from 100 to 10000, larger number gives more accurate p-value, but needs more time", default => '10000' },
-    covariates => { is => 'Text', doc => "\"\+\"-delimited list \(example: PC1+PC2+PC3+PC4+PC5\) of the covariates to use from the phenotype file or \"NONE\" if none", default => 'NONE' },
+    covariates => { is => 'Text', doc => "\"\+\"-delimited list \(example: PC1+PC2+PC3+PC4+PC5\) of the covariates to use from the phenotype file or \"NONE\" or \"NA\" if none", default => 'NONE' },
     trv_types => { is => 'Text', doc => "colon-delimited list of which trv types to use as significant rare variants or \"ALL\" if no exclusions", default => 'NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING:NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING,SPLICE_SITE:NMD_TRANSCRIPT,STOP_LOST:NON_SYNONYMOUS_CODING:NON_SYNONYMOUS_CODING,SPLICE_SITE:STOP_GAINED:STOP_GAINED,SPLICE_SITE' },
     select_phenotypes => { is => 'Text', doc => "If specified, don't use all phenotypes from phenotype file, but instead only use these from a comma-delimited list"},
+    testing_mode => { is => 'Text', doc => "If specified, assumes you're just testing the code and will not bsub out the actual tests", default => '0'},
   ],
 };
 
@@ -71,6 +72,9 @@ sub execute {                               # replace with real execution logic.
     my $permutations = $self->permutations;
 
     my $covariates = $self->covariates;
+    if ($covariates eq 'NA') {
+        $covariates = 'NONE';
+    }
 
     my $trv_types = $self->trv_types;
     my @trv_array = split(/:/, $trv_types);
@@ -135,16 +139,11 @@ sub execute {                               # replace with real execution logic.
     }
 
     #make .R file
-    my ($tfh_R_option,$R_path_option) = Genome::Sys->create_temp_file;
-    unless($tfh_R_option) {
-        $self->error_message("Unable to create temporary file $!");
-        die;
+    my $R_option_file = "$output_directory/R_option_file.R";
+    my $fh_R_option = new IO::File $R_option_file,"w";
+    unless ($fh_R_option) {
+        die "Failed to create R options file $R_option_file!: $!";
     }
-    $R_path_option =~ s/\:/\\\:/g;
-
-#    my $temp_path_output = Genome::Sys->create_temp_directory;
-#    $temp_path_output =~ s/\:/\\\:/g;
-
     #-------------------------------------------------
     my $R_command_option = <<"_END_OF_R_";
 ### This is option file for burdentest.R ###
@@ -153,16 +152,16 @@ sub execute {                               # replace with real execution logic.
 missing.data=c("NA",".","")
 
 genotype.file="$mutation_file"
-gfile.delimiter="\t"
+gfile.delimiter="\\t"
 gfile.vid="$project_name"   # variant id in genotype.file
 gfile.sid="FIRST_ROW"              # subject id in genotype.file
 
 phenotype.file="$phenotype_file"
-pfile.delimiter="\t"
+pfile.delimiter="\\t"
 pfile.sid="$subject_column_header"    # subject id in phenotype.file
 
 anno.file="$VEP_annotation_file"
-afile.delimiter="\t"
+afile.delimiter="\\t"
 afile.vid="Variant_Name"  #variant id in anno.file
 gene.col="$gene_name_in_header"
 vtype.col="Trv_Type"
@@ -179,13 +178,12 @@ maf.cutoff=$maf_cutoff
 _END_OF_R_
     #-------------------------------------------------
 
-    print $tfh_R_option "$R_command_option\n";
+    print $fh_R_option "$R_command_option\n";
 
     #now create bsub commands
     #bsub -e err 'R --no-save < burdentest.R option_file_asms Q trigRES ABCA1 10000'
     my $user = $ENV{USER};
-    my $bsub_base = "bsub -u $user\@genome.wustl.edu -e err 'R --no-save \< $base_R_commands $R_path_option";
-system("cp $R_path_option /gscuser/wschierd/Deleteme/R_option_file.txt");
+    my $bsub_base = "bsub -u $user\@genome.wustl.edu -e err 'R --no-save \< $base_R_commands $R_option_file";
     foreach my $phenotype (@pheno_minus_covariates) {
         foreach my $gene (@gene_names) {
             my $trait_type = 'Q'; #THIS SHOULD BE A HASH KEY THING
@@ -193,9 +191,12 @@ system("cp $R_path_option /gscuser/wschierd/Deleteme/R_option_file.txt");
                 next;
             }
             my $bsub_cmd = "$bsub_base $trait_type $phenotype $gene $permutations\'";
-            print "$bsub_cmd\n";
-exit;
-            system($bsub_cmd);
+            if ($self->testing_mode) {
+                print "$bsub_cmd\n";
+            }
+            else {
+                system($bsub_cmd);
+            }
         }
     }
 
