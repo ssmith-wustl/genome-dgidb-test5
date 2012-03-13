@@ -142,18 +142,33 @@ sub execute {                               # replace with real execution logic.
                 }
 
                 if(!$self->summary_file && ( (! -e $genofile) || !$skip_if_output_present) ) {
-                    my $extract = Genome::InstrumentData::Command::Microarray::Extract->create(
+                    my %extract_params = (
                         output => $genofile,
                         fields => [qw(chromosome position alleles id)],
-                        variation_list_build => Genome::Model::ImportedVariationList->dbsnp_build_for_reference($model->reference_sequence_build),
                         sample => $model->subject,
-                        use_external => $self->use_external,
                         ($self->whitelist_snps_file?(filters => ['whitelist:whitelist_snps_file='.$self->whitelist_snps_file]):()),
                     );
+
+                    if ($build->can('dbsnp_build') && $build->dbsnp_build) {
+                        $extract_params{variation_list_build} = $build->dbsnp_build;
+                    } else {
+                        $extract_params{variation_list_build} = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($build->reference_sequence_build),
+                    }
+
+                    if ($self->use_external) {
+                        $extract_params{use_external} = $self->use_external,
+                    } elsif ($build->can('genotype_microarray_build') && $build->genotype_microarray_build) {
+                        $extract_params{instrument_data} = $build->genotype_microarray_build->instrument_data;
+                    } elsif ($build->subject->can('default_genotype_data_id') && $build->subject->default_genotype_data_id) {
+                        $extract_params{instrument_data} = Genome::InstrumentData::Imported->get($build->subject->default_genotype_data_id);
+                    }
+
+                    my $extract = Genome::InstrumentData::Command::Microarray::Extract->create(%extract_params);
                     unless ($extract) {
                         $self->error_message("Failed to create Extract Microarray for sample " . $model->subject_name);
                         return;
                     }
+
                     $extract->dump_status_messages(1);
                     unless ($extract->_resolve_instrument_data){
                         $self->status_message('Skipping due to no instrument data for sample ' . $model->subject->id);
