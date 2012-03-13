@@ -42,6 +42,17 @@ sub dispatch_request {
             $filter = 'drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_types!:potentiator/na' if /default/;
             $filter = '' if /none/;
         }
+
+        my @sources;
+        push @sources, 'TTD' if $params->{'ttd'};
+        push @sources, 'DrugBank' if $params->{'db'};
+        if(@sources){
+            $filter .= ',gene.source_db_name';
+            $filter .= '=' if @sources == 1;
+            $filter .= ':' if @sources > 1;#if we have multiple sources, we need to use : with / delimited list for boolean expr syntax
+            $filter .= join '/', @sources;
+        }
+
         my $command = Genome::DruggableGene::Command::GeneNameReport::LookupInteractions->execute(
             gene_identifiers => \@gene_names,
             filter => $filter,
