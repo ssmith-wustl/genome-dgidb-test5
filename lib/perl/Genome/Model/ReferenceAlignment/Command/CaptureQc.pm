@@ -221,7 +221,7 @@ sub write_averaged_summary {
         print $fh join("\t",
             $grouping_value,
             map{
-            print "Metric for $_ : " . $sum_value{$_} / @$builds . "\n";
+            print "Metric for $_ : " . $sum_value{$_} / @$builds . "\n" if $self->debug;
             return sprintf ("%.2f%%", $sum_value{$_} / @$builds) if /percentage/;
             sprintf ("%.2f", $sum_value{$_} / @$builds);
             }$self->metric_names
@@ -255,7 +255,7 @@ sub write_full_summary {
             $index,
             $pool,
             map{
-            print "Metric for $_ : " . $build_to_metrics->{$build->id}{$_} . "\n";
+            print "Metric for $_ : " . $build_to_metrics->{$build->id}{$_} . "\n" if $self->debug;
             return sprintf ("%.2f%%", $build_to_metrics->{$build->id}{$_}) if /percentage/;
             sprintf ("%.2f", $build_to_metrics->{$build->id}{$_});
             }$self->metric_names
