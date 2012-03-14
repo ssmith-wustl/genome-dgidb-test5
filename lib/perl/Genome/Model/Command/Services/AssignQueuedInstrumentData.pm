@@ -73,7 +73,12 @@ sub _default_de_novo_assembly_bacterial_processing_profile_id {
 }
 
 sub _default_rna_seq_processing_profile_id {
-    return 2623697;
+    my $self = shift;
+    my $instrument_data = shift;
+    if($instrument_data->sample->taxon->name eq 'human'){
+        return 2694793;
+    }
+    return 2694792; #mouse
 }
 
 #FIXME: This should be refactored so that %known_454_pipelines and
@@ -1429,7 +1434,7 @@ sub add_processing_profiles_to_pses{
                 }
 
                 if($self->_is_rna($instrument_data)){
-                    push @processing_profile_ids_to_add, $self->_default_rna_seq_processing_profile_id;
+                    push @processing_profile_ids_to_add, $self->_default_rna_seq_processing_profile_id($instrument_data);
                 }
 
                 if ($self->_is_454_16s($pse)) {
@@ -1493,7 +1498,7 @@ sub add_processing_profiles_to_pses{
                     }
                     elsif ($self->_is_rna($instrument_data)){
                         if($instrument_data->is_paired_end){
-                            my $pp_id = $self->_default_rna_seq_processing_profile_id;
+                            my $pp_id = $self->_default_rna_seq_processing_profile_id($instrument_data);
                             push @processing_profile_ids_to_add, $pp_id;
                             $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                         }
