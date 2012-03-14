@@ -12,12 +12,11 @@ my %wildtype_sites = my %germline_sites = ();
 class Genome::Model::Tools::Capture::GermlineModelGroupQc {
     is => 'Genome::Command::Base',
 
-    has_many => [
-        models => { is => 'Genome::Model', shell_args_position => 1 },
-    ],
     has_optional => [
+        models                 => { is => 'Genome::Model', is_many => 1, shell_args_position => 1, doc => 'names or group of models to work on' },
+        group_id               => { is => 'Genome::Model', doc => 'names or group of models to work on -- deprecated, can now list models/groups without --group_id' },
         use_external           => { is => 'Boolean', doc => 'Use external data source rather than internal/iscan', default_value => 0 },
-        use_default           => { is => 'Boolean', doc => 'Use default data source as defined on sample (if available)', default_value => 0 },
+        use_default            => { is => 'Boolean', doc => 'Use default data source as defined on sample (if available)', default_value => 0 },
         output_dir             => { is => 'Text', doc => "Outputs qc into directory for each sample", default => cwd() },
         summary_file           => { is => 'Text', doc => "Outputs qc summary into this file, must be run with already finished output (turns skip-if-output-present on)" },
         whitelist_snps_file    => { is => 'Text', doc => "File of snps to limit qc to, for example the 55 ASMS snps in ROI -- 1 rs_id per line" },
@@ -25,23 +24,16 @@ class Genome::Model::Tools::Capture::GermlineModelGroupQc {
     ],
 };
 
-sub help_brief {
-    "Operate on germline capture model groups"
-}
-sub help_synopsis {
-    return <<EOS
-Operate on capture somatic model groups
-EXAMPLE:    gmt capture germline-model-group-qc --group-id XXXX --output-dir --dbsnp-build
-EOS
-}
-sub help_detail {
-    return;
-}
+sub help_brief { "Operate on germline capture models and groups" }
+sub help_synopsis { help_brief() . "\nEXAMPLE:    gmt capture germline-model-group-qc GROUP_ID/MODEL_NAMES --output-dir --dbsnp-build" }
+sub help_detail { }
 
 sub execute {
     my $self = shift;
 
-    my @models = $self->models;
+    my @models;
+    push @models, $self->models if $self->models;
+    push @models, $self->group_id->models if $self->group_id;
     my $skip_if_output_present = $self->skip_if_output_present;
     my $summary_file = $self->summary_file;
     if ($self->summary_file) {
