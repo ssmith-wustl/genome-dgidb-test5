@@ -115,6 +115,7 @@ our %known_454_pipelines =
         'Illumina Sequencing',
         'Nimblegen Custom Capture Illumina',
         'Nimblegen Whole Exome Capture Illumina',
+        'PCR-based 3730',
         'PCR-based 454',
         'PCR-based Illumina',
         'Production Library Construction and Technology Development Illumina',
@@ -140,6 +141,7 @@ our %known_454_16s_pipelines =
         '16S 3730 Sequencing',
         '16S 3730 Sequencing - Unknown Reference Strain',
         'Technology Development 16S 454',
+        'Illumina Sequencing,16S 454 Sequencing,PCR-based 3730,16S 3730 Sequencing - Unknown Reference Strain,16S 3730 Sequencing',
     );
 
 sub help_brief {
