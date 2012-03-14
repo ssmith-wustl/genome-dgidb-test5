@@ -169,19 +169,22 @@ sub move {
 
 sub archive {
     my ($class, %params) = @_;
-    confess "Archiving is not yet fully supported";
     return $class->_execute_system_command('_archive', %params);
 }
 
 sub unarchive {
     my ($class, %params) = @_;
-    confess "Unarchiving is not yet fully supported";
     return $class->_execute_system_command('_unarchive', %params);
 }
 
 sub is_archived {
     my $self = shift;
     return $self->volume->is_archive;
+}
+
+sub archive_path {
+    my $self = shift;
+    return join('/', $self->absolute_path, 'archive.tar');
 }
 
 sub _create {
@@ -457,6 +460,7 @@ sub _move {
     my $kilobytes_requested = delete $params{kilobytes_requested};
     my $group_name = delete $params{disk_group_name};
     my $new_mount_path = delete $params{target_mount_path};
+    my $pattern = delete $params{pattern};
     if (%params) {
         confess "Extra parameters given to allocation move method: " . join(',', sort keys %params);
     }
@@ -504,6 +508,14 @@ sub _move {
         );
         ($new_volume, $new_volume_lock) = $self->_lock_volume_from_list($kilobytes_requested, @candidate_volumes);
     }
+    my $old_allocation_dir = $self->absolute_path;
+    my $new_allocation_dir = join('/', $new_volume->mount_path, $self->group_subdirectory, $self->allocation_path);
+
+    unless (-w $new_allocation_dir) {
+        Genome::Sys->unlock_resource(resource_lock => $new_volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess "Cannot write to target volume, cannot move data!";
+    }
 
     $self->status_message("Moving allocation " . $self->id . " from volume " . $old_volume->mount_path . " to a new volume");
 
@@ -522,11 +534,16 @@ sub _move {
     );
 
     # Now copy data to the new location
-    my $old_allocation_dir = $self->absolute_path;
-    my $new_allocation_dir = join('/', $new_volume->mount_path, $self->group_subdirectory, $self->allocation_path);
     $self->status_message("Copying data from $old_allocation_dir to $new_allocation_dir");
     push @PATHS_TO_REMOVE, $new_allocation_dir; # If the process dies while copying, need to clean up the new directory
-    unless (dircopy($old_allocation_dir, $new_allocation_dir)) {
+    my $copy_rv = eval { 
+        Genome::Sys->copy_directory_tree(
+            source_directory => $old_allocation_dir,
+            target_directory => $new_allocation_dir,
+            file_pattern => $pattern,
+        )
+    };
+    unless ($copy_rv) {
         Genome::Sys->remove_directory_tree($new_allocation_dir) if -d $new_allocation_dir;
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not copy allocation ' . $self->id . " from $old_allocation_dir to $new_allocation_dir : $!";
@@ -577,14 +594,20 @@ sub _archive {
         confess "Found no allocation with ID $id";
     }
 
-    # Move allocation to archive volume
-    # TODO If the gscarchive volumes are only going to be mounted on a few hosts, then some
-    # kind of check will need to be made to ensure we're on one of those hosts, or we'll have 
-    # to make move smarter. I vote for the former.
+    my $tar_rv = Genome::Sys->tar(
+        tar_path => $self->archive_path,
+        input_directory => $self->absolute_path,
+    );
+    unless ($tar_rv) {
+        confess "Could not create tarball for allocation contents!";
+    }
+
+    my $tar_file = File::Basename::basename($self->archive_path);
     my $rv = $self->_move(
         allocation_id => $id,
         target_mount_path => $self->volume->archive_mount_path,
         kilobytes_requested => $self->kilobytes_requested,
+        pattern => $tar_file,
     );
     unless ($rv) {
         confess "Could not archive allocation " . $self->id . ", failed to move it from " .
@@ -598,7 +621,7 @@ sub _unarchive {
     my ($class, %params) = @_;
     my $id = delete $params{allocation_id};
     if (%params) {
-        confess "Extra parameters given to allocation move method: " . join(',', sort keys %params);
+        confess "Extra parameters given to allocation unarchive method: " . join(',', sort keys %params);
     }
 
     my $mode = $class->_retrieve_mode;
@@ -607,9 +630,6 @@ sub _unarchive {
         confess "Found no allocation with ID $id";
     }
 
-    # TODO Need to figure out how to tell tape system to pull stuff off tape. Need to either tell it
-    # where that data should go, or have a way to retrieve the path
-
     my $rv = $self->_move(
         allocation_id => $self->id,
         target_mount_path => $self->volume->active_mount_path,
@@ -617,9 +637,17 @@ sub _unarchive {
     );
     unless ($rv) {
         confess "Could not unarchive allocation " . $self->id . ", failed to move it from " .
-            $self->mount_path . " to " . $self->volume->active_mount_path;
+            $self->volume->archive_mount_path . " to " . $self->volume->active_mount_path;
     }
 
+    my $untar_rv = Genome::Sys->untar(
+        tar_path => $self->archive_path,
+        target_directory => $self->absolute_path,
+        delete_tar => 1,
+    );
+    unless ($untar_rv) {
+        confess "Could not untar tarball at " . $self->absolute_path;
+    }
     return 1;
 }
 
