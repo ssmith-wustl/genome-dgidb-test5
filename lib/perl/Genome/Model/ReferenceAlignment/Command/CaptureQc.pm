@@ -29,6 +29,11 @@ class Genome::Model::ReferenceAlignment::Command::CaptureQc {
             default => 0,
             doc => 'Print debug messages that could help fix oddities',
         },
+        find_qc_models => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'From models given, find and operate on their qc counterparts',
+        },
     ],
     doc => 'Summarize information on models from germline-model-group and germline-model-group-qc',
 };
@@ -40,15 +45,19 @@ sub help_detail{ help_brief() . "\nExample: genome model reference-alignment cap
 sub execute {
     my $self = shift;
     print "Gathering data\n" if $self->debug;
-    my @instrument_data = map{$_->instrument_data}$self->models;
     my (%build_to_metrics, %index_to_builds, %pool_to_builds);
-#    my @qc_models = Genome::Model::ReferenceAlignment->default_lane_qc_model_for_instrument_data(@instrument_data);
-#    my $missing_qc_models = (@instrument_data - @qc_models);
-#    if ($missing_qc_models) {
-#        warn "Missing $missing_qc_models lane qc model(s).\n";
-#    }
-#    for my $model ($qc_models) {
-    for my $model ($self->models) {
+    my @models;
+    if ($self->find_qc_models) {
+        my @instrument_data = map{$_->instrument_data}$self->models;
+        @models = Genome::Model::ReferenceAlignment->default_lane_qc_model_for_instrument_data(@instrument_data);
+        my $missing_qc_models = (@instrument_data - @models);
+        if ($missing_qc_models) {
+            warn "Missing $missing_qc_models lane qc model(s).\n";
+        }
+    } else {
+        @models = $self->models;
+    }
+    for my $model (@models) {
         my $build = $model->last_succeeded_build || next;
         print 'Gathering data for build: ' . $build->id . "\n" if $self->debug;
 
