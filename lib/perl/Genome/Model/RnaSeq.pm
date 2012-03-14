@@ -1,15 +1,5 @@
 package Genome::Model::RnaSeq;
 
-# these modules no longer exist as physical files in the repo
-# this code will prevent them from being loaded from another part of @INC
-# it can be removed after this snapshot becomes stable...
-for my $f (qw|
-    Genome/Model/Command/Define/RnaSeq.pm
-    Genome/ProcessingProfile/RnaSeq.pm
-|) {
-    $INC{$f} = 1;
-}
-
 use strict;
 use warnings;
 
@@ -307,53 +297,6 @@ sub params_for_alignment {
     #$self->status_message('The AlignmentResult parameters are: '. Data::Dumper::Dumper(%params));
     my @param_set = (\%params);
     return @param_set;
-}
-
-# these must stay in place until:
-# 1 old snapshots complete any running builds
-# 2 the database is updated to not have these class names anymore
-
-#class Genome::ProcessingProfile::RnaSeq::Solexa {
-#    is => 'Genome::ProcessingProfile::RnaSeq'
-#};
-#
-#class Genome::Model::Build::RnaSeq::Solexa {
-#    is => 'Genome::Model::Build::RnaSeq'
-#};
-
-sub Genome::ProcessingProfile::Command::List::RnaSeq::_resolve_boolexpr {
-    my $self = shift;
-
-    my ($bool_expr1, %extra2) = UR::BoolExpr->resolve_for_string(
-        'Genome::ProcessingProfile::RnaSeq::Solexa',
-        $self->_complete_filter, 
-        $self->_hint_string,
-        $self->order_by,
-    );
-
-    my @o1 = Genome::ProcessingProfile::RnaSeq::Solexa->get($bool_expr1);
-    
-    $DB::single = 1;
-
-    my ($bool_expr2, %extra1) = UR::BoolExpr->resolve_for_string(
-        'Genome::ProcessingProfile::RnaSeq',
-        $self->_complete_filter, 
-        $self->_hint_string,
-        $self->order_by,
-    );
-
-    $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra1)) )
-        and return if %extra1;
-
-    my @o2 = Genome::ProcessingProfile::RnaSeq->get($bool_expr2);
-
-    my $bool_expr = Genome::ProcessingProfile->define_boolexpr(
-        id => [ map { $_->id } (@o1, @o2) ],
-        type_name => 'rna seq',
-        ($bool_expr2->template->order_by ? ('-order_by' => $bool_expr2->template->order_by) : ()),
-    );
-
-    return $bool_expr;
 }
 
 
