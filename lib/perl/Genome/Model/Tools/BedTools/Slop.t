@@ -16,7 +16,7 @@ my $test_bed = $data_dir .'/test.bed';
 my $genome_file = $data_dir .'/all_sequences.genome';
 my $expected_bed = $data_dir .'/expected_250bp_slop.bed';
 
-my $tmp_dir = File::Temp::tempdir('BedTools-Slop-'.Genome::Sys->username.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 0);
+my $tmp_dir = File::Temp::tempdir('BedTools-Slop-'.Genome::Sys->username.'-XXXX',DIR => '/gsc/var/cache/testsuite/running_testsuites',CLEANUP => 1);
 my $output_bed = $tmp_dir .'/slop.bed';
 
 my $slop = Genome::Model::Tools::BedTools::Slop->create(
