@@ -447,10 +447,24 @@ sub _expand_param_properties {
     my ($class, $desc) = @_;
     while (my ($prop_name, $prop_desc) = each(%{ $desc->{has} })) {
         if (exists $prop_desc->{'is_param'} and $prop_desc->{'is_param'}) {
-            $prop_desc->{'to'} = 'value';
+            if (exists $prop_desc->{'data_type'} and $prop_desc->{'data_type'}) {
+                my $prop_class = UR::Object::Property->_convert_data_type_for_source_class_to_final_class(
+                    $prop_desc->{'data_type'},
+                    $class
+                );
+                if ($prop_class->isa("UR::Value")) {
+                    $prop_desc->{'to'} = 'value_id';
+                } else {
+                    $prop_desc->{'to'} = 'value_obj';
+                }
+            } else {
+                $prop_desc->{'to'} = 'value_id';
+            }
+
             $prop_desc->{'is_delegated'} = 1;
             $prop_desc->{'where'} = [
-                'name' => $prop_name
+                'name' => $prop_name,
+                #'value_class_name' => $prop_class,
             ];
             $prop_desc->{'via'} = 'params';
             $prop_desc->{'is_mutable'} = 1;
