@@ -40,7 +40,7 @@ sub dump_to_file_system {
 
     my $rv = eval { 
         Genome::Sys->shellcmd(
-            cmd => 'gmt lims import-sanger-run '.$self->id,
+            cmd => 'gmt lims import-sanger-runs '.$self->id,
         );
     };
     return 1 if $rv;
