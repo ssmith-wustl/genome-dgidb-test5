@@ -90,6 +90,37 @@ sub execute {
     return 1;
 }
 
+my @_properties_for_add_link = ('id','workflow_model_id','left_workflow_operation_id','left_property',
+                                'right_workflow_operation_id','right_property');
+my @_properties_in_template_order;
+sub _add_link_to_workflow {
+    my($self,$workflow_obj, %params) = @_;
+
+    unless ($self->{'_add_link_to_workflow_tmpl'}) {
+        my $tmpl = UR::BoolExpr::Template->resolve('Workflow::Link', @_properties_for_add_link);
+        unless ($tmpl) {
+            Carp::croak('Cannot resolve BoolExpr template for adding Workflow::Link objects');
+        }
+        $tmpl = $tmpl->get_normalized_template_equivalent();
+        for my $name ( @_properties_for_add_link ) {
+            my $pos = $tmpl->value_position_for_property_name($name);
+            if ($name eq 'workflow_model_id' ) {
+                $self->{'_add_link_workflow_id_pos'} = $pos;
+            } elsif ($name eq 'id') {
+                $self->{'_add_link_id_pos'} = $pos;
+            }
+            $_properties_in_template_order[$pos] = $name;
+        }
+        $self->{'_add_link_to_workflow_tmpl'} = $tmpl;
+    }
+    my @values = @params{@_properties_in_template_order};
+    $values[$self->{'_add_link_workflow_id_pos'}] = $workflow_obj->id;
+    $values[$self->{'_add_link_id_pos'}] = UR::Object::Type->autogenerate_new_object_id_urinternal();
+    my $rule = $self->{'_add_link_to_workflow_tmpl'}->get_rule_for_values(@values);
+    return UR::Context->create_entity('Workflow::Link', $rule);
+}
+
+
 sub generate_workflow {
     my $self = shift;
     my $tree = shift;
@@ -161,11 +192,14 @@ sub generate_workflow {
     my @input_properties = keys %input_properties;
     my @output_properties = keys %output_properties;
 
+    my @input_properties_list = map { 'm_' . $_ } @input_properties;
+    my @output_properties_list = map { 'm_' . $_ } @output_properties;
+
     my $master_workflow = Workflow::Model->create(
         name => 'Master Alignment Dispatcher',
-        input_properties => [map('m_' . $_, @input_properties)],
+        input_properties => \@input_properties_list,
         optional_input_properties => [map('m_' . $_, @input_properties)],
-        output_properties => [map('m_' . $_, @output_properties)],
+        output_properties => \@output_properties_list,
     );
 
 
@@ -178,10 +212,10 @@ sub generate_workflow {
         my $master_input_connector = $master_workflow->get_input_connector;
         my $workflow_input_connector = $workflow; #implicitly uses input connector
         for my $property (@{ $workflow->operation_type->input_properties }) {
-            $master_workflow->add_link(
-                left_operation => $master_input_connector,
+            $self->_add_link_to_workflow($master_workflow,
+                left_workflow_operation_id => $master_input_connector->id,
                 left_property => 'm_' . $property,
-                right_operation => $workflow_input_connector,
+                right_workflow_operation_id => $workflow_input_connector->id,
                 right_property => $property,
             );
         }
@@ -189,10 +223,10 @@ sub generate_workflow {
         my $master_output_connector = $master_workflow->get_output_connector;
         my $workflow_output_connector = $workflow; #implicitly uses output connector
         for my $property (@{ $workflow->operation_type->output_properties }) {
-            $master_workflow->add_link(
-                left_operation => $workflow_output_connector,
+            $self->_add_link_to_workflow($master_workflow,
+                left_workflow_operation_id => $workflow_output_connector->id,
                 left_property => $property,
-                right_operation => $master_output_connector,
+                right_workflow_operation_id => $master_output_connector->id,
                 right_property => 'm_' . $property,
             );
         }
@@ -213,19 +247,19 @@ sub generate_workflow {
             $merge->workflow_model($master_workflow);
 
             for my $property ($self->_merge_workflow_input_properties) {
-                $master_workflow->add_link(
-                    left_operation => $master_input_connector,
+                $self->_add_link_to_workflow($master_workflow,
+                    left_workflow_operation_id => $master_input_connector->id,
                     left_property => 'm_' . $property,
-                    right_operation => $merge,
+                    right_workflow_operation_id => $merge->id,
                     right_property => $property,
                 );
             }
 
             for my $property (@{ $merge->operation_type->output_properties }) {
-                $master_workflow->add_link(
-                    left_operation => $merge,
+                $self->_add_link_to_workflow($master_workflow,
+                    left_workflow_operation_id => $merge->id,
                     left_property => $property,
-                    right_operation => $master_output_connector,
+                    right_workflow_operation_id => $master_output_connector->id,
                     right_property => 'm_' . join('_', $property, $merge->name),
                 );
             }
@@ -257,10 +291,10 @@ sub generate_workflow {
                 );
 
                 $converge_operation->workflow_model($master_workflow);
-                $master_workflow->add_link(
-                    left_operation => $converge_operation,
+                $self->_add_link_to_workflow($master_workflow,
+                    left_workflow_operation_id => $converge_operation->id,
                     left_property => 'alignment_result_ids',
-                    right_operation => $merge_op,
+                    right_workflow_operation_id => $merge_op->id,
                     right_property => 'alignment_result_ids',
                 );
 
@@ -268,10 +302,10 @@ sub generate_workflow {
             }
 
             for my $property (@{ $align_wf->operation_type->output_properties }) {
-                $master_workflow->add_link(
-                    left_operation => $align_wf,
+                $self->_add_link_to_workflow($master_workflow,
+                    left_workflow_operation_id => $align_wf->id,
                     left_property => $property,
-                    right_operation => $converge_operation_for_group{$group},
+                    right_workflow_operation_id => $converge_operation_for_group{$group}->id,
                     right_property => $property,
                 );
             }
@@ -449,14 +483,27 @@ sub _merge_group_for_alignment_object {
    return $group_obj->id;
 }
 
+my $_mergealignments_command_id;
+my $_generate_merge_operation_tmpl;
 sub _generate_merge_operation {
     my $self = shift;
     my $merge_tree = shift;
     my $grouping = shift;
 
+    unless ($_generate_merge_operation_tmpl) {
+        $_generate_merge_operation_tmpl = UR::BoolExpr::Template->resolve('Workflow::Operation', 'id','name','workflow_operationtype_id')->get_normalized_template_equivalent();
+        $_mergealignments_command_id = Workflow::OperationType::Command->get('Genome::InstrumentData::Command::MergeAlignments')->id;
+    }
+#bbbb
     my $operation = Workflow::Operation->create(
-        name => 'merge_' . $grouping,
-        operation_type => Workflow::OperationType::Command->get('Genome::InstrumentData::Command::MergeAlignments'),
+        $_generate_merge_operation_tmpl->get_rule_for_values(
+                UR::Object::Type->autogenerate_new_object_id_urinternal(),
+                'merge_' . $grouping,
+                $_mergealignments_command_id
+        )
+                    
+        #name => 'merge_' . $grouping,
+        #operation_type => $_mergealignments_command_id
     );
 
     return $operation;
@@ -603,10 +650,10 @@ sub _generate_alignment_workflow_links {
 
         #create link for final result of that subtree
         my $op = $subtree->{$self->_operation_key($instrument_data, %options)};
-        $workflow->add_link(
-            left_operation => $op,
+        $self->_add_link_to_workflow($workflow,
+            left_workflow_operation_id => $op->id,
             left_property => 'result_id',
-            right_operation => $workflow->get_output_connector,
+            right_workflow_operation_id => $workflow->get_output_connector->id,
             right_property => join('_', 'result_id', $op->name),
         );
     }
@@ -635,10 +682,10 @@ sub _create_links_for_subtree {
     my $inputs = [];
     for my $property (@properties) {
         my $left_property = join('_', $property, $operation->name);
-        $workflow->add_link(
-            left_operation => $workflow->get_input_connector,
+        $self->_add_link_to_workflow($workflow,
+            left_workflow_operation_id => $workflow->get_input_connector->id,
             left_property => $left_property,
-            right_operation => $operation,
+            right_workflow_operation_id => $operation->id,
             right_property => $property,
         );
 
@@ -660,20 +707,20 @@ sub _create_links_for_subtree {
     }
 
     for my $property ($self->_general_workflow_input_properties) {
-        $workflow->add_link(
-            left_operation => $workflow->get_input_connector,
+        $self->_add_link_to_workflow($workflow,
+            left_workflow_operation_id => $workflow->get_input_connector->id,
             left_property => $property,
-            right_operation => $operation,
+            right_workflow_operation_id => $operation->id,
             right_property => $property,
         );
     }
 
     if(exists $tree->{parent}) {
         my $parent_operation = $tree->{parent}{$self->_operation_key($instrument_data, %options)};
-        $workflow->add_link(
-            left_operation => $parent_operation,
+        $self->_add_link_to_workflow($workflow,
+            left_workflow_operation_id => $parent_operation->id,
             left_property => 'output_result_id',
-            right_operation => $operation,
+            right_workflow_operation_id => $operation->id,
             right_property => 'alignment_result_input_id',
         );
 
@@ -682,10 +729,10 @@ sub _create_links_for_subtree {
         #we're at the root--so create links for passing the segment info, etc.
         for my $property ($self->_instrument_data_workflow_input_properties($instrument_data, %options)) {
             my ($simple_property_name) = $property =~ m/^(.+?)__/;
-            $workflow->add_link(
-                left_operation => $workflow->get_input_connector,
+            $self->_add_link_to_workflow($workflow,
+                left_workflow_operation_id => $workflow->get_input_connector->id,
                 left_property => $property,
-                right_operation => $operation,
+                right_workflow_operation_id => $operation->id,
                 right_property => $simple_property_name,
             );
 
