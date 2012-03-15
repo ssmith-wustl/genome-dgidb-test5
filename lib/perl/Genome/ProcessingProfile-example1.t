@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 16;
+use Test::More tests => 22;
 
 BEGIN {
     $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -39,6 +39,7 @@ class Genome::ProcessingProfile::Foo {
     has_param => [
         p1 => { doc => 'param 1' },
         p2 => { doc => 'param 2' },
+        p3 => { is => 'Genome::Sample', is_optional => 1, doc => 'param 3' },
     ]
 };
 
@@ -48,6 +49,21 @@ sub Genome::ProcessingProfile::Foo::_execute_build { $execute_build = $_[1]; 1; 
 ok(Genome::ProcessingProfile::Foo->can("get"), "defined a new class of processing profile");
 ok(Genome::Model::Foo->can('get'), "the corresponding model class auto generates");
 ok(Genome::Model::Build::Foo->can('get'), "the corresponding build class auto generates");
+
+# make a profile mixing scalar params and objects
+my $p0 = Genome::ProcessingProfile::Foo->create(
+    name => $tname,
+    p1 => 'value1', 
+    p2 => 'value2',
+    p3 => $s
+);
+ok($p0, "made a new profile");
+is($p0->name, $tname, "got back name");
+is($p0->p1, 'value1', "got back p1 value 'value1'");
+is($p0->p2, 'value2', "got back p2 value 'value2'");
+is($p0->p3, $s, "got back p3 value $s");
+$p0->delete;
+isa_ok($p0, 'UR::DeletedRef', "deleted test processing profile successfully");
 
 # make an initial processing profile with a given set of parameter values 
 my $p = Genome::ProcessingProfile::Foo->create(
