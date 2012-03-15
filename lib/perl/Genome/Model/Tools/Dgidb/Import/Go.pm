@@ -20,7 +20,7 @@ class Genome::Model::Tools::Dgidb::Import::Go {
         tmp_dir => {
             is => 'Path',
             default => '/tmp',
-            doc => '', #TODO: fill me in
+            doc => 'Directory where the go xml files will be downloaded',
         },
         genes_outfile => {
             is => 'Path',
@@ -122,7 +122,7 @@ sub input_to_tsv {
 sub import_tsv {
     my $self = shift;
     my $genes_outfile = $self->genes_outfile;
-    # $self->preload_objects; #TODO: Do we need these?
+    # $self->preload_objects; #TODO: Do we need this?
     my @genes = $self->import_genes($genes_outfile);
     return 1;
 }
@@ -239,7 +239,6 @@ sub import_go_category_xml_files {
     }
     $go_fh->close;
 
-    # my %tsv_files;
     my %xml_files;
 
     foreach my $go_id (sort keys %go_terms){
