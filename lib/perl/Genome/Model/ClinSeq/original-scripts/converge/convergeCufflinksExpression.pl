@@ -165,7 +165,7 @@ close(OUT);
 if ($verbose){
   print "\n\n";
 }else{
-  print "\n\nPrinting output to: $outfile\n\n";
+  print "\n\nPrinted output to: $outfile\n\n";
 }
 
 exit();
