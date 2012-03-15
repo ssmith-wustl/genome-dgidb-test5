@@ -152,7 +152,7 @@ sub import_genes {
         }
         my $go_id_category = $self->_create_gene_category_report($gene_name, 'go_id', $go_input->{'go_id'}, $go_input->{'go_description'});
         my $secondary_go_term = $go_input->{'secondary_go_term'};
-        if($go_input->{'go_id'} !~ /$secondary_go_term/ ){ #TODO: this might work
+        if($go_input->{'go_id'} !~ /$secondary_go_term/ ){
             my $secondary_go_id_category = $self->_create_gene_category_report($gene_name, 'secondary_go_id', $secondary_go_term, '');
         }
     }
@@ -253,14 +253,6 @@ sub import_go_category_xml_files {
         my $wget_cmd_xml = "wget \"http://amigo.geneontology.org/cgi-bin/amigo/term-assoc.cgi?gptype=all&speciesdb=all&taxid=9606&evcode=all&term_assocs=all&term=GO%3A$go_digits&action=filter&format=rdfxml\" -O $tmp_dir/$go_outfile_xml";
         system($wget_cmd_xml);
         $xml_files{$short_name_and_id} = "$tmp_dir/$go_outfile_xml";
-
-#TODO: remove this if we aren't going to use anything from it
-#Get TSV file
-#wget "http://amigo.geneontology.org/cgi-bin/amigo/term-assoc.cgi?gptype=all&speciesdb=all&taxid=9606&evcode=all&term_assocs=all&term=GO%3A0016301&action=filter&format=go_assoc" -O KinaseActivity_GO0016301.tsv
-        # my $go_outfile_tsv = $go_terms{$go_id}{short_name} . "_" . $go_id . ".tsv";
-        # my $wget_cmd_tsv = "wget \"http://amigo.geneontology.org/cgi-bin/amigo/term-assoc.cgi?gptype=all&speciesdb=all&taxid=9606&evcode=all&term_assocs=all&term=GO%3A$go_digits&action=filter&format=go_assoc\" -O $tmp_dir/$go_outfile_tsv";
-        # system($wget_cmd_tsv);
-        # $tsv_files{$short_name_and_id} = "$tmp_dir/$go_outfile_tsv";
     }
     
     return %xml_files;
