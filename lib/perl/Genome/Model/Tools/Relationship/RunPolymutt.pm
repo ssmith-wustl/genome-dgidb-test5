@@ -13,14 +13,12 @@ use File::Path;
 
 class Genome::Model::Tools::Relationship::RunPolymutt {
     is => 'Command',
-    has => [
+    has_optional_input => [
         version => {
             is => 'Text',
             default => $DEFAULT_VERSION,
             doc => "Version to use",
         },
-    ],
-    has_optional_input => [
         denovo => {
             is=>'Text',
             is_optional=>1,
