@@ -1261,7 +1261,7 @@ sub success {
         $self->the_master_event->cancel_change_subscription('commit', $commit_callback); #only fire once
         $self->status_message('Firing build success commit callback.');
         my $result = eval {
-            $self->_trigger_downstream_builds($self);
+            $self->model->_trigger_downstream_builds($self);
         };
         if($@) {
             $self->error_message('Error executing success callback: ' . $@);

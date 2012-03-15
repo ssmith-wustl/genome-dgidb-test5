@@ -164,6 +164,11 @@ sub verify_file_md5 {
 sub processed_bed_file_content {
     my $self = shift;
     my %args = @_;
+
+    my $track_name = delete($args{track_name});
+    unless (defined($track_name)) {
+        $track_name = 'target_region';
+    }
     my $short_name = delete($args{short_name});
     unless (defined($short_name)) {
         $short_name = 1;
@@ -188,10 +193,18 @@ sub processed_bed_file_content {
         chomp($line);
         if($self->is_multitracked) {
             if ($line =~ /^track name=tiled_region/ or $line =~ /^track name=probes/) {
-                $print = 0;
+                if ($track_name eq 'tiled_region') {
+                    $print = 1;
+                } else {
+                    $print = 0;
+                }
                 next;
             } elsif ($line =~ /^track name=target_region/ or $line =~ /^track name=targets/) {
-                $print = 1;
+                if ($track_name eq 'target_region') {
+                    $print = 1;
+                } else {
+                    $print = 0;
+                }
                 next;
             }
         }

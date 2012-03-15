@@ -524,7 +524,13 @@ sub get_or_create_lane_qc_models {
 
         # target_region_set_name means this is Capture data whose QC needs RefCov done
         my $region_of_interest_set_input = $self->inputs(name => 'region_of_interest_set_name');
-        if ($self->target_region_set_name && $region_of_interest_set_input) {
+        my $target_region_set_name_input = $self->inputs(name => 'target_region_set_name');
+        if ($target_region_set_name_input && $region_of_interest_set_input) {
+            $qc_model->add_input(
+                name => $target_region_set_name_input->name,
+                value_class_name => $target_region_set_name_input->value_class_name,
+                value_id => $target_region_set_name_input->value_id,
+            );
             $qc_model->add_input(
                 name => $region_of_interest_set_input->name,
                 value_class_name => $region_of_interest_set_input->value_class_name,

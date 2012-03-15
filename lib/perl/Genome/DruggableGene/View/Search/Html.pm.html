@@ -2,13 +2,17 @@
     <form action='/view/x/druggable-gene' method='POST' enctype='multipart/form-data'>
         <span style='font-weight: bold'>Use a gene list file: </span>
         <input type='file' id='file' name='file'/>
-        <br />or<br />
+        <br />and/or<br />
         <span style='font-weight: bold'>Paste a gene list: </span>
         <br />
         <textarea name='genes'/>
         <br />
+        Exclusively Use Sources, leave unchecked to not limit sources:<br />
+        <input type="checkbox" name="ttd" value='1' />TTD<br />
+        <input type="checkbox" name="db" value='1' />Drug Bank<br />
+        <br />
         Filters: <br />
-        <input type='radio' name='filter' value='default' checked='true'/>not withdrawn, not nutraceutical, not(potentiator or na)<br />
+        <input type='radio' name='filter' value='default' checked='true'/>Drug is not (withdrawn or nutraceutical) and interaction is not (potentiator or na)<br />
         <input type='radio' name='filter' value='none'/>none<br />
         <br />
         Output Format: <br />

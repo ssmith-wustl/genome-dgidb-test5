@@ -50,8 +50,8 @@ if (method == "glm") {
     # self-defined x.names have to be found in column names of y.file and/or x.file  
 
     #################### myglm fuction ##############
-    myglm=function(z,trait,variant,covar=NULL,ytype) {
-        if (is.null(covar)) {
+    myglm=function(z,trait,variant,covar=NA,ytype) {
+        if (nchar(covar)==0 | is.na(covar) | is.null(covar)) { 
             model=formula(paste(trait,"~",variant)) 
         } else {
             model=formula(paste(trait,"~",variant,"+",covar))
@@ -90,7 +90,7 @@ if (method == "glm") {
         ytype=md[i,1];yi=md[i,2];xs=md[i,3];covi=md[i,4];memo=md[i,5]
         if (!is.na(xs) & nchar(xs)>0) xs=strsplit(xs,split="[|]")[[1]]
         if (is.na(xs)[1]|nchar(xs)[1]==0) xs=x.names 
-        if (is.na(covi)|length(covi)==0) covi=NULL 
+        if (length(covi)==0) covi=NA
         for (xi in xs)
         {
             print(yi); print(xi); print(covi); print("******")
@@ -99,7 +99,6 @@ if (method == "glm") {
             if (class(fit)[1]!="try-error")
             {
                 fit=as.matrix(fit)
-                if (is.null(covi)) covi=NA
                 if (xi %in% rownames(fit)) tt=rbind(tt, cbind(yi,ytype,xi,as.data.frame(t(fit[xi,])),covi,memo))
             }
         }

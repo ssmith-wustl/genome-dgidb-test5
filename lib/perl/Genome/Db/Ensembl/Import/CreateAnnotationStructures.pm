@@ -93,6 +93,11 @@ sub execute
     foreach my $slice ( @slices )
     {
         my $chromosome = $slice->seq_region_name();
+        my $bases_file = $self->reference_build->get_bases_file($chromosome);
+        unless (-e $bases_file) {
+            $self->status_message("Transcript structures from chromosome $chromosome will not be imported because it doesn\'t exist in the reference sequence.");
+            next;
+        }
         my @ensembl_transcripts = @{ $transcript_adaptor->fetch_all_by_Slice($slice)};
         $self->status_message("Importing ".scalar @ensembl_transcripts." transcripts\n");
 

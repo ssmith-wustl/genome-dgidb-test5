@@ -122,7 +122,7 @@ sub execute {
     my $cosmic_dir = $self->cosmic_dir;
     my $basename = $self->output_file;
     my $ref_build = $self->reference_build;
-    unless($ref_build eq 'Build36' xor $ref_build eq 'Build37'){
+    unless($ref_build =~ m/build36/i xor $ref_build =~ m/build37/i){
         $self->error_message("You must either specify reference_build as either \"Build36\" or \"Build37\"");
         die $self->error_message;
     }
@@ -260,7 +260,7 @@ sub execute {
             chomp($line);
             my @parser = split(/\t/, $line);
             $gene = $parser[$gene_col];
-            if ($ref_build eq 'Build36') {
+            if ($ref_build =~ m/build36/i) {
                 $chr = $parser[$chr_col];
                 $start = $parser[$start_col];
                 $stop = $parser[$stop_col];
@@ -273,6 +273,9 @@ sub execute {
             $chr =~ s/NotListed/ /;
             $start =~ s/NotListed/ /;
             $stop =~ s/NotListed/ /;
+
+            $chr =~ s/23/X/;
+            $chr =~ s/24/Y/;
 
             $amino = $parser[$amino_col];
             $nucleo = $parser[$nucleo_col];

@@ -20,7 +20,7 @@ class Genome::ProcessingProfile::View::Status::Xml {
                     perspective => 'default',
                     toolkit => 'xml',
                     aspects => [
-                        'id', 'name', 'value',
+                        'id', 'name', '_value_scalar_or_object',
                     ]
                 }
             ]

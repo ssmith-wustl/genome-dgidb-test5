@@ -887,5 +887,32 @@ sub verify_or_create_local_cache {
     return $local_cache_dir;
 }
 
+
+sub get_or_create_genome_file {
+    my $self = shift;
+
+    my $genome_file = $self->data_directory .'/all_sequences.genome';
+    unless (-s $genome_file) {
+        my $seqdict_sam = $self->get_sequence_dictionary('sam');
+        my $genome_fh = Genome::Sys->open_file_for_writing($genome_file);
+        unless ($genome_fh) {
+            die('Failed to open genome file for writing: '. $genome_file);
+        }
+        my $seqdict_fh = Genome::Sys->open_file_for_reading($seqdict_sam);
+        unless ($seqdict_fh) {
+            die('Failed to open seqdict file for reading: '. $seqdict_sam);
+        }
+        while (my $line = $seqdict_fh->getline) {
+            chomp($line);
+            if ($line =~ /^\@SQ\s+SN:(.+)\s+LN:(\d+)\s*/) {
+                print $genome_fh $1 ."\t". $2 ."\n";
+            }
+        }
+        $seqdict_fh->close;
+        $genome_fh->close;
+    }
+    return $genome_file;
+}
+
 1;
 

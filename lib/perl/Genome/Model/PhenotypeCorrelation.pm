@@ -64,10 +64,15 @@ class Genome::Model::PhenotypeCorrelation {
             is => 'Genome::Model::Build::ReferenceSequence',
             doc => 'the reference sequence against which alignment and variant detection are done',
         },
+        previous_variant_detection_results => {
+            is => 'FilesystemPath',
+            is_optional => 1,
+            doc => 'path to a VCF of previous: skip variant detection and use this',
+        },
         nomenclature => {
             is => 'Genome::Nomenclature',
             doc => 'nomenclature used to access clinical data'
-        }
+        },
     ],
     has_optional_input => [
         roi_list => {
@@ -211,7 +216,6 @@ sub _resource_requirements_for_execute_build {
 our $SHORTCUT_ALIGNMENT_QUERY = 0;
 sub _execute_build {
     my ($self,$build) = @_;
-
     # TODO: remove this and replace with the workflow logic at the bottom when we have one.
     # Version 1 of this pipeline will run in a linear way only if the underlying samples have already
     # had independent alignment and variant detection completed in other models.
@@ -219,24 +223,11 @@ sub _execute_build {
     warn "The logic for building this model is only partly functional!  Contact Human Genomics or put in an APIPE-support ticket..";
 
     #
-    # get the subject (population group), the individual members and their samples
+    # the subject is a population group
     #
 
     my $population_group = $build->model->subject;
     $build->status_message("subject is " . $population_group->__display_name__);
-
-    my @patients = $population_group->members();
-    $build->status_message("found " . scalar(@patients) . " patients");
-
-    my @samples = $population_group->samples;
-    $build->status_message("found " . scalar(@samples) . " samples");
-
-    my @instdata_assn = $build->inputs(name => 'instrument_data');
-    $build->status_message("found " . scalar(@instdata_assn) . " assignments for the current build");
-
-    #my @instdata = Genome::InstrumentData->get(id => [ map { $_->value_id } @instdata_assn ]);
-    my @instdata = map { $_->value } @instdata_assn;
-    $build->status_message("found " . scalar(@instdata) . " instdata");
 
     #
     # get the reference sequence
@@ -252,124 +243,162 @@ sub _execute_build {
     $build->status_message("reference sequence fasta: " . $reference_fasta);
 
     #
-    # get the alignment results for each sample
-    # this will only work right now if the per-sample model has already run
-    # once Tom's new alignment thing is in place, it would actually generate them in parallel
+    # get or create the vcf
     #
-    
-    my $actually_gather_alignment_results = 1;
 
-    my @per_sample_alignment_results;
-    my @bams;
+    my $multisample_vcf;
     my @builds;
-    
-    if ($SHORTCUT_ALIGNMENT_QUERY) {
-        # shortcut to speed testing
-        @per_sample_alignment_results = Genome::SoftwareResult->get(
-            [
-                '116553088',
-                '116553238',
-                '116553281'
-            ]
-        );
-        
-        @builds = Genome::Model::Build->get(
-            [
-                '116552788',
-                '116552996',
-                '116553031'
-            ]
-        );
+    my @samples;
+    if (! $build->previous_variant_detection_results) {
+        # generate a multisample VCF
 
-        @bams = (
-          '/gscmnt/gc7001/info/build_merged_alignments/merged-alignment-blade13-4-10.gsc.wustl.edu-rlong-14103-116553088/116553088.bam',
-          '/gscmnt/gc7001/info/build_merged_alignments/merged-alignment-blade13-4-10.gsc.wustl.edu-rlong-17210-116553238/116553238.bam',
-          '/gscmnt/ams1152/info/build_merged_alignments/merged-alignment-blade13-4-7.gsc.wustl.edu-rlong-12110-116553281/116553281.bam'
-        );
+        #
+        # get the subject (population group), the individual members and their samples
+        #
+
+        my @patients = $population_group->members();
+        $build->status_message("found " . scalar(@patients) . " patients");
+
+        @samples = $population_group->samples;
+        $build->status_message("found " . scalar(@samples) . " samples");
+
+        my @instdata_assn = $build->inputs(name => 'instrument_data');
+        $build->status_message("found " . scalar(@instdata_assn) . " assignments for the current build");
+
+        #my @instdata = Genome::InstrumentData->get(id => [ map { $_->value_id } @instdata_assn ]);
+        my @instdata = map { $_->value } @instdata_assn;
+        $build->status_message("found " . scalar(@instdata) . " instdata");
+
+        #
+        # get the alignment results for each sample
+        # this will only work right now if the per-sample model has already run
+        # once Tom's new alignment thing is in place, it would actually generate them in parallel
+        #
+        
+        my $actually_gather_alignment_results = 1;
+
+        my @per_sample_alignment_results;
+        my @bams;
+        
+        if ($SHORTCUT_ALIGNMENT_QUERY) {
+            # shortcut to speed testing
+            @per_sample_alignment_results = Genome::SoftwareResult->get(
+                [
+                    '116553088',
+                    '116553238',
+                    '116553281'
+                ]
+            );
+            
+            @builds = Genome::Model::Build->get(
+                [
+                    '116552788',
+                    '116552996',
+                    '116553031'
+                ]
+            );
+
+            @bams = (
+            '/gscmnt/gc7001/info/build_merged_alignments/merged-alignment-blade13-4-10.gsc.wustl.edu-rlong-14103-116553088/116553088.bam',
+            '/gscmnt/gc7001/info/build_merged_alignments/merged-alignment-blade13-4-10.gsc.wustl.edu-rlong-17210-116553238/116553238.bam',
+            '/gscmnt/ams1152/info/build_merged_alignments/merged-alignment-blade13-4-7.gsc.wustl.edu-rlong-12110-116553281/116553281.bam'
+            );
+        }
+        else {
+            $self->status_message('Gathering alignments...');    
+            my $overall_alignment_result = Genome::InstrumentData::Composite->get_or_create(
+                inputs => {
+                    instrument_data => \@instdata,
+                    reference_sequence_build => $reference_build,
+                },
+                strategy => $self->alignment_strategy,
+                log_directory => $build->log_directory,
+            );
+
+            # used by the updated DV2 API
+            @per_sample_alignment_results = $overall_alignment_result->_merged_results;
+            for my $r (@per_sample_alignment_results) {
+                $r->add_user(label => 'uses', user => $build);
+            }
+            $self->status_message('Found ' . scalar(@per_sample_alignment_results) . ' per-sample alignmnet results.');
+
+            # used directly by the merge tool until we switch to using the above directly
+            @bams = $overall_alignment_result->bam_paths;
+            $self->status_message('Found ' . scalar(@bams) . ' merged BAMs.');
+            for my $bam (@bams){
+                unless (-e $bam){
+                    die $self->error_message("Bam file could not be reached at: ".$bam);
+                }
+            }
+
+            # this is used by the old, non-DV2 code, but is also used by vcf2maf, 
+            # which reliese on annotation having been run on the original samples
+            @builds = $self->_get_builds(\@per_sample_alignment_results);
+        
+            my @ar_ids = map { $_->id } @per_sample_alignment_results;
+            my @build_ids = map { $_->id } @builds; 
+            print Data::Dumper::Dumper(\@ar_ids, \@build_ids, \@bams);
+        }
+
+        #
+        # Detect Variants
+        #
+        # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
+        # _internally_ it will (for the first pass):
+        #  notice it's running on multiple BAMs
+        #  get the single-BAM results
+        #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
+        #  run bamreadcount to fill-in the blanks
+        #
+
+        $self->status_message("Executing detect variants step");        
+
+        my %params;
+        $params{snv_detection_strategy} = $self->snv_detection_strategy if $self->snv_detection_strategy;
+        $params{indel_detection_strategy} = $self->indel_detection_strategy if $self->indel_detection_strategy;
+        $params{sv_detection_strategy} = $self->sv_detection_strategy if $self->sv_detection_strategy;
+        $params{cnv_detection_strategy} = $self->cnv_detection_strategy if $self->cnv_detection_strategy;
+
+        $params{reference_build_id} = $reference_build->id;
+
+        my $output_dir = $build->data_directory."/variants";
+        $params{output_directory} = $output_dir;
+
+        # instead of setting {control_,}aligned_reads_{input,sample}
+        # set alignment_results and control_alignment_results
+
+        $params{alignment_results} = \@per_sample_alignment_results;
+        $params{control_alignment_results} = [];
+        $params{pedigree_file_path} = $build->pedigree_file_path;
+        $params{roi_list} = $build->roi_list;
+        $params{roi_wingspan} = $self->roi_wingspan;
+
+        my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
+        unless ($command){
+            die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);
+        }
+
+        my $rv = $command->execute;
+        my $err = $@;
+        unless ($rv){
+            die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
+        }
+
+        $self->status_message("detect variants command completed successfully");
+
+        $multisample_vcf = $output_dir . '/snvs.merged.vcf.gz';
+
     }
     else {
-        $self->status_message('Gathering alignments...');    
-        my $overall_alignment_result = Genome::InstrumentData::Composite->get_or_create(
-            inputs => {
-                instrument_data => \@instdata,
-                reference_sequence_build => $reference_build,
-            },
-            strategy => $self->alignment_strategy,
-            log_directory => $build->log_directory,
-        );
-
-        # used by the updated DV2 API
-        @per_sample_alignment_results = $overall_alignment_result->_merged_results;
-        for my $r (@per_sample_alignment_results) {
-            $r->add_user(label => 'uses', user => $build);
-        }
-        $self->status_message('Found ' . scalar(@per_sample_alignment_results) . ' per-sample alignmnet results.');
-
-        # used directly by the merge tool until we switch to using the above directly
-        @bams = $overall_alignment_result->bam_paths;
-        $self->status_message('Found ' . scalar(@bams) . ' merged BAMs.');
-        for my $bam (@bams){
-            unless (-e $bam){
-                die $self->error_message("Bam file could not be reached at: ".$bam);
-            }
-        }
-
-        # this is used by the old, non-DV2 code, but is also used by vcf2maf, 
-        # which reliese on annotation having been run on the original samples
-        @builds = $self->_get_builds(\@per_sample_alignment_results);
-    
-        my @ar_ids = map { $_->id } @per_sample_alignment_results;
-        my @build_ids = map { $_->id } @builds; 
-        print Data::Dumper::Dumper(\@ar_ids, \@build_ids, \@bams);
+        $multisample_vcf = $self->previous_variant_detection_results;
+        $build->status_message("using pre-made VCF: $multisample_vcf");
+        
+        @samples = $population_group->samples;
+        $build->status_message("found " . scalar(@samples) . " samples");
+   
+        # TODO: don't dependin on underlying builds, for polymutt etc there won't be any
+        @builds = ();
     }
-
-    #
-    # Detect Variants
-    #
-    # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
-    # _internally_ it will (for the first pass):
-    #  notice it's running on multiple BAMs
-    #  get the single-BAM results
-    #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
-    #  run bamreadcount to fill-in the blanks
-    #
-
-    $self->status_message("Executing detect variants step");        
-
-    my %params;
-    $params{snv_detection_strategy} = $self->snv_detection_strategy if $self->snv_detection_strategy;
-    $params{indel_detection_strategy} = $self->indel_detection_strategy if $self->indel_detection_strategy;
-    $params{sv_detection_strategy} = $self->sv_detection_strategy if $self->sv_detection_strategy;
-    $params{cnv_detection_strategy} = $self->cnv_detection_strategy if $self->cnv_detection_strategy;
-
-    $params{reference_build_id} = $reference_build->id;
-
-    my $output_dir = $build->data_directory."/variants";
-    $params{output_directory} = $output_dir;
-
-    # instead of setting {control_,}aligned_reads_{input,sample}
-    # set alignment_results and control_alignment_results
-
-    $params{alignment_results} = \@per_sample_alignment_results;
-    $params{control_alignment_results} = [];
-    $params{pedigree_file_path} = $build->pedigree_file_path;
-    $params{roi_list} = $build->roi_list;
-    $params{roi_wingspan} = $self->roi_wingspan;
-
-    my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
-    unless ($command){
-        die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);
-    }
-
-    my $rv = $command->execute;
-    my $err = $@;
-    unless ($rv){
-        die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
-    }
-
-    $self->status_message("detect variants command completed successfully");
-
-    my $multisample_vcf = $output_dir . '/snvs.merged.vcf.gz';
 
     #
     # Continue with analysis of the multisample_vcf
@@ -405,7 +434,7 @@ sub _execute_build {
         foreach my $build_object (@builds) {
             my $sample_name = $build_object->subject_name;
             my $bam_file = $build_object->whole_rmdup_bam_file;
-            print $tfh_bams "$sample_name\t$bam_file\n";
+            print $tfh_bams "$sample_name\t$bam_file\t$bam_file\n";
         }
         close($tfh_bams);
 
@@ -414,20 +443,22 @@ sub _execute_build {
 #need clinical data file $clinical_data
 #my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt'; #comma or tab delim?
 
+print "preparing clinical files\n";
         my %pheno_hash;
         my %attributes;
+        my %is_it_binary;
         foreach my $sample (@samples) {
             my $sample_id = $sample->id;
             my $sample_name = $sample->name;
-
             my @sample_attributes = $sample->attributes_for_nomenclature($self->nomenclature);
             for my $attr (@sample_attributes) {
-                $attributes{$attr->attribute_label} = 1;
+                $attributes{$attr->attribute_label} = $attr->nomenclature_field_type; #Right now the types are: integer, real, date, string, enumerated 
                 $pheno_hash{$sample_name}{$attr->attribute_label} = $attr->attribute_value;
+                $is_it_binary{$attr->attribute_label}{$attr->attribute_value}++;
             }
         }
         my @header_fields = sort keys %attributes;
-        my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
+        my $clinical_data = "$temp_path/Clinical_Data.txt";
         my $clinical_inFh = Genome::Sys->open_file_for_writing($clinical_data);
         print $clinical_inFh join("\t","Sample_name",@header_fields),"\n";
 
@@ -436,20 +467,92 @@ sub _execute_build {
         }
         close($clinical_inFh);
 
+#        my $glm_model_file = '/gscmnt/sata424/info/medseq/Freimer-Boehnke/Final_Data_Set_20111213/3Center/MAF_File/glm-model-file.txt';
+        my $glm_model_file = "$temp_path/Glm_Model_File.txt";
+        my $glm_model_file_inFh = Genome::Sys->open_file_for_writing($glm_model_file);
+#need a way to set this
+#        my $covariates = "PC1+PC2+PC3+PC4+PC5";
+        my $covariates = "NA";
+        my @covariate_options = split(/\+/, $covariates);
+        my $pheno_fh = new IO::File $clinical_data,"r";
+        my $pheno_header = $pheno_fh->getline;
+        chomp($pheno_header);
+        close($pheno_fh);
+        my @pheno_headers = split(/\t/, $pheno_header);
+        my @pheno_minus_covariates;
+        foreach my $phead (@pheno_headers) {
+            my $match = 0;
+            foreach my $cov (@covariate_options) {
+                if ($phead eq $cov) {
+                    $match = 1;
+                }
+            }
+            unless ($match) {
+                push(@pheno_minus_covariates,$phead);
+            }
+        }
+        my $phenotype_list = join(",", @pheno_minus_covariates);
+
+        print $glm_model_file_inFh "analysis_type\tclinical_data_trait_name\tvariant/gene_name\tcovariates\tmemo\n";
+        foreach my $glm_attr (@header_fields) {
+            my $data_type = $attributes{$glm_attr};
+            my $analysis_data_type;
+#            if (
+            my $binary_assessment = scalar(keys %{$is_it_binary{$glm_attr}});
+            if ($binary_assessment < 3 && ($data_type eq 'enumerated' || $data_type eq 'string')) {
+                $analysis_data_type = 'B';
+            }
+            else {
+                $analysis_data_type = 'Q';
+            }
+            print $glm_model_file_inFh "$analysis_data_type\t$glm_attr\tNA\t$covariates\tNA\n";
+        }
+        close($glm_model_file_inFh);
         #$name is project name or some other good identifier
         my $name = $self->name;
+#smg bedfile $temp_path/smg_restricted_bed.bed
+#starting bedfile $target_region_set_name_bedfile
+        #my $variant_matrix_cmd = "gmt vcf vcf-to-variant-matrix --vcf-file $multisample_vcf --output-file $temp_path/variant_matrix.txt --project-name $name --matrix-genotype-version Numerical --bed-roi-file $target_region_set_name_bedfile --transpose";
+        my $mutation_matrix = "$temp_path/$name"."_variant_matrix.txt";
+        my $variant_matrix_cmd  = Genome::Model::Tools::Vcf::VcfToVariantMatrix->execute(
+            vcf_file => $multisample_vcf,
+            output_file => $mutation_matrix,
+            project_name => $name,
+            matrix_genotype_version => 'Numerical',
+            bed_roi_file => $target_region_set_name_bedfile,
+            transpose => 1,
+        );
+        unless($variant_matrix_cmd){
+            die $self->error_message("Could not complete vcf to variant matrix conversion!");
+        }
 
+#system("cp $multisample_vcf /gscuser/wschierd/Deleteme/vcf.txt");
+#system("cp $clinical_data /gscuser/wschierd/Deleteme/Clinicaldata.txt");
+#system("cp $glm_model_file /gscuser/wschierd/Deleteme/glm_model_file.txt");
+#system("cp $mutation_matrix /gscuser/wschierd/Deleteme/variant_matrix.txt");
+#system("cp $target_region_set_name_bedfile /gscuser/wschierd/Deleteme/roi_bedfile.txt");
+#system("cp $bam_list /gscuser/wschierd/Deleteme/bamlist.txt");
+#system("cp $maf_file /gscuser/wschierd/Deleteme/maf.txt");
+
+print "starting clinical correlation\n";
+        #with above variant matrix forced in
+#this file needs to be generated...somehow
         #my $clin_corr = "gmt music clinical-correlation --genetic-data-type variant --bam-list $bam_list --maf-file $maf_file --output-file $temp_path/clin_corr_result --categorical-clinical-data-file $clinical_data";
         my $clin_corr_cmd = Genome::Model::Tools::Music::ClinicalCorrelation->execute(
             genetic_data_type => "variant",
             bam_list => $bam_list,
             maf_file => $maf_file,
             output_file => "$temp_path/clin_corr_result",
-            categorical_clinical_data_file => $clinical_data,
+            glm_model_file => $glm_model_file,
+            glm_clinical_data_file => $clinical_data,
+            input_clinical_correlation_matrix_file => $mutation_matrix,
+            use_maf_in_glm => 1,
         );
         unless($clin_corr_cmd){
             die $self->error_message("Could not complete clinical correlation!");
         }
+
+=cut
         my $fdr_cutoff = 0.05;
         #my $clin_corr_finish = "gmt germline finish-music-clinical-correlation --input-file $temp_path/clin_corr_result.categorical --output-file $temp_path/clin_corr_result_stats_FDR005.txt --output-pdf-image-file $temp_path/clin_corr_result_stats_FDR005.pdf --clinical-data-file $clinical_data --project-name $name --fdr-cutoff $fdr_cutoff --maf-file $maf_file";
         my $clin_corr_finish_cmd = Genome::Model::Tools::Germline::FinishMusicClinicalCorrelation->execute(
@@ -464,20 +567,9 @@ sub _execute_build {
         unless($clin_corr_finish_cmd){
             die $self->error_message("Could not complete clinical correlation finisher statistics!");
         }
+=cut
 
-        #vcf to mutation matrix
-        my $mutation_matrix = "$temp_path/$name"."_variant_matrix.txt";
-        my $vcf_mutmatrix_cmd = Genome::Model::Tools::Vcf::VcfToVariantMatrix->execute(
-            vcf_file => $multisample_vcf,
-            project_name => $name,
-            bed_roi_file => $target_region_set_name_bedfile,
-            output_file => $mutation_matrix,
-            #positions_file
-        );
-        unless($vcf_mutmatrix_cmd){
-            die $self->error_message("Could not complete mutation matrix creation!");
-        }
-
+print "starting annotation\n";
         my %annotation_hash;
         foreach my $build (@builds) {
             my $annotation_output_directory = $build->data_directory."/variants";
@@ -492,30 +584,66 @@ sub _execute_build {
             }
         }
 
-        my ($tfh_annotation,$annotation_file_path) = Genome::Sys->create_temp_file;
-        unless($tfh_annotation) {
-            die $self->error_message("Unable to create temporary file $!");
-        }
-        $annotation_file_path =~ s/\:/\\\:/g;
+        my $annotation_file_path = "$multisample_vcf.annotated";
+        my $annotation_file_inFh = Genome::Sys->open_file_for_writing($annotation_file_path);
 
         foreach my $variant (sort keys %annotation_hash) {
-        	print $tfh_annotation "$variant\t$annotation_hash{$variant}\n";
+        	print $annotation_file_inFh "$variant\t$annotation_hash{$variant}\n";
         }
 
-=cut
-        #burden analysis
+        my $vep_annotation_file_path = "$multisample_vcf.VEP_annotated";
+
+        my $ensembl_VEP_cmd = Genome::Db::Ensembl::Vep->execute(
+            input_file => $multisample_vcf,
+            output_file => $vep_annotation_file_path,
+            format => 'vcf',
+            condel => 'b',
+            polyphen => 'b',
+            sift => 'b',
+            hgnc => 1,
+            per_gene => 1,
+        );
+        unless($ensembl_VEP_cmd){
+            die $self->error_message("Could not complete VEP annotation!");
+        }
+
+        my $vep_annotation_parsed_file_path = "$multisample_vcf.VEP_annotated.parsed";
+
+        my $ensembl_VEP_parsed_cmd = Genome::Model::Tools::Annotate::ParseVep->execute(
+            vep_input => $vep_annotation_file_path,
+            output_file => $vep_annotation_parsed_file_path,
+        );
+        unless($ensembl_VEP_parsed_cmd){
+            die $self->error_message("Could not complete VEP annotation parsing!");
+        }
+
+print "starting burden analysis\n";
+        my $id = $build->id;
+        my $testing_mode = 0;
+        if ($id < 0) {
+            $testing_mode = 1;
+        }
+        my $burden_temp_path_output = "$temp_path/BurdenAnalysisResults/";
+        unless (-d $burden_temp_path_output) {
+            system("mkdir $burden_temp_path_output");
+        }
         my $burden_cmd = Genome::Model::Tools::Germline::BurdenAnalysis->execute(
             mutation_file => $mutation_matrix,
             phenotype_file => $clinical_data,
-            marker_file => $annotation_file_path,
+            VEP_annotation_file => $vep_annotation_parsed_file_path,
             project_name => $name,
-#            base_R_commands => { is => 'Text', doc => "The base R command library", default => '/gscuser/qzhang/ASMS/rarelib20111003.R' },
-            output_file => "$temp_path/$name"."_burden_analysis.txt",
+            output_directory => $burden_temp_path_output,
+#            base_R_commands => '/gscuser/qzhang/gstat/burdentest/burdentest.R',
+#            maf_cutoff => '0.01',
+#            permutations => '10000',
+#            covariates => 'NONE',
+#            trv_types => 'NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING:NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING,SPLICE_SITE:NMD_TRANSCRIPT,STOP_LOST:NON_SYNONYMOUS_CODING:NON_SYNONYMOUS_CODING,SPLICE_SITE:STOP_GAINED:STOP_GAINED,SPLICE_SITE',
+            select_phenotypes => $phenotype_list,
+            testing_mode => $testing_mode,
         );
         unless($burden_cmd){
             die $self->error_message("Could not complete burden analysis!");
         }
-=cut
 =cut
 #haplotype analysis
 
@@ -595,7 +723,7 @@ my $clinical_variable_distribution_cmd = "perl /gscmnt/sata424/info/medseq/Freim
         foreach $build (@builds) {
             my $sample_name = $build->subject_name;
             my $bam_file = $build->whole_rmdup_bam_file;
-            print $tfh_bams "$sample_name\t$bam_file\t$bam_file\n";
+            print $tfh_bams "$sample_name\t$bam_file\t$bam_file\t$bam_file\n";
         }
         close($tfh_bams);
 
@@ -652,9 +780,9 @@ my $clinical_variable_distribution_cmd = "perl /gscmnt/sata424/info/medseq/Freim
             die $self->error_message("Could not complete bmr step 2!");
         }
 
-system("cp $maf_file /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/maf_file.maf");
-system("cp $bam_list /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/bam_list.txt");
-system("cp $temp_path/* /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/");
+#system("cp $maf_file /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/maf_file.maf");
+#system("cp $bam_list /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/bam_list.txt");
+#system("cp $temp_path/* /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/");
 
         #Ran SMG test:
         #The smg test limits its --output-file to a --max-fdr cutoff. A full list of genes is always stored separately next to the output with prefix "_detailed".
@@ -750,55 +878,110 @@ my $kegg_db = '/gscmnt/gc2108/info/medseq/ckandoth/music/brc_input/pathway_dbs/K
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
 #my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
+print "preparing clinical files\n";
         my %pheno_hash;
         my %attributes;
+        my %is_it_binary;
         foreach my $sample (@samples) {
             my $sample_id = $sample->id;
             my $sample_name = $sample->name;
             my @sample_attributes = $sample->attributes_for_nomenclature($self->nomenclature);
             for my $attr (@sample_attributes) {
-                $attributes{$attr->attribute_label} = 1;
+                $attributes{$attr->attribute_label} = $attr->nomenclature_field_type; #Right now the types are: integer, real, date, string, enumerated 
                 $pheno_hash{$sample_name}{$attr->attribute_label} = $attr->attribute_value;
+                $is_it_binary{$attr->attribute_label}{$attr->attribute_value}++;
             }
         }
-
-        my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
+        my @header_fields = sort keys %attributes;
+        my $clinical_data = "$temp_path/Clinical_Data.txt";
         my $clinical_inFh = Genome::Sys->open_file_for_writing($clinical_data);
+        print $clinical_inFh join("\t","Sample_name",@header_fields),"\n";
+
         for my $sample_name (sort keys %pheno_hash) {
-            print $clinical_inFh "Sample_name";
-            for my $pheno_category (sort keys %{$pheno_hash{$sample_name}}) {
-                print $clinical_inFh "\t$pheno_category";
-            }
-            print $clinical_inFh "\n";
-            last;
-        }
-        for my $sample_name (sort keys %pheno_hash) {
-            print $clinical_inFh "$sample_name";
-            for my $pheno_category (sort keys %{$pheno_hash{$sample_name}}) {
-                my $pheno_value = $pheno_hash{$sample_name}{$pheno_category};
-                print $clinical_inFh "\t$pheno_value";
-            }
-            print $clinical_inFh "\n";
+            print $clinical_inFh join("\t","$sample_name",@{$pheno_hash{$sample_name}}{@header_fields}),"\n";
         }
         close($clinical_inFh);
 
+#        my $glm_model_file = '/gscmnt/sata424/info/medseq/Freimer-Boehnke/Final_Data_Set_20111213/3Center/MAF_File/glm-model-file.txt';
+        my $glm_model_file = "$temp_path/Glm_Model_File.txt";
+        my $glm_model_file_inFh = Genome::Sys->open_file_for_writing($glm_model_file);
+#need a way to set this
+#        my $covariates = "PC1+PC2+PC3+PC4+PC5";
+        my $covariates = "NA";
+
+        my @covariate_options = split(/\+/, $covariates);
+        my $pheno_fh = new IO::File $clinical_data,"r";
+        my $pheno_header = $pheno_fh->getline;
+        chomp($pheno_header);
+        close($pheno_fh);
+        my @pheno_headers = split(/\t/, $pheno_header);
+        my @pheno_minus_covariates;
+        foreach my $phead (@pheno_headers) {
+            my $match = 0;
+            foreach my $cov (@covariate_options) {
+                if ($phead eq $cov) {
+                    $match = 1;
+                }
+            }
+            unless ($match) {
+                push(@pheno_minus_covariates,$phead);
+            }
+        }
+        my $phenotype_list = join(",", @pheno_minus_covariates);
+
+        print $glm_model_file_inFh "analysis_type\tclinical_data_trait_name\tvariant/gene_name\tcovariates\tmemo\n";
+        foreach my $glm_attr (@header_fields) {
+            my $data_type = $attributes{$glm_attr};
+            my $analysis_data_type;
+#            if (
+            my $binary_assessment = scalar(keys %{$is_it_binary{$glm_attr}});
+            if ($binary_assessment < 3 && ($data_type eq 'enumerated' || $data_type eq 'string')) {
+                $analysis_data_type = 'B';
+            }
+            else {
+                $analysis_data_type = 'Q';
+            }
+            print $glm_model_file_inFh "$analysis_data_type\t$glm_attr\tNA\t$covariates\tNA\n";
+        }
+        close($glm_model_file_inFh);
+
 #example: /gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/music/input/sample_phenotypes2.csv
-#this is not the logistic regression yet, found out that yyou and ckandoth did not put logit into music, but just into the R package that music runs
 #$name is project name or some other good identifier
 my $name = $self->name;
+#smg bedfile $temp_path/smg_restricted_bed.bed
+#starting bedfile $target_region_set_name_bedfile
+        #my $variant_matrix_cmd = "gmt vcf vcf-to-variant-matrix --vcf-file $multisample_vcf --output-file $temp_path/variant_matrix.txt --project-name $name --matrix-genotype-version Numerical --bed-roi-file $target_region_set_name_bedfile --transpose";
+        my $mutation_matrix = "$temp_path/$name"."_variant_matrix.txt";
+        my $variant_matrix_cmd  = Genome::Model::Tools::Vcf::VcfToVariantMatrix->execute(
+            vcf_file => $multisample_vcf,
+            output_file => $mutation_matrix,
+            project_name => $name,
+            matrix_genotype_version => 'Numerical',
+            bed_roi_file => $target_region_set_name_bedfile,
+            transpose => 1,
+        );
+        unless($variant_matrix_cmd){
+            die $self->error_message("Could not complete vcf to variant matrix conversion!");
+        }
 
+        #with above variant matrix forced in
+#this file needs to be generated...somehow
         #my $clin_corr = "gmt music clinical-correlation --genetic-data-type variant --bam-list $bam_list --maf-file $maf_file --output-file $temp_path/clin_corr_result --categorical-clinical-data-file $clinical_data";
         my $clin_corr_cmd = Genome::Model::Tools::Music::ClinicalCorrelation->execute(
             genetic_data_type => "variant",
             bam_list => $bam_list,
             maf_file => $maf_file,
             output_file => "$temp_path/clin_corr_result",
-            categorical_clinical_data_file => $clinical_data,
+            glm_model_file => $glm_model_file,
+            glm_clinical_data_file => $clinical_data,
+            input_clinical_correlation_matrix_file => $mutation_matrix,
+            use_maf_in_glm => 1,
         );
         unless($clin_corr_cmd){
             die $self->error_message("Could not complete clinical correlation!");
         }
 
+=cut
         $fdr_cutoff = 0.05;
         #my $clin_corr_finish = "gmt germline finish-music-clinical-correlation --input-file $temp_path/clin_corr_result.categorical --output-file $temp_path/clin_corr_result_stats_FDR005.txt --output-pdf-image-file $temp_path/clin_corr_result_stats_FDR005.pdf --clinical-data-file $clinical_data --project-name $name --fdr-cutoff $fdr_cutoff --maf-file $maf_file";
         my $clin_corr_finish_cmd = Genome::Model::Tools::Germline::FinishMusicClinicalCorrelation->execute(
@@ -813,61 +996,87 @@ my $name = $self->name;
         unless($clin_corr_finish_cmd){
             die $self->error_message("Could not complete clinical correlation finisher statistics!");
         }
-
-#instead of clinical correlation, we can call these stats directly
-
-        #break up clinical data into two files, one for explanatory variable and one for covariates
-        #sample_infection.csv = $expl_file
-        #Sample_Name	Levels of Infection Invasiveness (0=control, 1=case)
-        #H_MRS-6305-1025125	0
-        #H_MRS-6401-1025123	1
-
-        #sample_phenotypes.csv = $pheno_file
-        #Sample_Name	Age at Time of Infection (years)	Race (1 white 2 black 3 asian)	Gender (1 male 2 female)
-        #H_MRS-6305-1025125	10	1	1
-        #H_MRS-6401-1025123	16	1	1
-
-        #make smg bed file STILL UNDONE
-
-
-        my $variant_matrix_cmd = "gmt vcf vcf-to-variant-matrix --output-file $temp_path/variant_matrix.txt --vcf-file $multisample_vcf --bed-roi-file $temp_path/smg_restricted_bed.bed";
 =cut
-        #make .R file example
-        my ($tfh_R,$R_path) = Genome::Sys->create_temp_file;
-        unless($tfh_R) {
-            die $self->error_message("Unable to create temporary file $!");
-        }
-        $R_path =~ s/\:/\\\:/g;
-
-        #-------------------------------------------------
-        my $R_command = <<"_END_OF_R_";
-options(error=recover)
-source("stat.lib", chdir=TRUE)
-#this should work, but I havent tested using the .csv out of mut rel -- wschierd
-mut.file="$temp_path/variant_matrix.txt" 
-inf.file="$expl_file";
-pheno.file="$pheno_file";
-output.file="$temp_path/logit_out_cor.csv";
-#to do logistic regression, might need /gscuser/yyou/git/genome/lib/perl/Genome/Model/Tools/Music/stat.lib.R -- talk to Cyriac here
-cor2test(y=inf.file, x=mut.file, cov=pheno.file, outf=output.file, method="logit", sep="\t");
-_END_OF_R_
-        #-------------------------------------------------
-
-        print $tfh_R "$R_command\n";
-
-        my $cmd = "R --vanilla --slave \< $R_path";
-        my $return = Genome::Sys->shellcmd(
-            cmd => "$cmd",
-        );
-        unless($return) { 
-            die $self->error_message("Failed to execute: Returned $return");
-        }
-
 #find sites that are important and also of a type we like (such as all Nonsynonymous/splice_site mutations in regions of interest unique to cases vs controls
 #/gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/causal_variants/pull_causal_variants.pl
-=cut
-    }
 
+print "starting annotation\n";
+        my %annotation_hash;
+        foreach my $build (@builds) {
+            my $annotation_output_directory = $build->data_directory."/variants";
+            my $annotation_file_per_sample = $annotation_output_directory."/filtered.variants.post_annotation";
+            my $inFh_annotation = Genome::Sys->open_file_for_reading($annotation_file_per_sample);
+            while (my $line = <$inFh_annotation>) {
+            	chomp($line);
+                my ($chromosome_name, $start, $stop, $reference, $variant, $mut_type, $gene_name, @everything_else) = split(/\t/, $line);
+        	    #my $variant_name = $gene_name."_".$chromosome_name."_".$start."_".$stop."_".$reference."_".$variant;
+        	    my $variant_name = $chromosome_name."_".$start."_".$reference."_".$variant; #this only matched vcf format for SNVs
+            	$annotation_hash{$variant_name} = "$line";
+            }
+        }
+
+        my $annotation_file_path = "$multisample_vcf.annotated";
+        my $annotation_file_inFh = Genome::Sys->open_file_for_writing($annotation_file_path);
+
+        foreach my $variant (sort keys %annotation_hash) {
+        	print $annotation_file_inFh "$variant\t$annotation_hash{$variant}\n";
+        }
+
+        my $vep_annotation_file_path = "$multisample_vcf.VEP_annotated";
+
+        my $ensembl_VEP_cmd = Genome::Db::Ensembl::Vep->execute(
+            input_file => $multisample_vcf,
+            output_file => $vep_annotation_file_path,
+            format => 'vcf',
+            condel => 'b',
+            polyphen => 'b',
+            sift => 'b',
+            hgnc => 1,
+            per_gene => 1,
+        );
+        unless($ensembl_VEP_cmd){
+            die $self->error_message("Could not complete VEP annotation!");
+        }
+
+        my $vep_annotation_parsed_file_path = "$multisample_vcf.VEP_annotated.parsed";
+
+        my $ensembl_VEP_parsed_cmd = Genome::Model::Tools::Annotate::ParseVep->execute(
+            vep_input => $vep_annotation_file_path,
+            output_file => $vep_annotation_parsed_file_path,
+        );
+        unless($ensembl_VEP_parsed_cmd){
+            die $self->error_message("Could not complete VEP annotation parsing!");
+        }
+
+print "starting burden analysis\n";
+        my $id = $build->id;
+        my $testing_mode = 0;
+        if ($id < 0) {
+            $testing_mode = 1;
+        }
+        my $burden_temp_path_output = "$temp_path/BurdenAnalysisResults/";
+        unless (-d $burden_temp_path_output) {
+            system("mkdir $burden_temp_path_output");
+        }
+        my $burden_cmd = Genome::Model::Tools::Germline::BurdenAnalysis->execute(
+            mutation_file => $mutation_matrix,
+            phenotype_file => $clinical_data,
+            VEP_annotation_file => $vep_annotation_parsed_file_path,
+            project_name => $name,
+            output_directory => $burden_temp_path_output,
+#            base_R_commands => '/gscuser/qzhang/gstat/burdentest/burdentest.R',
+#            maf_cutoff => '0.01',
+#            permutations => '10000',
+#            covariates => 'NONE',
+#            trv_types => 'NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING:NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING,SPLICE_SITE:NMD_TRANSCRIPT,STOP_LOST:NON_SYNONYMOUS_CODING:NON_SYNONYMOUS_CODING,SPLICE_SITE:STOP_GAINED:STOP_GAINED,SPLICE_SITE',
+            select_phenotypes => $phenotype_list,
+            testing_mode => $testing_mode,
+        );
+        unless($burden_cmd){
+            die $self->error_message("Could not complete burden analysis!");
+        }
+
+    }
 
     return 1;
 }

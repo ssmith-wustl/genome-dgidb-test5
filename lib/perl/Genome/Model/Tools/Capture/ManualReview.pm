@@ -124,74 +124,87 @@ sub execute {
     if( $read_review )
     {
       print "Reading review files for case $case... ";
+      my ( $snv_uhf_anno, $snv_review, $indel_review, $out_anno_file ) = ( "", "", "", "" );
       if( -e "$output_dir/$case.snv.reviewed.csv" and -e "$output_dir/$case.indel.reviewed.csv" )
       {
-        # Grab the high confidence tier1 SNV and Indel annotations from their respective files
-        my ( $snv_anno, $indel_anno ) = ( $bams{$case}{snvs}, $bams{$case}{indels} );
-        my @snv_lines = `cat $snv_anno`;
-        my @indel_lines = `cat $indel_anno`;
-        chomp( @snv_lines, @indel_lines );
-
-        # Store the variants into a hash to help search through them quickly
-        my %anno_lines = ();
-        for my $line ( @snv_lines )
-        {
-          my ( $chr, $start, $stop, $ref, $var ) = split( /\t/, $line );
-          $anno_lines{snvs}{$chr}{$start}{$stop} = $line;
-        }
-        for my $line ( @indel_lines )
-        {
-          my ( $chr, $start, $stop, $ref, $var ) = split( /\t/, $line );
-          $anno_lines{indels}{$chr}{$start}{$stop} = $line;
-        }
-
-        my $out_anno_file = "$output_dir/$case.reviewed.anno";
-        my $out_anno_fh = IO::File->new( $out_anno_file, ">" ) or die "Cannot open $out_anno_file. $!";
-
-        # Read in the UHF SNVs, if found, and write them straight to output
-        if ( -e "$output_dir/$case.snv.uhf.anno" )
-        {
-          my @uhf_snv_lines = `cat $output_dir/$case.snv.uhf.anno`;
-          chomp( @uhf_snv_lines ); # Chomping and reprinting newlines cuz we shouldn't make assumptions
-          $out_anno_fh->print( join( "\n", @uhf_snv_lines ), "\n" );
-        }
-
-        # Load the manual review files and print WU annotation lines for call codes 'S' or 'V'
-        my ( $snv_review, $indel_review ) = ( "$output_dir/$case.snv.reviewed.csv", "$output_dir/$case.indel.reviewed.csv" );
-        ( @snv_lines, @indel_lines ) = ((), ());
-        @snv_lines = `cat $snv_review` if( -e $snv_review );
-        @indel_lines = `cat $indel_review` if( -e $indel_review );
-        chomp( @snv_lines, @indel_lines );
-        for my $line ( @snv_lines )
-        {
-          my ( $chr, $start, $stop, undef, undef, $call ) = split( /\t/, $line );
-          next if( $chr eq 'Chr' ); # Skip header
-          if( !defined $call or $call =~ m/^\s*$/ or $call =~ m/[SVsv]/ ) # If this line is not reviewed, then let it through, for now
-          {
-            $out_anno_fh->print( $anno_lines{snvs}{$chr}{$start}{$stop}, "\n" ) if( defined $anno_lines{snvs}{$chr}{$start}{$stop} );
-          }
-        }
-        for my $line ( @indel_lines )
-        {
-          my ( $chr, $start, $stop, undef, undef, $call ) = split( /\t/, $line );
-          next if( $chr eq 'Chr' ); # Skip header
-          if( !defined $call or $call =~ m/^\s*$/ or $call =~ m/[SVsv]/ ) # If this line is not reviewed, then let it through, for now
-          {
-            $out_anno_fh->print( $anno_lines{indels}{$chr}{$start}{$stop}, "\n" ) if( defined $anno_lines{indels}{$chr}{$start}{$stop} );
-          }
-        }
-        $out_anno_fh->close;
-        print "wrote somatic variants to file $case.reviewed.anno\n";
+        $snv_uhf_anno = "$output_dir/$case.snv.uhf.anno";
+        $snv_review = "$output_dir/$case.snv.reviewed.csv";
+        $indel_review = "$output_dir/$case.indel.reviewed.csv";
+        $out_anno_file = "$output_dir/$case.reviewed.anno";
       }
-      elsif( -e "$output_dir/too_many_to_review/$case.snv.reviewed.csv" or -e "$output_dir/too_many_to_review/$case.indel.reviewed.csv" or
-             -e "$output_dir/too_many_to_review/$case.snv.review.csv" or -e "$output_dir/too_many_to_review/$case.indel.review.csv" )
+      elsif( -e "$output_dir/too_many_to_review/$case.snv.reviewed.csv" and -e "$output_dir/too_many_to_review/$case.indel.reviewed.csv" )
       {
-        print "files found in folder 'too_many_to_review'. Skipping case.\n";
+        $snv_uhf_anno = "$output_dir/too_many_to_review/$case.snv.uhf.anno";
+        $snv_review = "$output_dir/too_many_to_review/$case.snv.reviewed.csv";
+        $indel_review = "$output_dir/too_many_to_review/$case.indel.reviewed.csv";
+        $out_anno_file = "$output_dir/too_many_to_review/$case.reviewed.anno";
+      }
+      elsif( -e "$output_dir/too_many_to_review/$case.snv.review.csv" and -e "$output_dir/too_many_to_review/$case.indel.review.csv" )
+      {
+        print "Case is in folder 'too_many_to_review' with no reviewed files found for SNVs and/or Indels. Skipping.\n";
+        next;
       }
       else
       {
-        print "SNV and Indel review files not found. Skipping case.\n";
+        print "No reviewed files found for SNVs and/or Indels. Skipping.\n";
+        next;
       }
+
+      # Grab the high confidence tier1 SNV and Indel annotations from their respective files
+      my ( $snv_anno, $indel_anno ) = ( $bams{$case}{snvs}, $bams{$case}{indels} );
+      my @snv_lines = `cat $snv_anno`;
+      my @indel_lines = `cat $indel_anno`;
+      chomp( @snv_lines, @indel_lines );
+
+      # Store the variants into a hash to help search through them quickly
+      my %anno_lines = ();
+      for my $line ( @snv_lines )
+      {
+        my ( $chr, $start, $stop, $ref, $var ) = split( /\t/, $line );
+        $anno_lines{snvs}{$chr}{$start}{$stop} = $line;
+      }
+      for my $line ( @indel_lines )
+      {
+        my ( $chr, $start, $stop, $ref, $var ) = split( /\t/, $line );
+        $anno_lines{indels}{$chr}{$start}{$stop} = $line;
+      }
+
+      my $out_anno_fh = IO::File->new( $out_anno_file, ">" ) or die "Cannot open $out_anno_file. $!";
+
+      # Read in the UHF SNVs, if found, and write them straight to output
+      if ( -e $snv_uhf_anno )
+      {
+        my @uhf_snv_lines = `cat $snv_uhf_anno`;
+        chomp( @uhf_snv_lines ); # Chomping and reprinting newlines cuz we shouldn't make assumptions
+        $out_anno_fh->print( join( "\n", @uhf_snv_lines ), "\n" );
+      }
+
+      # Load the manual review files and print WU annotation lines for call codes 'S' or 'V'. If it has no code, let it through anyway.
+      ( @snv_lines, @indel_lines ) = ((), ());
+      @snv_lines = `cat $snv_review` if( -e $snv_review );
+      @indel_lines = `cat $indel_review` if( -e $indel_review );
+      chomp( @snv_lines, @indel_lines );
+      for my $line ( @snv_lines )
+      {
+        my ( $chr, $start, $stop, undef, undef, $call ) = split( /\t/, $line );
+        next if( $chr eq 'Chr' ); # Skip header
+        if( !defined $call or $call =~ m/^\s*$/ or $call =~ m/[SVsv]/ )
+        {
+          $out_anno_fh->print( $anno_lines{snvs}{$chr}{$start}{$stop}, "\n" ) if( defined $anno_lines{snvs}{$chr}{$start}{$stop} );
+        }
+      }
+      for my $line ( @indel_lines )
+      {
+        my ( $chr, $start, $stop, undef, undef, $call ) = split( /\t/, $line );
+        next if( $chr eq 'Chr' ); # Skip header
+        if( !defined $call or $call =~ m/^\s*$/ or $call =~ m/[SVsv]/ )
+        {
+          $out_anno_fh->print( $anno_lines{indels}{$chr}{$start}{$stop}, "\n" ) if( defined $anno_lines{indels}{$chr}{$start}{$stop} );
+        }
+      }
+      $out_anno_fh->close;
+			$out_anno_file =~ s/$output_dir/output-dir/;
+      print "wrote annotation files to $out_anno_file\n";
 
       next;
     }

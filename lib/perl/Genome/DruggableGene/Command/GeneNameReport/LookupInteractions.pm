@@ -63,6 +63,9 @@ class Genome::DruggableGene::Command::GeneNameReport::LookupInteractions {
         identifier_to_genes => {
             is => 'HASH',
         },
+        gene_to_identifiers => {
+            is => 'HASH',
+        }
     ],
 };
 
@@ -73,7 +76,25 @@ sub help_synopsis {
 
 }
 
-sub help_detail { help_brief() }
+sub help_detail {
+    return <<EOS
+LookupInteractions expects a gene-file consisting of a list of gene identifiers one per line and outputs one interaction per line.
+
+Example Syntax:
+
+genome druggable-gene gene-name-report lookup-interactions --gene-file=gene_names.txt --filter='drug.is_approved=1,drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_attributes.name=is_known_action,interaction_attributes.value=yes,is_potentiator=0'
+
+genome druggable-gene gene-name-report lookup-interactions --gene-file=gene_names.txt --filter='drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_attributes.name=is_known_action,interaction_attributes.value=yes,is_potentiator=0'
+
+genome druggable-gene gene-name-report lookup-interactions --gene-file=gene_names.txt --filter='drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,(is_untyped=0 or is_known_action=1)';
+
+genome druggable-gene gene-name-report lookup-interactions --gene-file=gene_names.txt --filter='drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,is_inhibitor=1,(is_untyped=0 or is_known_action=1)';
+
+genome druggable-gene gene-name-report lookup-interactions --gene-file=gene_names.txt --filter='drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,gene.is_kinase=1,(is_untyped=0 or is_known_action=1)';
+
+genome druggable-gene gene-name-report lookup-interactions --gene-file=gene_names.txt --filter='drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,drug.is_antineoplastic=1,(is_untyped=0 or is_known_action=1)';
+EOS
+}
 
 sub execute {
     my $self = shift;
@@ -105,6 +126,7 @@ sub lookup_gene_identifiers {
     my ($entrez_gene_name_reports, $entrez_gene_name_intermediate_reports, @unmatched_gene_identifiers) = Genome::DruggableGene::GeneNameReport->convert_to_entrez(@gene_identifiers);
     my %gene_name_reports = $self->_find_gene_name_reports_for_identifiers(@gene_identifiers);
     $self->identifier_to_genes(\%gene_name_reports);
+    $self->_create_gene_to_identifiers();
 
     my @complete_genes;
     for my $gene_identifier (@gene_identifiers){
@@ -212,13 +234,22 @@ sub print_grouped_interactions{
     my @headers = qw/
     drug_name_report
     drug_nomenclature
+    drug_primary_name
+    drug_alternate_names
+    drug_brands
+    drug_types
+    drug_groups
+    drug_categories
     drug_source_db_name
     drug_source_db_version
+    gene_identifiers
     gene_name_report
     gene_nomenclature
     gene_alternate_names
     gene_source_db_name
     gene_source_db_version
+    entrez_gene_name
+    entrez_gene_synonyms
     interaction_types
     /;
     if($self->headers){
@@ -247,12 +278,45 @@ sub _build_interaction_line {
     my $drug = $interaction->drug;
     my $gene = $interaction->gene;
     my $gene_alternate_names = join(':', map($_->alternate_name, $gene->gene_alt_names));
+    my $gene_identifiers = join(':', @{$self->gene_to_identifiers->{$gene->id}});
+    my ($entrez_gene_name, $entrez_gene_synonyms) = $self->_create_entrez_gene_outputs($gene_identifiers);
+    my ($drug_primary_name) = map($_->alternate_name, grep($_->nomenclature =~ /primary/i, $drug->drug_alt_names));
+    my $drug_alternate_names = join(':', map($_->alternate_name, grep($_->nomenclature !~ /primary/i && $_->nomenclature ne 'drug_brand', $drug->drug_alt_names)));
+    my $drug_brands = join(':', map($_->alternate_name, grep($_->nomenclature eq 'drug_brand', $drug->drug_alt_names)));
+    my $drug_types = join(';', map($_->category_value, grep($_->category_name eq 'drug_type', $drug->drug_categories)));
+    my $drug_groups = join(';', map($_->category_value, grep($_->category_name eq 'drug_group', $drug->drug_categories)));
+    my $drug_categories = join(';', map($_->category_value, grep($_->category_name eq 'drug_category', $drug->drug_categories)));
     my $interaction_types = join(':', $interaction->interaction_types);
-    my $interaction_line = join("\t", $drug->name,
-        $drug->nomenclature, $drug->source_db_name, $drug->source_db_version,
-        $gene->name, $gene->nomenclature, $gene_alternate_names,
-        $gene->source_db_name, $gene->source_db_version, $interaction_types);
+    my $interaction_line = join("\t", $drug->name, $drug->nomenclature, $drug_primary_name,
+        $drug_alternate_names, $drug_brands, $drug_types, $drug_groups, $drug_categories, $drug->source_db_name, $drug->source_db_version,
+        $gene_identifiers, $gene->name, $gene->nomenclature, $gene_alternate_names,
+        $gene->source_db_name, $gene->source_db_version, $entrez_gene_name, $entrez_gene_synonyms, $interaction_types);
     return $interaction_line;
+}
+
+sub _create_entrez_gene_outputs{
+    my $self = shift;
+    my @gene_identifiers = split(':', shift);
+    my $entrez_gene_name_output = "";
+    my $entrez_gene_synonyms_output = "";
+    my $entrez_delimiter = '|';
+    my $sub_delimiter = '/';
+    for my $gene_identifier (@gene_identifiers){
+        my @genes = @{$self->identifier_to_genes->{$gene_identifier}};
+        my @entrez_genes = grep($_->nomenclature eq 'entrez_id', @genes);
+        if(@entrez_genes){
+            for my $entrez_gene (@entrez_genes){
+                my ($entrez_gene_symbol) = map($_->alternate_name, grep($_->nomenclature eq 'entrez_gene_symbol', $entrez_gene->gene_alt_names));
+                my @entrez_gene_synonyms = map($_->alternate_name, grep($_->nomenclature eq 'entrez_gene_synonym', $entrez_gene->gene_alt_names));
+                $entrez_gene_name_output = $entrez_gene_name_output . ($entrez_gene_name_output ? $entrez_delimiter : '') . $entrez_gene_symbol;
+                $entrez_gene_synonyms_output = $entrez_gene_synonyms_output . ($entrez_gene_synonyms_output ? $entrez_delimiter : '') . join($sub_delimiter, @entrez_gene_synonyms);
+            }
+        }else{
+            $entrez_gene_name_output = $entrez_gene_name_output . $entrez_delimiter;
+            $entrez_gene_synonyms_output = $entrez_gene_synonyms_output . $entrez_delimiter;
+        }
+    }
+    return ($entrez_gene_name_output, $entrez_gene_synonyms_output);
 }
 
 sub _read_gene_file{
@@ -303,14 +367,46 @@ sub _chunk_in_clause_list{
             and return if %extra;
     }
 
+    my $boolexpr;
     my @filter_params = ($filter_bx? $filter_bx->params_list : ());
-    my $boolexpr = $target_class->define_boolexpr(
-        '-or' => [
+    if(@filter_params and $filter_params[0] eq '-or') {
+        #This should be unnecessary, but UR's handling of "or"s is currently inelegant
+        $boolexpr = $target_class->define_boolexpr(
+            '-or' => [
+                map {
+                    my $filter_param = $_;
+                    map([$property_name => $_, @$filter_param], @chunked_values);
+                } @{$filter_params[1]},
+            ]
+        );
+
+    } else {
+        $boolexpr = $target_class->define_boolexpr(
+            '-or' => [
             map([$property_name => $_, @filter_params], @chunked_values)
-        ],
-    );
+            ],
+        );
+    }
 
     return $boolexpr;
+}
+
+sub _create_gene_to_identifiers {
+    my $self = shift;
+    my %identifier_to_genes = %{$self->identifier_to_genes}; 
+    my %gene_to_identifiers;
+    for my $identifier (keys %identifier_to_genes){
+        my @genes = @{$identifier_to_genes{$identifier}};
+        for my $gene (@genes){
+            if($gene_to_identifiers{$gene->id}){
+                push @{$gene_to_identifiers{$gene->id}}, $identifier;
+            }else{
+                $gene_to_identifiers{$gene->id} = [$identifier]
+            }
+        }
+    }
+
+    $self->gene_to_identifiers(\%gene_to_identifiers);
 }
 
 1;

@@ -76,18 +76,6 @@ HELP
 sub execute {
     my $self = shift;
 
-    unless ($self->fields) {
-        # default_value doesn't seem to work for is_many properties (I think because they are supposed to be relationships)
-        my $meta = $self->__meta__;
-        my $fields_property = $meta->property('fields');
-        my $default_fields = $fields_property->{default_value};
-        for my $field (@$default_fields) {
-            $self->status_message($field);
-            $self->add_field($field);
-        }
-        die 'Missing fields' unless $self->fields;
-    }
-
     my $variation_list_build = $self->variation_list_build;
     if ( not $variation_list_build ) {
         $self->error_message('No variation list build given!');
@@ -281,7 +269,11 @@ sub _load_genotyopes {
 
     $self->status_message('Load genotypes...');
     my $header_line;
-    do { $header_line = $genotype_fh->getline; } until $header_line =~ /,/;
+    do { $header_line = $genotype_fh->getline; } until not $header_line or $header_line =~ /,/;
+    if ( not $header_line ) {
+        $self->error_message('Failed to get header line for genotype file!');
+        return;
+    }
     chomp $header_line;
     my @headers = map { s/\s/_/g; s/_\-\_top$//i; lc } split(',', $header_line);
     $self->status_message('Genotype headers: '. join(', ', @headers));
