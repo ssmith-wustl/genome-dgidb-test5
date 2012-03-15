@@ -81,8 +81,8 @@ sub _execute_build {
     }
     if ($normal_rnaseq_build) {
         $cmd .= ' --normal_rna ' . $normal_rnaseq_build->id;
-        $normal_rnaseq_common_name = $tumor_rnaseq_build->subject->patient->common_name;
-        $normal_rnaseq_name = $tumor_rnaseq_build->subject->patient->name;
+        $normal_rnaseq_common_name = $normal_rnaseq_build->subject->patient->common_name;
+        $normal_rnaseq_name = $normal_rnaseq_build->subject->patient->name;
     }
 
     #Get the patient common name from one of the builds, if none can be found, use the individual name instead, if that can't be found either set the name to 'UnknownName'
