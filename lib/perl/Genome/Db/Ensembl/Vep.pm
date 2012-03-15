@@ -27,7 +27,8 @@ class Genome::Db::Ensembl::Vep {
         format => {
             is => 'String',
             doc => 'The format of the input file, or guess to try to work out format',
-            valid_values => [qw(ensembl pileup vcf hgvs id guess bed)],
+            valid_values => [qw(ensembl pileup vcf hgvs id bed)],
+            default_value => "bed",
         },
         output_file => {
             is => 'String',
@@ -118,18 +119,20 @@ sub help_detail {
     Tool to run Ensembl VEP (Variant Effect Predictor).  For documentation on input format, see:
     http://useast.ensembl.org/info/docs/variation/vep/vep_formats.html
 
-    It is recommended that the input file is in Ensembl format:
-    1    881907    881906    -/C    +
+    It is recommended that the input file be in BED format. For example:
+    5    140531    140532    T      C
+    1    881906    881906    -      C
+    8    12599     12602     CGT    -
+
+    This wrapper will convert your BED to the corresponding Ensembl format, which looks like:
     5    140532    140532    T/C    +
-    8    12600     12602     CGT/-  -
+    1    881907    881906    -/C    +
+    8    12600     12602     CGT/-  +
 
-    The 5th column must always be a '+' because we always call variants on the forward strand.
-    Any additional columns after the '+' strand column will not change the resulting annotation.
-
-    If a bed file is input, it will be converted to ensembl format, then annotated.
+    If using Ensembl format as input, the 5th column must always be a '+' because we always call
+    variants on the forward strand. Also notice how start > stop for Ensembl format insertions.
 EOS
 }
-
 
 sub execute {
     my $self = shift;
@@ -153,27 +156,28 @@ sub execute {
             next if $line =~/^Chr/;
             next if $line =~/^$/;
 
-
             my @vars = split("/",$F[3]);
             #check SNVs
             if(($vars[0] =~ /^\w$/) && ($vars[1] =~ /^\w$/)){
                 unless ($F[1] == $F[2]){
-                    die ("ERROR: ensembl format is 1-based. this line appears to be 1-based\n$line\n")
+                    die ("ERROR: ensembl format is 1-based. this line appears to be 1-based\n$line\n");
                 }
             }
             #indel insertion
             elsif(($vars[0] =~ /^-$/) && ($vars[1] =~ /\w+/)){
                 unless ($F[1] == $F[2]+1){
-                    die ("ERROR: This line doesn't appear to be a valid ensembl format indel:\n$line\n")
+                    die ("ERROR: This line doesn't appear to be a valid ensembl format indel:\n$line\n");
                 }
             }
             #indel deletion
             elsif(($vars[0] =~ /\w+/) && ($vars[0] =~ /^-$/)){
                 unless ($F[1]+length($F[2])-1 == $F[1]){
-                    die ("ERROR: This line doesn't appear to be a valid ensembl format indel\n$line\n")
+                    die ("ERROR: This line doesn't appear to be a valid ensembl format indel\n$line\n");
                 }
             }
-
+            else{
+                die ("ERROR: This line doesn't appear to be a valid ensembl format indel\n$line\n");
+            }
         }
         close($inFh);
     }
@@ -212,7 +216,8 @@ sub execute {
             if($F[3] =~ /\//){
                 @vars = split(/\//,$F[3]);
                 @suffix = @F[4..(@F-1)]
-            } else {
+            }
+            else {
                 @vars = @F[3..4];
                 @suffix = @F[5..(@F-1)]
             }
@@ -224,36 +229,35 @@ sub execute {
             #check SNVs
             if(($vars[0] =~ /^\w$/) && ($vars[1] =~ /^\w$/)){
                 unless ($F[1] == $F[2]-1){
-                    die ("ERROR: bed format is 0-based. This line is not:\n$line\n")
+                    die ("ERROR: bed format is 0-based. This line is not:\n$line\n");
                 }
-                $F[1]++
+                $F[1]++;
             }
             #indel insertion
-            elsif(($vars[0] =~ /^-|0$/) && ($vars[1] =~ /\w+/)){
+            elsif(($vars[0] =~ /^-$/) && ($vars[1] =~ /\w+/)){
                 unless ($F[1] == $F[2]){
-                    die ("ERROR: bed format is 0-based. this line is not:\n$line\n")
+                    die ("ERROR: bed format is 0-based. this line is not:\n$line\n");
                 }
                 #increment the start position
                 $F[1]++;
             }
             #indel deletion
-            elsif(($vars[0] =~ /\w+/) && ($vars[1] =~ /^-|0$/)){
+            elsif(($vars[0] =~ /\w+/) && ($vars[1] =~ /^-$/)){
                 unless ($F[1]+length($vars[0]) == $F[2]){
-                    die ("ERROR: bed format is 0-based. this line is not:\n$line\n")
+                    die ("ERROR: bed format is 0-based. this line is not:\n$line\n");
                 }
                 #increment the start position
                 $F[1]++;
-            } else {
-                die ("This line is not a valid bed line:\n$line\n")
+            }
+            else {
+                die ("This line is not a valid bed line:\n$line\n");
             }
             print OUTFILE join("\t",(@F[0..2],join("/",@vars),"+",@suffix)) . "\n";
         }
 
-
         $format = "ensembl";
         $input_file = $tmpfile;
     }
-
 
     my $script_path = $VEP_SCRIPT_PATH.$self->{version}.".pl";
     my $string_args = "";

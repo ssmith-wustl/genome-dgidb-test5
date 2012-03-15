@@ -24,8 +24,8 @@ class Genome::Model::Tools::Dbsnp::Import::Flatfile {
             reference_coordinates => {
                 is => 'Text',
                 is_input => 1,
-                default => 'GRCh37.p2',
-                doc => 'reference_coordinates whose coordinates will be used',
+                default => 'GRCh37\.p[0-9]+',
+                doc => 'reference_coordinates whose coordinates will be used, regex syntax accepted for matching multiple patch levels',
             },
         ],
 };
@@ -117,7 +117,7 @@ sub process_block {
     my @submitters = uniq map { $_->[1] } @ss;
     my ($snp) = grep { $_->[0] eq 'SNP' } @_;
     my ($val) = grep { $_->[0] eq 'VAL' } @_;
-    my @ctgs = grep { $_->[0] eq 'CTG' && $_->[1] eq "assembly=$reference_coordinates" } @_;
+    my @ctgs = grep { $_->[0] eq 'CTG' && $_->[1] =~ /assembly=$reference_coordinates/ } @_;
     
     my %record = ('ds_id'        => 0,
                   'rs_id'        => $_[0][0],
@@ -138,6 +138,8 @@ sub process_block {
 
     if ($record{'is_validated'}){
         for my $val_type (@$val[5..$#$val]){
+            #TODO: this is janky, but it quiets the warnings for now
+            next if $val_type eq "suspect";
             $record{$val_type_conv{$val_type}} = 1;
         }
     }

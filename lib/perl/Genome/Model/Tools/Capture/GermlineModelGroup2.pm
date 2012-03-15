@@ -9,13 +9,8 @@ class Genome::Model::Tools::Capture::GermlineModelGroup2 {
         models => {
             is => 'Genome::Model',
             is_many => 1,
-            is_optional => 1,
-            doc => 'use these models and their samples for QC',
-        },
-        model_group => {
-            is => 'Genome::ModelGroup',
             shell_args_position => 1,
-            doc => 'use models from this group and their samples for QC',
+            doc => 'use these models and their samples for QC',
         },
         qc_directory => {
             is => 'Text',
@@ -53,12 +48,10 @@ sub help_synopsis {
 
 sub execute {
     my $self = shift;
-    $self->models([$self->model_group->models]) unless $self->models;
 
-    my $group_id = $self->model_group->id;
-    my $subject_summary_file = Genome::Sys->open_file_for_overwriting($self->output_directory . "/$group_id.subject_summary.csv");
-    my $index_summary_file = Genome::Sys->open_file_for_overwriting($self->output_directory . "/$group_id.index_summary.csv");
-    my $pool_summary_file = Genome::Sys->open_file_for_overwriting($self->output_directory . "/$group_id.pool_summary.csv");
+    my $subject_summary_file = Genome::Sys->open_file_for_overwriting($self->output_directory . "/subject_summary.csv");
+    my $index_summary_file = Genome::Sys->open_file_for_overwriting($self->output_directory . "/index_summary.csv");
+    my $pool_summary_file = Genome::Sys->open_file_for_overwriting($self->output_directory . "/pool_summary.csv");
 
     if ($self->overwrite_cached_metrics){
         print "Deleting old metrics\n";

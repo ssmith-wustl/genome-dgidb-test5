@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Capture::ProcessSomaticValidation;
+package Genome::Model::Tools::Validation::ProcessSomaticValidation;
 
 use warnings;
 use strict;
@@ -7,7 +7,7 @@ use Genome;
 use Sort::Naturally qw(nsort);
 use Genome::Info::IUB;
 
-class Genome::Model::Tools::Capture::ProcessSomaticValidation {
+class Genome::Model::Tools::Validation::ProcessSomaticValidation {
   is => 'Command',
   has_input => [
       somatic_validation_model_id => {
@@ -92,12 +92,10 @@ class Genome::Model::Tools::Capture::ProcessSomaticValidation {
 
 sub help_detail {
   return <<HELP;
-Given a model-group of SomaticValiation models, this tool will gather resulting tier1 variants,
-tier them, prepare selected sites for manual review and report preliminary validation statistics.
-
-After manual review, this tool can be used again with the argument --read-review to parse the
-reviewed files (expects file extensions *.reviewed.csv), and print somatic SNVs and Indels in
-WashU annotation format for each case (variants with review codes 'S' or 'V').
+Given a SomaticValidation model, this tool will gather the resulting variants, remove
+off-target sites, tier the variants, optionally filter them, and match them up with the
+initial predictions sent for validation.  It will then divide them into categories (validated,
+non-validated, and new calls). New calls are prepped for manual review in the review/ directory.
 HELP
 }
 
@@ -487,156 +485,158 @@ sub execute {
 
 
 
-  #-------------------------------------------------
-  #look at the calls that were missed (case 3 - called in original, failed validation)
-  #to determine whether they were missed due to poor coverage.
-  #if coverage is fine, dump them (most), but if coverage was poor in validation (and good in wgs), send for review
-  #we can only really do this for snvs at the moment, until indel readcounting is tweaked
+##we're not going to do this after all - if not called in validation, we just ditch the call
 
-  if(defined($self->somatic_variation_model_id)){
-      print "Getting readcounts...\n";
-      my $som_var_model = Genome::Model->get( $self->somatic_variation_model_id );
+  # #-------------------------------------------------
+  # #look at the calls that were missed (case 3 - called in original, failed validation)
+  # #to determine whether they were missed due to poor coverage.
+  # #if coverage is fine, dump them (most), but if coverage was poor in validation (and good in wgs), send for review
+  # #we can only really do this for snvs at the moment, until indel readcounting is tweaked
 
-      mkdir "$output_dir/$sample_name/snvs/counts";
+  # if(defined($self->somatic_variation_model_id)){
+  #     print "Getting readcounts...\n";
+  #     my $som_var_model = Genome::Model->get( $self->somatic_variation_model_id );
 
-      unless($tumor_only){
-          print STDERR "nb: " . $normal_bam . "\n";
-          #get readcounts from the normal sample
-          my $normal_rc_cmd = Genome::Model::Tools::Analysis::Coverage::BamReadcount->create(
-              bam_file => $normal_bam,
-              output_file => "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.nrm.counts",
-              snv_file => "$output_dir/$sample_name/snvs/snvs.notvalidated.var",
-              genome_build => $ref_seq_fasta,
-              );
-          unless ($normal_rc_cmd->execute) {
-              die "Failed to obtain normal readcounts.\n";
-          }
-      }
+  #     mkdir "$output_dir/$sample_name/snvs/counts";
 
-      #get readcounts from the tumor sample
-      my $tumor_rc_cmd = Genome::Model::Tools::Analysis::Coverage::BamReadcount->create(
-          bam_file => $tumor_bam,
-          output_file => "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.nrm.counts",
-          snv_file => "$output_dir/$sample_name/snvs/snvs.notvalidated.var",
-          genome_build => $ref_seq_fasta,
-          );
-      unless ($tumor_rc_cmd->execute) {
-          die "Failed to obtain tumor readcounts.\n";
-      }
+  #     unless($tumor_only){
+  #         print STDERR "nb: " . $normal_bam . "\n";
+  #         #get readcounts from the normal sample
+  #         my $normal_rc_cmd = Genome::Model::Tools::Analysis::Coverage::BamReadcount->create(
+  #             bam_file => $normal_bam,
+  #             output_file => "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.nrm.counts",
+  #             snv_file => "$output_dir/$sample_name/snvs/snvs.notvalidated.var",
+  #             genome_build => $ref_seq_fasta,
+  #             );
+  #         unless ($normal_rc_cmd->execute) {
+  #             die "Failed to obtain normal readcounts.\n";
+  #         }
+  #     }
 
-
-      #get original bams
-      my $tumor_bam_var = $som_var_model->tumor_model->last_succeeded_build->whole_rmdup_bam_file;
-      print STDERR "ERROR: Somatic Variation tumor bam not found\n" unless( -e $tumor_bam_var );
-
-      my $normal_bam_var = $som_var_model->normal_model->last_succeeded_build->whole_rmdup_bam_file;
-      print STDERR "ERROR: Somatic Variation normal bam not found\n" unless( -e $normal_bam_var );
-
-      #get readcounts from the original normal sample
-      my $normal_rc2_cmd = Genome::Model::Tools::Analysis::Coverage::BamReadcount->create(
-          bam_file => $normal_bam_var,
-          output_file => "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.tum.orig.counts.orig",
-          snv_file => "$output_dir/$sample_name/snvs/snvs.notvalidated.var",
-          genome_build => $ref_seq_fasta,
-          );
-      unless ($normal_rc2_cmd->execute) {
-          die "Failed to obtain normal readcounts.\n";
-      }
-
-      #get readcounts from the original tumor sample
-      my $tumor_rc2_cmd = Genome::Model::Tools::Analysis::Coverage::BamReadcount->create(
-          bam_file => $tumor_bam_var,
-          output_file => "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.nrm.counts.orig",
-          snv_file => "$output_dir/$sample_name/snvs/snvs.notvalidated.var",
-          genome_build => $ref_seq_fasta,
-          );
-      unless ($tumor_rc2_cmd->execute) {
-          die "Failed to obtain tumor readcounts.\n";
-      }
+  #     #get readcounts from the tumor sample
+  #     my $tumor_rc_cmd = Genome::Model::Tools::Analysis::Coverage::BamReadcount->create(
+  #         bam_file => $tumor_bam,
+  #         output_file => "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.nrm.counts",
+  #         snv_file => "$output_dir/$sample_name/snvs/snvs.notvalidated.var",
+  #         genome_build => $ref_seq_fasta,
+  #         );
+  #     unless ($tumor_rc_cmd->execute) {
+  #         die "Failed to obtain tumor readcounts.\n";
+  #     }
 
 
-      #read in all the validation readcounts, keep only those with poor coverage
-      #require 8 reads in tumor, 6 in normal, per varscan cutoffs
+  #     #get original bams
+  #     my $tumor_bam_var = $som_var_model->tumor_model->last_succeeded_build->whole_rmdup_bam_file;
+  #     print STDERR "ERROR: Somatic Variation tumor bam not found\n" unless( -e $tumor_bam_var );
 
-      my %poorly_covered_snvs;
-      open(OUTFILE,">$output_dir/review/$sample_name.poorValCoverage.bed");
+  #     my $normal_bam_var = $som_var_model->normal_model->last_succeeded_build->whole_rmdup_bam_file;
+  #     print STDERR "ERROR: Somatic Variation normal bam not found\n" unless( -e $normal_bam_var );
 
-      unless($tumor_only){
-          my $inFh = IO::File->new( "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.nrm.counts" ) || die "can't open file\n";
-          while( my $line = $inFh->getline )
-          {
-              chomp($line);
-              my ( $chr, $start, $ref, $var, $refcnt, $varcnt, $vaf) = split("\t",$line);
-              if(($refcnt+$varcnt) < 6){
-                  $poorly_covered_snvs{join(":",( $chr, $start, $ref, $var ))} = 0;
-              }
-          }
-          close($inFh);
-      }
+  #     #get readcounts from the original normal sample
+  #     my $normal_rc2_cmd = Genome::Model::Tools::Analysis::Coverage::BamReadcount->create(
+  #         bam_file => $normal_bam_var,
+  #         output_file => "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.tum.orig.counts.orig",
+  #         snv_file => "$output_dir/$sample_name/snvs/snvs.notvalidated.var",
+  #         genome_build => $ref_seq_fasta,
+  #         );
+  #     unless ($normal_rc2_cmd->execute) {
+  #         die "Failed to obtain normal readcounts.\n";
+  #     }
 
-      $inFh = IO::File->new( "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.tum.counts" ) || die "can't open file\n";
-      while( my $line = $inFh->getline )
-      {
-          chomp($line);
-          my ( $chr, $start, $ref, $var, $refcnt, $varcnt, $vaf) = split("\t",$line);
-          if(($refcnt+$varcnt) < 8){
-              $poorly_covered_snvs{join(":",( $chr, $start, $ref, $var ))} = 0;
-          }
-      }
-      close($inFh);
-
-      #now, go through the original readcounts, and flag any that do have good coverage for manual review
-      $inFh = IO::File->new( "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.nrm.counts.orig" ) || die "can't open file\n";
-      while( my $line = $inFh->getline )
-      {
-          chomp($line);
-          my ( $chr, $start, $ref, $var, $refcnt, $varcnt, $vaf) = split("\t",$line);
-          if(defined($poorly_covered_snvs{join(":",( $chr, $start, $ref, $var ))})){
-              if(($refcnt+$varcnt) >= 20){
-                  $poorly_covered_snvs{join(":",( $chr, $start, $ref, $var ))} = 1;
-              }
-          }
-      }
-      close($inFh);
-
-      my $poorCount = 0;
-      $inFh = IO::File->new( "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.tum.counts.orig" ) || die "can't open file\n";
-      while( my $line = $inFh->getline )
-      {
-          chomp($line);
-          my ( $chr, $start, $ref, $var, $refcnt, $varcnt, $vaf) = split("\t",$line);
-          if(($refcnt+$varcnt) >= 20){
-              if ($poorly_covered_snvs{join(":",( $chr, $start, $ref, $var ))} == 1){
-                  #convert to bed while we're at it
-                  print OUTFILE join("\t",( $chr, $start-1, $start, $ref, $var )) . "\n";
-                  $poorCount++;
-              }
-          }
-      }
-      close($inFh);
+  #     #get readcounts from the original tumor sample
+  #     my $tumor_rc2_cmd = Genome::Model::Tools::Analysis::Coverage::BamReadcount->create(
+  #         bam_file => $tumor_bam_var,
+  #         output_file => "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.nrm.counts.orig",
+  #         snv_file => "$output_dir/$sample_name/snvs/snvs.notvalidated.var",
+  #         genome_build => $ref_seq_fasta,
+  #         );
+  #     unless ($tumor_rc2_cmd->execute) {
+  #         die "Failed to obtain tumor readcounts.\n";
+  #     }
 
 
-      if($poorCount > 0){
-          #create the xml file for this 4-way review
-          my $dumpCovXML = Genome::Model::Tools::Analysis::DumpIgvXmlMulti->create(
-              bams => join(",",($normal_bam,$tumor_bam,$normal_bam_var,$tumor_bam_var)),
-              labels => join(",",("validation normal $sample_name","validation tumor $sample_name","original normal $sample_name","original tumor $sample_name")),
-              output_file => "$output_dir/review/$sample_name.poorValCoverage.xml",
-              genome_name => $sample_name,
-              review_bed_file => "$output_dir/review/$sample_name.poorValCoverage.bed",
-              reference_name => $self->igv_reference_name,
-              );
-          unless ($dumpCovXML->execute) {
-              die "Failed to dump IGV xml for poorly covered sites.\n";
-          }
+  #     #read in all the validation readcounts, keep only those with poor coverage
+  #     #require 8 reads in tumor, 6 in normal, per varscan cutoffs
 
-          print STDERR "--------------------------------------------------------------------------------\n";
-          print STDERR "Sites for review with poor coverage in validation but good coverage in original are here:\n";
-          print STDERR "$output_dir/review/$sample_name.poorValCoverage.bed\n";
-          print STDERR "IGV XML file is here:";
-          print STDERR "$output_dir/$sample_name/review/poorValCoverage.xml\n\n";
-      }
-  }
+  #     my %poorly_covered_snvs;
+  #     open(OUTFILE,">$output_dir/review/$sample_name.poorValCoverage.bed");
+
+  #     unless($tumor_only){
+  #         my $inFh = IO::File->new( "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.nrm.counts" ) || die "can't open file\n";
+  #         while( my $line = $inFh->getline )
+  #         {
+  #             chomp($line);
+  #             my ( $chr, $start, $ref, $var, $refcnt, $varcnt, $vaf) = split("\t",$line);
+  #             if(($refcnt+$varcnt) < 6){
+  #                 $poorly_covered_snvs{join(":",( $chr, $start, $ref, $var ))} = 0;
+  #             }
+  #         }
+  #         close($inFh);
+  #     }
+
+  #     $inFh = IO::File->new( "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.tum.counts" ) || die "can't open file\n";
+  #     while( my $line = $inFh->getline )
+  #     {
+  #         chomp($line);
+  #         my ( $chr, $start, $ref, $var, $refcnt, $varcnt, $vaf) = split("\t",$line);
+  #         if(($refcnt+$varcnt) < 8){
+  #             $poorly_covered_snvs{join(":",( $chr, $start, $ref, $var ))} = 0;
+  #         }
+  #     }
+  #     close($inFh);
+
+  #     #now, go through the original readcounts, and flag any that do have good coverage for manual review
+  #     $inFh = IO::File->new( "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.nrm.counts.orig" ) || die "can't open file\n";
+  #     while( my $line = $inFh->getline )
+  #     {
+  #         chomp($line);
+  #         my ( $chr, $start, $ref, $var, $refcnt, $varcnt, $vaf) = split("\t",$line);
+  #         if(defined($poorly_covered_snvs{join(":",( $chr, $start, $ref, $var ))})){
+  #             if(($refcnt+$varcnt) >= 20){
+  #                 $poorly_covered_snvs{join(":",( $chr, $start, $ref, $var ))} = 1;
+  #             }
+  #         }
+  #     }
+  #     close($inFh);
+
+  #     my $poorCount = 0;
+  #     $inFh = IO::File->new( "$output_dir/$sample_name/snvs/counts/snvs.notvalidated.tum.counts.orig" ) || die "can't open file\n";
+  #     while( my $line = $inFh->getline )
+  #     {
+  #         chomp($line);
+  #         my ( $chr, $start, $ref, $var, $refcnt, $varcnt, $vaf) = split("\t",$line);
+  #         if(($refcnt+$varcnt) >= 20){
+  #             if ($poorly_covered_snvs{join(":",( $chr, $start, $ref, $var ))} == 1){
+  #                 #convert to bed while we're at it
+  #                 print OUTFILE join("\t",( $chr, $start-1, $start, $ref, $var )) . "\n";
+  #                 $poorCount++;
+  #             }
+  #         }
+  #     }
+  #     close($inFh);
+
+
+  #     if($poorCount > 0){
+  #         #create the xml file for this 4-way review
+  #         my $dumpCovXML = Genome::Model::Tools::Analysis::DumpIgvXmlMulti->create(
+  #             bams => join(",",($normal_bam,$tumor_bam,$normal_bam_var,$tumor_bam_var)),
+  #             labels => join(",",("validation normal $sample_name","validation tumor $sample_name","original normal $sample_name","original tumor $sample_name")),
+  #             output_file => "$output_dir/review/$sample_name.poorValCoverage.xml",
+  #             genome_name => $sample_name,
+  #             review_bed_file => "$output_dir/review/$sample_name.poorValCoverage.bed",
+  #             reference_name => $self->igv_reference_name,
+  #             );
+  #         unless ($dumpCovXML->execute) {
+  #             die "Failed to dump IGV xml for poorly covered sites.\n";
+  #         }
+
+  #         print STDERR "--------------------------------------------------------------------------------\n";
+  #         print STDERR "Sites for review with poor coverage in validation but good coverage in original are here:\n";
+  #         print STDERR "$output_dir/review/$sample_name.poorValCoverage.bed\n";
+  #         print STDERR "IGV XML file is here:";
+  #         print STDERR "$output_dir/$sample_name/review/poorValCoverage.xml\n\n";
+  #     }
+  # }
 
 
   #-------------------------------------------------

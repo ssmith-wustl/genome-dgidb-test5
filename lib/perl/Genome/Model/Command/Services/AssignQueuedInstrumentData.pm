@@ -73,7 +73,12 @@ sub _default_de_novo_assembly_bacterial_processing_profile_id {
 }
 
 sub _default_rna_seq_processing_profile_id {
-    return 2623697;
+    my $self = shift;
+    my $instrument_data = shift;
+    if($instrument_data->sample->taxon->name eq 'human'){
+        return 2694793;
+    }
+    return 2694792; #mouse
 }
 
 #FIXME: This should be refactored so that %known_454_pipelines and
@@ -110,6 +115,7 @@ our %known_454_pipelines =
         'Illumina Sequencing',
         'Nimblegen Custom Capture Illumina',
         'Nimblegen Whole Exome Capture Illumina',
+        'PCR-based 3730',
         'PCR-based 454',
         'PCR-based Illumina',
         'Production Library Construction and Technology Development Illumina',
@@ -135,6 +141,7 @@ our %known_454_16s_pipelines =
         '16S 3730 Sequencing',
         '16S 3730 Sequencing - Unknown Reference Strain',
         'Technology Development 16S 454',
+        'Illumina Sequencing,16S 454 Sequencing,PCR-based 3730,16S 3730 Sequencing - Unknown Reference Strain,16S 3730 Sequencing',
     );
 
 sub help_brief {
@@ -1089,9 +1096,14 @@ sub _find_or_create_mc16s_454_qc_model {
         $new_models->{$model->id} = $model;
     }
     else {
-        $model->add_instrument_data($instrument_data);
-        my $assigned_to = $self->_existing_models_assigned_to;
-        $assigned_to->{$model->id} = $model;
+        my $existing_instrument_data = $model->inputs(name => 'instrument_data', value => $instrument_data);
+        if ( not $existing_instrument_data ) {
+            $model->add_instrument_data($instrument_data);
+            $self->_existing_models_assigned_to->{$model->id} = $model;
+        }
+        else {
+            $self->_existing_models_with_existing_assignments->{$model->id} = $model;
+        }
     }
 
     return 1;
@@ -1429,7 +1441,7 @@ sub add_processing_profiles_to_pses{
                 }
 
                 if($self->_is_rna($instrument_data)){
-                    push @processing_profile_ids_to_add, $self->_default_rna_seq_processing_profile_id;
+                    push @processing_profile_ids_to_add, $self->_default_rna_seq_processing_profile_id($instrument_data);
                 }
 
                 if ($self->_is_454_16s($pse)) {
@@ -1493,7 +1505,7 @@ sub add_processing_profiles_to_pses{
                     }
                     elsif ($self->_is_rna($instrument_data)){
                         if($instrument_data->is_paired_end){
-                            my $pp_id = $self->_default_rna_seq_processing_profile_id;
+                            my $pp_id = $self->_default_rna_seq_processing_profile_id($instrument_data);
                             push @processing_profile_ids_to_add, $pp_id;
                             $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                         }
@@ -1541,17 +1553,8 @@ sub add_processing_profiles_to_pses{
             $pse->add_param('subject_class_name', $subject_class_name);
             $pse->add_param('subject_id', $subject_id);
 
-            # ask each if they work with this type of instrument data?
-            PP:         for my $pp_id (@processing_profile_ids_to_add) {
-                my $pp = Genome::ProcessingProfile->get($pp_id);
-                if ($instrument_data_type =~ /454/) {
-                    if ($pp->can('instrument_data_is_applicable')) {
-                        unless ($pp->instrument_data_is_applicable($instrument_data_type,$instrument_data_id,$subject_name)) {
-                            next PP;
-                        }
-                    }
-                }
-                $pse->add_param("processing_profile_id", $pp->id);
+            PP: for my $pp_id (@processing_profile_ids_to_add) {
+                $pse->add_param("processing_profile_id", $pp_id);
             }
 
             for my $pp_id (keys %reference_sequence_names_for_processing_profile_ids) {
