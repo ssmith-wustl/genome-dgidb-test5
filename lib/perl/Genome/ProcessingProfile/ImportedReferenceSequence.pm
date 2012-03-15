@@ -158,7 +158,13 @@ sub _make_bases_files {
         #if the line contains a sequence name, check that name
         if($line =~ /^>/){
             my $chr = $';
-            ($chr) = split " ",$chr;
+            my @rest;
+            ($chr, @rest) = split " ",$chr;
+
+            if(length join(" ", @rest) >= 1024) { #see bns_restore_core in bntseq.c of bwa
+                $self->warning_message('The extra information on the header for sequence ' . $chr . ' is longer than the maximum size handled by bwa.  This may cause failures if this reference is used for alignment.');
+            }
+
             $chr =~s/(\/|\\)/_/g;  # "\" or "/" are not allowed in sequence names
             push @chroms, $chr;
             if(defined($file)) {

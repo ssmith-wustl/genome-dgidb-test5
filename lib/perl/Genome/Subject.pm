@@ -77,9 +77,10 @@ sub get_source_with_class {
     my $source = $self;
     while ($source) {
         $source = $source->get_source;
-        last if $source->isa($class);
+        last unless $source;
+        return $source if $source->isa($class);
     }
-    return $source;
+    return;
 }
 
 sub attributes_for_nomenclature {

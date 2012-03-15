@@ -353,6 +353,8 @@ _END_OF_R_
     cn3xchr100=subset(xchr100, xchr100\$V20 >= 2.25 & xchr100\$V20 <= 3.5);
     cn4xchr100=subset(xchr100, xchr100\$V20 >= 3.5);
 
+
+
     cov20x=subset(z1, (z1\$V9+z1\$V10) <= 20);
     cov50x=subset(z1, (z1\$V9+z1\$V10) >= 20 & (z1\$V9+z1\$V10) <= 50);
     cov100x=subset(z1, (z1\$V9+z1\$V10) >= 50 & (z1\$V9+z1\$V10) <= 100);
@@ -596,12 +598,12 @@ _END_OF_R_
 
         #if cn is being plotted
         if((defined($cnvhmm_file) || (defined($cbs_file))) && !($plot_only_CN2)){
-            print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
-            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";
-            print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
-            print R_COMMANDS 'drawPlot(z1, cn4plus, cn4xchr, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn1minus100x, cn1xchr100, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn2100x, cn2xchr100, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn3100x, cn3xchr100, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn4plus100x, cn4xchr100, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
         } else {
-            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn2100x, cn2xchr100, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
         }
 #-------------------------------------------------
         $R_command = <<"_END_OF_R_";

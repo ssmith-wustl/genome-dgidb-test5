@@ -15,7 +15,7 @@ require Genome::InstrumentData::Solexa;
 use Test::More tests => 138;
 use Test::MockObject;
 
-use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
+use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData') or die;
 
 my $gsc_project = Test::MockObject->new();
 ok($gsc_project, 'create mock gsc project');

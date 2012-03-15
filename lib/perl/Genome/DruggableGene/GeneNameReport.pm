@@ -127,7 +127,7 @@ sub original_data_source_url {
 
 sub convert_to_entrez  {
     my $class = shift;
-    my @gene_identifiers = shift;
+    my @gene_identifiers = @_;
     my ($entrez_gene_symbol_matches, $entrez_id_matches, $ensembl_id_matches, $uniprot_id_matches);
     my $intermediate_gene_name_reports;
 
@@ -228,7 +228,7 @@ sub _match_as_uniprot_id {
     my %intermediate_results_for_identifiers;
     my @unmatched_identifiers;
 
-    my @uniprot_associations = Genome::DruggableGene::GeneAlternateNameReport->get(nomenclature => 'uniprot_id', alternate_name => @gene_identifiers);
+    my @uniprot_associations = Genome::DruggableGene::GeneAlternateNameReport->get(nomenclature => 'uniprot_id', alternate_name => [@gene_identifiers]);
     for my $gene_identifier(@gene_identifiers){
         my @associations_for_identifier = grep($_->alternate_name => @uniprot_associations);
         unless(@associations_for_identifier){

@@ -95,6 +95,9 @@ sub task_loop {
            $task->unload; 
            waitpid($pid, 0);
         }
+    } else {
+        # need to commit to throw away the lock from select FOR UPDATE
+        UR::Context->commit;
     }
 }
 

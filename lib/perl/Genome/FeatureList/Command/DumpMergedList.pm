@@ -9,7 +9,11 @@ use Genome;
 class Genome::FeatureList::Command::DumpMergedList {
     is => 'Genome::Command::Base',
     has_input => [
-        feature_list => { is => 'Genome::FeatureList', doc => 'The feature list to be dumped', shell_args_position => 1 },
+        feature_list => {
+            is => 'Genome::FeatureList',
+            doc => 'The feature list to be dumped',
+            shell_args_position => 1
+        },
         output_path => {
             is => 'Text',
             is_optional => 1,
@@ -32,7 +36,14 @@ class Genome::FeatureList::Command::DumpMergedList {
             doc => 'A command line option to merge or not merge the feature list',
             default_value => 1,
             is_optional => 1,
-        }
+        },
+        track_name => {
+            is => 'Text',
+            doc => 'For NimbleGEN multi-tracked BED files, this option will select which track to dump',
+            valid_values => ['tiled_region','target_region'],
+            default_value => 'target_region',
+            is_optional => 1,
+        },
     ]
 };
 
@@ -66,11 +77,18 @@ sub execute {
             reference => $alternate_reference,
             short_name => $self->short_name,
             merge => $self->merge,
+            track_name => $self->track_name,
         );
     } elsif ($self->merge) {
-        $bed = $feature_list->merged_bed_file(short_name => $self->short_name);
+        $bed = $feature_list->merged_bed_file(
+            short_name => $self->short_name,
+            track_name => $self->track_name,
+        );
     } else {
-        $bed = $feature_list->processed_bed_file(short_name => $self->short_name);
+        $bed = $feature_list->processed_bed_file(
+            short_name => $self->short_name,
+            track_name => $self->track_name,
+        );
     }
 
     if($self->output_path) {

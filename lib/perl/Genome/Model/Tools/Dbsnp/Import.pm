@@ -23,7 +23,7 @@ class Genome::Model::Tools::Dbsnp::Import {
             is => 'Path',
             is_output => 1,
             doc => 'Path to the final output file in .bed',
-        }
+        },
     ],
 };
 
