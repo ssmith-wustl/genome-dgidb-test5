@@ -106,18 +106,20 @@ sub execute {
         Genome::Sys->open_file_for_overwriting($dir . "/index_summary.tsv"),
         \%index_to_builds,
         \%build_to_metrics,
+        'Index',
     );
     print "Writing pool_summary\n" if $self->debug;
     $self->write_averaged_summary(
         Genome::Sys->open_file_for_overwriting($dir . "/pool_summary.tsv"),
         \%pool_to_builds,
         \%build_to_metrics,
+        'Pool',
     );
     return 1;
 }
 
-sub common_headers {
-    (
+sub metric_names {
+    ( #all are wingspan 0
         '%40Depth',
         '%30Depth',
         '%20Depth',
@@ -148,67 +150,28 @@ sub common_headers {
     )
 }
 
-sub metric_names {
-    qw(
-    wingspan_0_40_coverage_depth
-    wingspan_0_30_coverage_depth
-    wingspan_0_20_coverage_depth
-    wingspan_0_15_coverage_depth
-    wingspan_0_10_coverage_depth
-    wingspan_0_percent_duplication
-    wingspan_0_percent_mapped
-    wingspan_0_percent_unique_on_target
-    wingspan_0_percent_unique_off_target
-    wingspan_0_percent_total_on_target
-    wingspan_0_percent_total_off_target
-    wingspan_0_percent_unaligned
-    snps_called
-    with_genotype
-    met_min_depth
-    reference
-    ref_match
-    ref_was_het
-    ref_was_hom
-    variant
-    var_match
-    hom_was_het
-    het_was_hom
-    var_mismatch
-    var_concordance
-    rare_hom_concordance
-    overall_concordance
-    )
-}
-
-sub write_subject_headers {
+sub write_full_headers {
     my $self = shift;
     my $fh = shift || die;
     print $fh join ("\t", (
             'Model',
             'Build',
             'Sample',
+            'Lane',
             'Libraries',
             'Index',
             'Pooled library',
-            $self->common_headers,
+            $self->metric_names,
         )) . "\n";
 }
 
-sub write_index_headers {
+sub write_averaged_headers {
     my $self = shift;
     my $fh = shift || die;
+    my $grouping_metric = shift || die;
     print $fh join ("\t", (
-            'Index',
-            $self->common_headers,
-        )) . "\n";
-}
-
-sub write_pool_headers {
-    my $self = shift;
-    my $fh = shift || die;
-    print $fh join ("\t", (
-            'Pool',
-            $self->common_headers,
+            $grouping_metric,
+            $self->metric_names,
         )) . "\n";
 }
 
@@ -218,7 +181,8 @@ sub write_averaged_summary {
     my $fh = shift || die;
     my $grouping_value_to_builds = shift || die;
     my $build_to_metrics = shift || die;
-    $self->write_index_headers($fh);
+    my $grouping_metric = shift || die;
+    $self->write_averaged_headers($fh, $grouping_metric);
 
     while (my ($grouping_value,$builds) = each %$grouping_value_to_builds) {
         my %sum_value;
@@ -229,11 +193,7 @@ sub write_averaged_summary {
         }
         print $fh join("\t",
             $grouping_value,
-            map{
-            print "Metric for $_ : " . $sum_value{$_} / @$builds . "\n" if $self->debug;
-            return sprintf ("%.2f%%", $sum_value{$_} / @$builds) if /percentage/;
-            sprintf ("%.2f", $sum_value{$_} / @$builds);
-            }$self->metric_names
+            map{ sprintf ("%.2f", $sum_value{$_} / @$builds); } $self->metric_names
         ) . "\n";
     }
 }
@@ -242,7 +202,7 @@ sub write_full_summary {
     my $self = shift;
     my $fh = shift || die;
     my $build_to_metrics = shift || die;
-    $self->write_subject_headers($fh);
+    $self->write_full_headers($fh);
 
     for my $model ($self->models){
         next if $model->subject->name =~ /Pooled_Library/;
@@ -254,20 +214,19 @@ sub write_full_summary {
         my $pool = Genome::Model::Command::Services::AssignQueuedInstrumentData->_resolve_pooled_sample_name_for_instrument_data((),$model->instrument_data);
         my $libraries = join ' ', map{$_->library->name}$build->instrument_data;
 
+        my ($lane) = map{$_->lane}grep{defined $_->lane}$build->instrument_data;
+
         #add model->instrument_data->lane
 
         print $fh join("\t",
             $model->id,
             $build->id,
             $model->subject->name,
+            $lane,
             $libraries,
             $index,
             $pool,
-            map{
-            print "Metric for $_ : " . $build_to_metrics->{$build->id}{$_} . "\n" if $self->debug;
-            return sprintf ("%.2f%%", $build_to_metrics->{$build->id}{$_}) if /percentage/;
-            sprintf ("%.2f", $build_to_metrics->{$build->id}{$_});
-            }$self->metric_names
+            map{ sprintf ("%.2f", $build_to_metrics->{$build->id}{$_}) } $self->metric_names
         ) . "\n";
     }
 }
@@ -292,23 +251,23 @@ sub get_metrics_for_non_qc_data {
     my $percent_unique_off_target = $unique_off_target/$total*100;
     my $percent_duplicate_off_target = $duplicate_off_target/$total*100;
 
-    $metric_to_value{wingspan_0_percent_total_on_target} = $percent_duplicate_on_target + $percent_unique_on_target;
-    $metric_to_value{wingspan_0_percent_total_off_target} = $percent_duplicate_off_target + $percent_unique_off_target;
-    $metric_to_value{wingspan_0_percent_unaligned} = $unaligned/$total*100;
-
-    $metric_to_value{wingspan_0_percent_unique_on_target} = $percent_unique_on_target;
-    $metric_to_value{wingspan_0_percent_unique_off_target} = $percent_unique_off_target;
-
-    $metric_to_value{wingspan_0_percent_duplication} = $align_stats->{percent_duplicates} || 0;
-
     #Default coverage depth percentage is zero - there may not be depth information, especially for 30x and 40x
-    $metric_to_value{wingspan_0_40_coverage_depth} = $cov_stats->{40}{pc_target_space_covered} || 0;
-    $metric_to_value{wingspan_0_30_coverage_depth} = $cov_stats->{30}{pc_target_space_covered} || 0;
-    $metric_to_value{wingspan_0_20_coverage_depth} = $cov_stats->{20}{pc_target_space_covered} || 0;
-    $metric_to_value{wingspan_0_15_coverage_depth} = $cov_stats->{15}{pc_target_space_covered} || 0;
-    $metric_to_value{wingspan_0_10_coverage_depth} = $cov_stats->{10}{pc_target_space_covered} || 0;
+    $metric_to_value{'%40Depth'} = $cov_stats->{40}{pc_target_space_covered} || 0;
+    $metric_to_value{'%30Depth'} = $cov_stats->{30}{pc_target_space_covered} || 0;
+    $metric_to_value{'%20Depth'} = $cov_stats->{20}{pc_target_space_covered} || 0;
+    $metric_to_value{'%15Depth'} = $cov_stats->{15}{pc_target_space_covered} || 0;
+    $metric_to_value{'%10Depth'} = $cov_stats->{10}{pc_target_space_covered} || 0;
 
-    $metric_to_value{wingspan_0_percent_mapped} = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flagstat)->{'reads_mapped_percentage'};
+    $metric_to_value{'%Dup'} = $align_stats->{percent_duplicates} || 0;
+
+    $metric_to_value{'%Mapped'} = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flagstat)->{'reads_mapped_percentage'};
+
+    $metric_to_value{'%UniqOn'} = $percent_unique_on_target;
+    $metric_to_value{'%UniqOff'} = $percent_unique_off_target;
+
+    $metric_to_value{'%TotalOn'} = $percent_duplicate_on_target + $percent_unique_on_target;
+    $metric_to_value{'%TotalOff'} = $percent_duplicate_off_target + $percent_unique_off_target;
+    $metric_to_value{'%Unaligned'} = $unaligned/$total*100;
 
     if ($self->debug) {
         while (my ($metric,$value) = each %metric_to_value) {
@@ -350,21 +309,21 @@ sub get_metrics_for_qc_data {
     }
 
     my %metric_to_value;
-    $metric_to_value{snps_called} = $values[1] || 0;
-    $metric_to_value{with_genotype} = $values[2] || 0;
-    $metric_to_value{met_min_depth} = $values[3] || 0;
-    $metric_to_value{reference} = $values[4] || 0;
-    $metric_to_value{ref_match} = $values[5] || 0;
-    $metric_to_value{ref_was_het} = $values[6] || 0;
-    $metric_to_value{ref_was_hom} = $values[7] || 0;
-    $metric_to_value{variant} = $values[8] || 0;
-    $metric_to_value{var_match} = $values[9] || 0;
-    $metric_to_value{hom_was_het} = $values[10] || 0;
-    $metric_to_value{het_was_hom} = $values[11] || 0;
-    $metric_to_value{var_mismatch} = $values[12] || 0;
-    $metric_to_value{var_concordance} = $values[13] || 0;
-    $metric_to_value{rare_hom_concordance} = $values[14] || 0;
-    $metric_to_value{overall_concordance} = $values[15] || 0;
+    $metric_to_value{SNPsCalled } = $values[1] || 0;
+    $metric_to_value{WithGenotype } = $values[2] || 0;
+    $metric_to_value{MetMinDepth } = $values[3] || 0;
+    $metric_to_value{Reference } = $values[4] || 0;
+    $metric_to_value{RefMatch } = $values[5] || 0;
+    $metric_to_value{RefWasHet } = $values[6] || 0;
+    $metric_to_value{RefWasHom } = $values[7] || 0;
+    $metric_to_value{Variant } = $values[8] || 0;
+    $metric_to_value{VarMatch } = $values[9] || 0;
+    $metric_to_value{HomWasHet } = $values[10] || 0;
+    $metric_to_value{HetWasHom } = $values[11] || 0;
+    $metric_to_value{VarMismatch } = $values[12] || 0;
+    $metric_to_value{VarConcordance } = $values[13] || 0;
+    $metric_to_value{RareHomConcordance } = $values[14] || 0;
+    $metric_to_value{OverallConcordance } = $values[15] || 0;
 
     if ($self->debug) {
         while (my ($metric,$value) = each %metric_to_value) {
@@ -377,20 +336,20 @@ sub get_metrics_for_qc_data {
 
 sub _empty_qc_data {
     return {
-        snps_called => 0,
-        with_genotype => 0,
-        met_min_depth => 0,
-        reference => 0,
-        ref_match => 0,
-        ref_was_het => 0,
-        ref_was_hom => 0,
-        variant => 0,
-        var_match => 0,
-        hom_was_het => 0,
-        het_was_hom => 0,
-        var_mismatch => 0,
-        var_concordance => 0,
-        rare_hom_concordance => 0,
-        overall_concordance => 0,
+        SNPsCalled => 0,
+        WithGenotype => 0,
+        MetMinDepth => 0,
+        Reference => 0,
+        RefMatch => 0,
+        RefWasHet => 0,
+        RefWasHom => 0,
+        Variant => 0,
+        VarMatch => 0,
+        HomWasHet => 0,
+        HetWasHom => 0,
+        VarMismatch => 0,
+        VarConcordance => 0,
+        RareHomConcordance => 0,
+        OverallConcordance => 0,
     };
 }
