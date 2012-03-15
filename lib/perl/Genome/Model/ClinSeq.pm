@@ -99,6 +99,11 @@ sub _execute_build {
     $cmd .= " --verbose=1 --clean=1";
     $cmd .= " 1>&2";
 
+    #Before executing, change the environment variable for R_LIBS to be ''
+    #This will force R to use it own local notion of library paths instead of the /gsc/ versions
+    #This should work for R installed on the machine /usr/bin/R  OR  a standalone version of R installed by a local user. e.g. /gscmnt/gc2142/techd/tools/R/R-2.14.0/bin/R
+    local $ENV{R_LIBS}='';
+
     if ($dry_run) {
         $build->status_message("NOT running! I _would_ have run: $cmd");
     }
