@@ -599,6 +599,7 @@ sub get_unique_action_name {
     return join('_', $name, $index);
 }
 
+my $_generate_operation_tmpl;
 sub _generate_operation {
     my $self = shift;
     my $action = shift;
@@ -626,9 +627,17 @@ sub _generate_operation {
         die $self->error_message;
     }
 
+    unless ($_generate_operation_tmpl) {
+        # 'id' will still be first, since they're sorted alpha order
+#ccc
+        $_generate_operation_tmpl
+            = UR::BoolExpr::Template->resolve('Workflow::Operation', 'id','name','workflow_operationtype_id')->get_normalized_template_equivalent();
+    }
+
     my $operation = Workflow::Operation->create(
-        name => $self->get_unique_action_name($action),
-        operation_type => Workflow::OperationType::Command->get($class_name),
+        $_generate_operation_tmpl->get_rule_for_values(UR::Object::Type->autogenerate_new_object_id_urinternal(),
+                                                       $self->get_unique_action_name($action),
+                                                       Workflow::OperationType::Command->get($class_name)->id),
     );
 
     $action->{$key} = $operation;
