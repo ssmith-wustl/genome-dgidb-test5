@@ -47,7 +47,7 @@ sub dispatch_request {
         push @sources, 'TTD' if $params->{'ttd'};
         push @sources, 'DrugBank' if $params->{'db'};
         if(@sources){
-            $filter .= ',gene.source_db_name';
+            $filter .= ',source_db_name';
             $filter .= '=' if @sources == 1;
             $filter .= ':' if @sources > 1;#if we have multiple sources, we need to use : with / delimited list for boolean expr syntax
             $filter .= join '/', @sources;

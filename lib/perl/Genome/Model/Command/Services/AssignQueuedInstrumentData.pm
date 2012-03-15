@@ -1096,9 +1096,14 @@ sub _find_or_create_mc16s_454_qc_model {
         $new_models->{$model->id} = $model;
     }
     else {
-        $model->add_instrument_data($instrument_data);
-        my $assigned_to = $self->_existing_models_assigned_to;
-        $assigned_to->{$model->id} = $model;
+        my $existing_instrument_data = $model->inputs(name => 'instrument_data', value => $instrument_data);
+        if ( not $existing_instrument_data ) {
+            $model->add_instrument_data($instrument_data);
+            $self->_existing_models_assigned_to->{$model->id} = $model;
+        }
+        else {
+            $self->_existing_models_with_existing_assignments->{$model->id} = $model;
+        }
     }
 
     return 1;
