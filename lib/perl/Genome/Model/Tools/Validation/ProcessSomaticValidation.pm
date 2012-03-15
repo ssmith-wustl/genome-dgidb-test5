@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Capture::ProcessSomaticValidation;
+package Genome::Model::Tools::Validation::ProcessSomaticValidation;
 
 use warnings;
 use strict;
@@ -7,7 +7,7 @@ use Genome;
 use Sort::Naturally qw(nsort);
 use Genome::Info::IUB;
 
-class Genome::Model::Tools::Capture::ProcessSomaticValidation {
+class Genome::Model::Tools::Validation::ProcessSomaticValidation {
   is => 'Command',
   has_input => [
       somatic_validation_model_id => {
