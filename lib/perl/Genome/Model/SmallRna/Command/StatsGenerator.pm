@@ -38,7 +38,7 @@ class Genome::Model::SmallRna::Command::StatsGenerator {
 		
 		flagstat_17_70_file => {
 			is  => 'Text',
-			doc => 'Input BAM file of alignments',
+			doc => 'Input flagstat file of the normalization bin',
 			is_output=>1
 		},
 		output_stats_file => {
