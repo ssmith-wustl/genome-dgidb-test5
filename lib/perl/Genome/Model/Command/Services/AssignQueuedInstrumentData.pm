@@ -1553,17 +1553,8 @@ sub add_processing_profiles_to_pses{
             $pse->add_param('subject_class_name', $subject_class_name);
             $pse->add_param('subject_id', $subject_id);
 
-            # ask each if they work with this type of instrument data?
-            PP:         for my $pp_id (@processing_profile_ids_to_add) {
-                my $pp = Genome::ProcessingProfile->get($pp_id);
-                if ($instrument_data_type =~ /454/) {
-                    if ($pp->can('instrument_data_is_applicable')) {
-                        unless ($pp->instrument_data_is_applicable($instrument_data_type,$instrument_data_id,$subject_name)) {
-                            next PP;
-                        }
-                    }
-                }
-                $pse->add_param("processing_profile_id", $pp->id);
+            PP: for my $pp_id (@processing_profile_ids_to_add) {
+                $pse->add_param("processing_profile_id", $pp_id);
             }
 
             for my $pp_id (keys %reference_sequence_names_for_processing_profile_ids) {
