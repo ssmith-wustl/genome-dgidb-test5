@@ -82,7 +82,7 @@ sub create {
             if ($self->can($name)) {
                 my $specified_value = $self->$name;
                 if (not defined $specified_value or not length $specified_value) {
-                    $self->$name($param->value);
+                    $self->$name($other_profile->$name);
                 }
                 elsif ( $specified_value eq 'UNDEF' ) { # allow the undef-ing of params, cannot be done from the command line
                     $self->$name(undef);
