@@ -22,6 +22,7 @@ class Genome::Model::Tools::Germline::BurdenAnalysis {
     trv_types => { is => 'Text', doc => "colon-delimited list of which trv types to use as significant rare variants or \"ALL\" if no exclusions", default => 'NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING:NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING,SPLICE_SITE:NMD_TRANSCRIPT,STOP_LOST:NON_SYNONYMOUS_CODING:NON_SYNONYMOUS_CODING,SPLICE_SITE:STOP_GAINED:STOP_GAINED,SPLICE_SITE' },
     select_phenotypes => { is => 'Text', doc => "If specified, don't use all phenotypes from phenotype file, but instead only use these from a comma-delimited list"},
     testing_mode => { is => 'Text', doc => "If specified, assumes you're just testing the code and will not bsub out the actual tests", default => '0'},
+    sample_list_file => { is => 'Text', doc => "Limit Samples in the Variant Matrix to Samples Within this File - Sample_Id should be the first column of a tab-delimited file, all other columns are ignored", is_optional => 1,},
   ],
 };
 
@@ -80,11 +81,86 @@ sub execute {                               # replace with real execution logic.
     my @trv_array = split(/:/, $trv_types);
     my $trv_types_to_use = "\"".join("\",\"", @trv_array)."\"";
 
+    #define subset of samples to use
+    my %sample_name_hash;
+    my $mutation_subset_file;
+    if(defined($self->sample_list_file)) {
+        my $sample_list_file = $self->sample_list_file;
+        my $sample_list_inFh = Genome::Sys->open_file_for_reading($sample_list_file);
+        while(my $sample_line = $sample_list_inFh->getline ) {
+            chomp($sample_line);
+            my ($sample_name, @line_stuff) = split(/\t/, $sample_line);
+            $sample_name_hash{$sample_name}++;
+        }
+        close($sample_list_inFh);
+
+        $mutation_subset_file = "$output_directory/Mutation_Matrix_Subset.txt";
+        my $fh_mutmat_out = new IO::File $mutation_subset_file,"w";
+        unless ($fh_mutmat_out) {
+            die "Failed to create new mutation matrix $mutation_subset_file!: $!";
+        }
+        my $mutmat_inFh = new IO::File $mutation_file,"r";
+        my $mutmat_header = $mutmat_inFh->getline;
+        my ($name, @samples) = split(/\t/, $mutmat_header);
+        my %sample_inclusion_hash;
+        my $sample_count = 0;
+        my @sample_names;
+        foreach my $sname (@samples) {
+            if (defined($sample_name_hash{$sname})) {
+                $sample_inclusion_hash{$sample_count}++;
+                push(@sample_names,$sname);
+            }
+            $sample_count++;
+        }
+        my $subset_samples = join("\t",@sample_names);
+        print $fh_mutmat_out "$name\t$subset_samples\n";
+
+        while(my $line = $mutmat_inFh->getline ) {
+            chomp($line);
+            my @line_stuff = split(/\t/, $line);
+            my ($variant_name, @values) = split(/\t/, $line);
+            my $sample_count = 0;
+            my @included_values;
+            foreach my $value_included (@values) {
+                if (defined($sample_inclusion_hash{$sample_count})) {
+                    push(@included_values,$value_included);
+                }
+                $sample_count++;
+            }
+            my $subset_values = join("\t",@included_values);
+            print $fh_mutmat_out "$variant_name\t$subset_values\n";
+        }
+        close($mutmat_inFh);
+        close($fh_mutmat_out);
+    }
+    else {
+        $mutation_subset_file = $mutation_file;
+    }
+
+    #get phenos and determine if trait is binary or not
     my $pheno_fh = new IO::File $phenotype_file,"r";
     my $pheno_header = $pheno_fh->getline;
     chomp($pheno_header);
-    close($pheno_fh);
     my @pheno_headers = split(/\t/, $pheno_header);
+    my %is_it_binary;
+    while (my $line = $pheno_fh->getline) {
+        chomp($line);
+        my @line_stuff = split(/\t/, $line);
+        if(defined($self->sample_list_file)) {
+            my $sname = $line_stuff[0];
+            unless (defined($sample_name_hash{$sname})) {
+                next;
+            }
+        }
+        my $counter = 0;
+        foreach my $pheader (@pheno_headers) {
+            my $phenovalue = $line_stuff[$counter];
+            $is_it_binary{$pheader}{$phenovalue}++;
+            $counter++;
+        }
+    }
+    close($pheno_fh);
+
     my $subject_column_header = shift(@pheno_headers);
     my @pheno_minus_covariates;
     if (defined($self->select_phenotypes)) {
@@ -131,6 +207,9 @@ sub execute {                               # replace with real execution logic.
         my @line_stuff = split(/\t/, $line);
         my $gene_name = $line_stuff[$annot_header_hash{$gene_name_in_header}];
         $gene_names_hash{$gene_name}++;
+unless(defined($gene_name)) {
+print "$line\n";
+}
     }
     close($annot_fh);
     my @gene_names;
@@ -151,7 +230,7 @@ sub execute {                               # replace with real execution logic.
 ################### data files & key columns 
 missing.data=c("NA",".","")
 
-genotype.file="$mutation_file"
+genotype.file="$mutation_subset_file"
 gfile.delimiter="\\t"
 gfile.vid="$project_name"   # variant id in genotype.file
 gfile.sid="FIRST_ROW"              # subject id in genotype.file
@@ -180,17 +259,31 @@ _END_OF_R_
 
     print $fh_R_option "$R_command_option\n";
 
+
     #now create bsub commands
     #bsub -e err 'R --no-save < burdentest.R option_file_asms Q trigRES ABCA1 10000'
     my $user = $ENV{USER};
     my $bsub_base = "bsub -u $user\@genome.wustl.edu -e err 'R --no-save \< $base_R_commands $R_option_file";
     foreach my $phenotype (@pheno_minus_covariates) {
+        my $analysis_data_type;
+        if (defined($is_it_binary{$phenotype})) {
+            my $binary_assessment = scalar(keys %{$is_it_binary{$phenotype}});
+            if ($binary_assessment < 3) {
+                $analysis_data_type = 'B';
+            }
+            else {
+                $analysis_data_type = 'Q';
+            }
+        }
+        else {
+            warn "You screwed up your code here somehow: pheno $phenotype\n";
+            $analysis_data_type = 'Q';
+        }
         foreach my $gene (@gene_names) {
-            my $trait_type = 'Q'; #THIS SHOULD BE A HASH KEY THING
             if ($gene eq '-' || $gene eq 'NA' ) {
                 next;
             }
-            my $bsub_cmd = "$bsub_base $trait_type $phenotype $gene $permutations\'";
+            my $bsub_cmd = "$bsub_base $analysis_data_type $phenotype $gene $permutations\'";
             if ($self->testing_mode) {
                 print "$bsub_cmd\n";
             }
