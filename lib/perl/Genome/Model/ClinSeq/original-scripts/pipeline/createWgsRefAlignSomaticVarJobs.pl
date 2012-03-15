@@ -122,18 +122,10 @@ for my $common_name (@common_names) {
         print "\ngenome model define somatic-variation  --model-name='$model_name'  --tumor-model=''  --normal-model=''  --processing-profile-name='$somaticvariation_processing_profile_name'  --previously-discovered-variations-build='$previously_discovered_variations_build'  --annotation-build='$annotation_reference_build'";
         print "\ngenome model build start ''";
 
-
-
       }
     }
-
-
   }
-
-
 }
-
-
 
 print "\n\n";
 
