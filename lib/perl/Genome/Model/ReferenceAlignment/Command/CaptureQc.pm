@@ -150,31 +150,6 @@ sub metric_names {
     )
 }
 
-sub write_full_headers {
-    my $self = shift;
-    my $fh = shift || die;
-    print $fh join ("\t", (
-            'Model',
-            'Build',
-            'Sample',
-            'Lane',
-            'Libraries',
-            'Index',
-            'Pooled library',
-            $self->metric_names,
-        )) . "\n";
-}
-
-sub write_averaged_headers {
-    my $self = shift;
-    my $fh = shift || die;
-    my $grouping_metric = shift || die;
-    print $fh join ("\t", (
-            $grouping_metric,
-            $self->metric_names,
-        )) . "\n";
-}
-
 sub write_averaged_summary {
     #Accepts builds grouped by a value, and averages all build metrics in each grouping
     my $self = shift;
@@ -182,7 +157,12 @@ sub write_averaged_summary {
     my $grouping_value_to_builds = shift || die;
     my $build_to_metrics = shift || die;
     my $grouping_metric = shift || die;
-    $self->write_averaged_headers($fh, $grouping_metric);
+
+    #Write column headers
+    print $fh join ("\t", (
+            $grouping_metric,
+            $self->metric_names,
+        )) . "\n";
 
     while (my ($grouping_value,$builds) = each %$grouping_value_to_builds) {
         my %sum_value;
@@ -202,7 +182,18 @@ sub write_full_summary {
     my $self = shift;
     my $fh = shift || die;
     my $build_to_metrics = shift || die;
-    $self->write_full_headers($fh);
+
+    #Write column headers
+    print $fh join ("\t", (
+            'Model',
+            'Build',
+            'Sample',
+            'Lane',
+            'Libraries',
+            'Index',
+            'Pooled library',
+            $self->metric_names,
+        )) . "\n";
 
     for my $model ($self->models){
         next if $model->subject->name =~ /Pooled_Library/;
@@ -214,9 +205,7 @@ sub write_full_summary {
         my $pool = Genome::Model::Command::Services::AssignQueuedInstrumentData->_resolve_pooled_sample_name_for_instrument_data((),$model->instrument_data);
         my $libraries = join ' ', map{$_->library->name}$build->instrument_data;
 
-        my ($lane) = map{$_->lane}grep{defined $_->lane}$build->instrument_data;
-
-        #add model->instrument_data->lane
+        my $lane = join ' ', map{$_->lane}grep{defined $_->lane}$build->instrument_data;
 
         print $fh join("\t",
             $model->id,
