@@ -31,8 +31,13 @@ class Genome::Model::ReferenceAlignment::Command::CaptureQc {
         },
         find_qc_models => {
             is => 'Boolean',
-            default => 0,
+            default => 1,
             doc => 'From models given, find and operate on their qc counterparts',
+        },
+        prefix => {
+            is => 'Text',
+            default => '',
+            doc => 'Prefix generated files with this text',
         },
     ],
     doc => 'Summarize information on models from germline-model-group and germline-model-group-qc',
@@ -40,7 +45,7 @@ class Genome::Model::ReferenceAlignment::Command::CaptureQc {
 
 sub help_brief { 'Summarize information on models from germline-model-group and germline-model-group-qc' }
 
-sub help_detail{ help_brief() . "\nExample: genome model reference-alignment capture-qc 10407 -qc_dir ./germline-model-group-qc_output" }
+sub help_detail{ help_brief() . "\nExample: genome model reference-alignment capture-qc 10407 -p 10407" }
 
 sub execute {
     my $self = shift;
@@ -97,20 +102,22 @@ sub execute {
     print "Summarizing data\n" if $self->debug;
     my $dir = $self->output_directory;
     print "Writing subject_summary\n" if $self->debug;
+    my $prefix = $self->prefix;
+    $prefix .= '_' if $prefix;
     $self->write_full_summary(
-        Genome::Sys->open_file_for_overwriting($dir . "/subject_summary.tsv"),
+        Genome::Sys->open_file_for_overwriting($dir . "/".$prefix."subject.tsv"),
         \%build_to_metrics,
     );
     print "Writing index_summary\n" if $self->debug;
     $self->write_averaged_summary(
-        Genome::Sys->open_file_for_overwriting($dir . "/index_summary.tsv"),
+        Genome::Sys->open_file_for_overwriting($dir . "/".$prefix."index.tsv"),
         \%index_to_builds,
         \%build_to_metrics,
         'Index',
     );
     print "Writing pool_summary\n" if $self->debug;
     $self->write_averaged_summary(
-        Genome::Sys->open_file_for_overwriting($dir . "/pool_summary.tsv"),
+        Genome::Sys->open_file_for_overwriting($dir . "/".$prefix."pool.tsv"),
         \%pool_to_builds,
         \%build_to_metrics,
         'Pool',
