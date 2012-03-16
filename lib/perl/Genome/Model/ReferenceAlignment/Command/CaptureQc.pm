@@ -31,8 +31,13 @@ class Genome::Model::ReferenceAlignment::Command::CaptureQc {
         },
         find_qc_models => {
             is => 'Boolean',
-            default => 0,
+            default => 1,
             doc => 'From models given, find and operate on their qc counterparts',
+        },
+        prefix => {
+            is => 'Text',
+            default => '',
+            doc => 'Prefix generated files with this text',
         },
     ],
     doc => 'Summarize information on models from germline-model-group and germline-model-group-qc',
@@ -40,7 +45,7 @@ class Genome::Model::ReferenceAlignment::Command::CaptureQc {
 
 sub help_brief { 'Summarize information on models from germline-model-group and germline-model-group-qc' }
 
-sub help_detail{ help_brief() . "\nExample: genome model reference-alignment capture-qc 10407 -qc_dir ./germline-model-group-qc_output" }
+sub help_detail{ help_brief() . "\nExample: genome model reference-alignment capture-qc 10407 -p 10407" }
 
 sub execute {
     my $self = shift;
@@ -97,20 +102,22 @@ sub execute {
     print "Summarizing data\n" if $self->debug;
     my $dir = $self->output_directory;
     print "Writing subject_summary\n" if $self->debug;
+    my $prefix = $self->prefix;
+    $prefix .= '_' if $prefix;
     $self->write_full_summary(
-        Genome::Sys->open_file_for_overwriting($dir . "/subject_summary.tsv"),
+        Genome::Sys->open_file_for_overwriting($dir . "/".$prefix."subject.tsv"),
         \%build_to_metrics,
     );
     print "Writing index_summary\n" if $self->debug;
     $self->write_averaged_summary(
-        Genome::Sys->open_file_for_overwriting($dir . "/index_summary.tsv"),
+        Genome::Sys->open_file_for_overwriting($dir . "/".$prefix."index.tsv"),
         \%index_to_builds,
         \%build_to_metrics,
         'Index',
     );
     print "Writing pool_summary\n" if $self->debug;
     $self->write_averaged_summary(
-        Genome::Sys->open_file_for_overwriting($dir . "/pool_summary.tsv"),
+        Genome::Sys->open_file_for_overwriting($dir . "/".$prefix."pool.tsv"),
         \%pool_to_builds,
         \%build_to_metrics,
         'Pool',
@@ -150,31 +157,6 @@ sub metric_names {
     )
 }
 
-sub write_full_headers {
-    my $self = shift;
-    my $fh = shift || die;
-    print $fh join ("\t", (
-            'Model',
-            'Build',
-            'Sample',
-            'Lane',
-            'Libraries',
-            'Index',
-            'Pooled library',
-            $self->metric_names,
-        )) . "\n";
-}
-
-sub write_averaged_headers {
-    my $self = shift;
-    my $fh = shift || die;
-    my $grouping_metric = shift || die;
-    print $fh join ("\t", (
-            $grouping_metric,
-            $self->metric_names,
-        )) . "\n";
-}
-
 sub write_averaged_summary {
     #Accepts builds grouped by a value, and averages all build metrics in each grouping
     my $self = shift;
@@ -182,7 +164,12 @@ sub write_averaged_summary {
     my $grouping_value_to_builds = shift || die;
     my $build_to_metrics = shift || die;
     my $grouping_metric = shift || die;
-    $self->write_averaged_headers($fh, $grouping_metric);
+
+    #Write column headers
+    print $fh join ("\t", (
+            $grouping_metric,
+            $self->metric_names,
+        )) . "\n";
 
     while (my ($grouping_value,$builds) = each %$grouping_value_to_builds) {
         my %sum_value;
@@ -202,7 +189,18 @@ sub write_full_summary {
     my $self = shift;
     my $fh = shift || die;
     my $build_to_metrics = shift || die;
-    $self->write_full_headers($fh);
+
+    #Write column headers
+    print $fh join ("\t", (
+            'Model',
+            'Build',
+            'Sample',
+            'Lane',
+            'Libraries',
+            'Index',
+            'Pooled library',
+            $self->metric_names,
+        )) . "\n";
 
     for my $model ($self->models){
         next if $model->subject->name =~ /Pooled_Library/;
@@ -214,9 +212,7 @@ sub write_full_summary {
         my $pool = Genome::Model::Command::Services::AssignQueuedInstrumentData->_resolve_pooled_sample_name_for_instrument_data((),$model->instrument_data);
         my $libraries = join ' ', map{$_->library->name}$build->instrument_data;
 
-        my ($lane) = map{$_->lane}grep{defined $_->lane}$build->instrument_data;
-
-        #add model->instrument_data->lane
+        my $lane = join ' ', map{$_->lane}grep{defined $_->lane}$build->instrument_data;
 
         print $fh join("\t",
             $model->id,
