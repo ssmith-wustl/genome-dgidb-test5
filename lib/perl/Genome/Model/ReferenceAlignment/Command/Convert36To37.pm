@@ -45,7 +45,7 @@ sub execute {
                 "name=" . $model->name . ".37",
                 'reference_sequence_build=106942997', #Build 37 itself
                 'dbsnp_build=106375969',
-                'annotation_reference_build=106409619',#Model/ImportedAnnotation.pm for build37
+                'annotation_reference_build=106409296', #build37 ensembl only
             ],
         )->_new_model;
 
