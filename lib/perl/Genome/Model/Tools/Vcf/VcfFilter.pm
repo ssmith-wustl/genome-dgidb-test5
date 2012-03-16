@@ -143,8 +143,14 @@ sub execute {
             }
         }
         my ($ref, $var) = split "/", $fields[3];
-        my $length_change_of_event = length($var) - length($ref);
-        my $key = join(":", ($fields[0], $fields[1], $fields[2], $length_change_of_event) );
+
+        # If this is an insertion, we need the length of it to uniquely identify the variant between bed and vcf
+        my $key;
+        if ($ref eq "*" or $ref eq "-" or $ref eq "0") {
+            $key = join(":", ($fields[0], $fields[1], $fields[2], length($var)) );
+        } else {
+            $key = join(":", ($fields[0], $fields[1], $fields[2]) );
+        }
 
         #add this filter to the hash
         $filter{$key} = 0;
@@ -223,20 +229,23 @@ sub execute {
                 for my $alt (@alts) {
                     # Calculate the stop position that should be in the bed file for this variant
                     my $stop;
-                    my $length_change_of_event = length($alt) - length($ref);
-                    # If the ref and alt are the same length, it is a snv
-                    if (length($ref) == length($alt)) {
-                        $stop = $fields[1]; 
-                        # If ref is longer than alt, it is a deletion
-                    } elsif (length($ref) > length($alt)) { 
-                        $stop = $fields[1] + (length($ref) - length($alt));
-                        $length_change_of_event++;
-                        # if ref is shorter than alt, it is an insertion
-                    } else {
+
+                    # If this is an insertion, we need the length of it to uniquely identify the variant between bed and vcf
+                    my $key;
+                    if (length($alt) > length($ref)) {
+                        # Insertion
+                        my $insertion_length = length($alt) - length($ref);
                         $stop = $fields[1];
-                        $length_change_of_event--;
+                        $key = join(":", ($fields[0], $fields[1], $stop, $insertion_length) );
+                    } elsif (length($alt) < length($ref)) {
+                        # Deletion
+                        $stop = $fields[1] + (length($ref) - length($alt));
+                        $key = join(":", ($fields[0], $fields[1], $stop) );
+                    } else {
+                        # SNV
+                        $stop = $fields[1]; 
+                        $key = join(":", ($fields[0], $fields[1], $stop) );
                     }
-                    my $key = join(":", ($fields[0], $fields[1], $stop, $length_change_of_event) );
 
                     if ($filter_keep){
                         if (exists($filter{$key})){
