@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::InstrumentData::Imported::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has => [
+    has_field => [
         type => {
             is => 'Text',
             default => 'imported_instrument_data'

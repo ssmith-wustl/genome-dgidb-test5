@@ -1,14 +1,14 @@
-package Genome::Model::Tools::Analysis::LaneQc::CompareSnps;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Analysis::LaneQc::CompareSnps;
 
 #####################################################################################################################################
 # SearchRuns - Search the database for runs
 #
-#	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
+#    AUTHOR:        Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
-#	CREATED:	04/01/2009 by D.K.
-#	MODIFIED:	04/01/2009 by D.K.
+#    CREATED:    04/01/2009 by D.K.
+#    MODIFIED:    04/01/2009 by D.K.
 #
-#	NOTES:
+#    NOTES:
 #
 #####################################################################################################################################
 
@@ -17,44 +17,30 @@ use warnings;
 
 use FileHandle;
 
-use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
+use Genome;
 
-class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
-	is => 'Command',
+class Genome::Model::Tools::Analysis::LaneQc::CompareSnps{
+    is => 'Command',
 
-	has => [                                # specify the command's single-value properties (parameters) <---
-		genotype_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
-		variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools mpileup-consensus format", is_optional => 1, is_input => 1 },
-		bam_file	=> { is => 'Text', doc => "Alternatively, provide a BAM file", is_optional => 1, is_input => 1 },
-		sample_name	=> { is => 'Text', doc => "Sample Name Used in QC", is_optional => 1, is_input => 1 },
-		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call", is_optional => 1, is_input => 1, default => 8},
-		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call", is_optional => 1, is_input => 1, default => 4},
-		reference_build	=> { is => 'Text', doc => "36 or 37", is_optional => 1, is_input => 1, default => 36},
-		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1},
-		flip_alleles 	=> { is => 'Text', doc => "If set to 1, try to avoid strand issues by flipping alleles to match", is_optional => 1, is_input => 1},
-		fast 	=> { is => 'Text', doc => "If set to 1, run a quick check on just chromosome 1", is_optional => 1, is_input => 1},
-		output_file	=> { is => 'Text', doc => "Output file for QC result", is_optional => 1, is_input => 1}
-	],
+    #TODO: Use class pre-processor to sync the result class and the command class
+    has_param => [
+        verbose       => { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1},
+        min_depth_het => { is => 'Text', doc => "Minimum depth to compare a het call", is_optional => 1, default => 8},
+        min_depth_hom => { is => 'Text', doc => "Minimum depth to compare a hom call", is_optional => 1, default => 4},
+        flip_alleles  => { is => 'Text', doc => "If set to 1, try to avoid strand issues by flipping alleles to match", is_optional => 1},
+        fast          => { is => 'Text', doc => "If set to 1, run a quick check on just chromosome 1", is_optional => 1},
+    ],
+
+    has_input => [
+        genotype_file   => { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0 },
+        variant_file    => { is => 'Text', doc => "Variant calls in SAMtools mpileup-consensus format", is_optional => 1 },
+        bam_file        => { is => 'Text', doc => "Alternatively, provide a BAM file", is_optional => 1 },
+        sample_name     => { is => 'Text', doc => "Sample Name Used in QC", is_optional => 1 },
+        reference_build => { is => 'Text', doc => "36 or 37", is_optional => 1, default => 36},
+        output_file     => { is => 'Text' },
+    ],
+
 };
-
-sub sub_command_sort_position { 12 }
-
-sub help_brief {                            # keep this to just a few words <---
-    "Compares SAMtools variant calls to array genotypes"
-}
-
-sub help_synopsis {
-    return <<EOS
-This command compares SAMtools variant calls to array genotypes
-EXAMPLE:	gmt analysis lane-qc compare-snps --genotype-file affy.genotypes --variant-file lane1.var
-EOS
-}
-
-sub help_detail {                           # this is what the user will see with the longer version of help. <---
-    return <<EOS
-
-EOS
-}
 
 sub output_columns {
     return qw/
@@ -77,14 +63,10 @@ sub output_columns {
     /;
 }
 
-################################################################################################
-# Execute - the main program logic
-#
-################################################################################################
-
-sub execute {                               # replace with real execution logic.
+sub execute {
     my $self = shift;
-    ## Get required parameters ##
+    my $output_file = $self->output_file;
+
     my $sample_name = "Sample";
 
     if($self->sample_name)
@@ -132,8 +114,6 @@ sub execute {                               # replace with real execution logic.
 
         ## Build positions key ##
         # and dump a bed file for filtering alignments
-        my $search_string = "";
-        my $key_count = 0;
         my ($bfh,$bedfile) =  Genome::Sys->create_temp_file;
         unless($bfh) {
             $self->error_message("Unable to create temporary bed file for filtering alignments");
@@ -142,11 +122,8 @@ sub execute {                               # replace with real execution logic.
 
         foreach my $key (sort byBamOrder keys %genotypes)
         {
-            $key_count++;
             (my $chrom, my $position) = split(/\t/, $key);
-            $search_string .= " " if($search_string);
-		    my $label = $chrom . ":" . $position . "-" . $position;	
-			$search_string .= $label;
+            my $label = $chrom . ":" . $position . "-" . $position;
             print $bfh join("\t",$chrom,$position-1,$position,$label),"\n";
         }
         $bfh->close;
@@ -160,19 +137,8 @@ sub execute {                               # replace with real execution logic.
 
         ## Build consensus ##
         print "Building mpileup to $temp_path\n";
-        my $cmd = "";
-
-        if($search_string && $key_count < 100)
-        {
-            print "Extracting genotypes for $key_count positions...\n";
-            $cmd = "samtools view -b $bam_file $search_string | samtools mpileup -f $reference_build_fasta - | java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar pileup2cns >$temp_path";
-            print "$cmd\n";
-        }
-        else
-        {
-            #use samtools pileup, but don't use BAQ since it sucks up a lot of CPU
-			$cmd = "$samtools view -u -L $bedfile $bam_file | $samtools pileup -B -cf $reference_build_fasta - | cut --fields=1-8 >$temp_path";			
-        }
+        #use samtools pileup, but don't use BAQ since it sucks up a lot of CPU
+        my $cmd = "$samtools view -u -L $bedfile $bam_file | $samtools pileup -B -cf $reference_build_fasta - | cut --fields=1-8 >$temp_path";
 
         my $return = Genome::Sys->shellcmd(
             cmd => "$cmd",
@@ -180,7 +146,7 @@ sub execute {                               # replace with real execution logic.
             skip_if_output_is_present => 0,
         );
         unless($return) {
-			$self->error_message("Failed to execute samtools pileup: pileup Returned $return");
+            $self->error_message("Failed to execute samtools pileup: pileup Returned $return");
             die $self->error_message;
         }
 
@@ -199,11 +165,8 @@ sub execute {                               # replace with real execution logic.
     my $min_depth_hom = $self->min_depth_hom if($self->min_depth_hom);
     my $min_depth_het = $self->min_depth_het if($self->min_depth_het);
 
-    if($self->output_file)
-    {
-        open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";
-#		print OUTFILE "file\tnum_snps\tnum_with_genotype\tnum_min_depth\tnum_variant\tvariant_match\thom_was_het\thet_was_hom\thet_was_diff\tconc_variant\tconc_rare_hom\n";
-        #num_ref\tref_was_ref\tref_was_het\tref_was_hom\tconc_overall
+    if($output_file) {
+        open(OUTFILE, ">" . $output_file) or die "Can't open outfile: $!\n";
     }
 
 
@@ -300,7 +263,7 @@ sub execute {                               # replace with real execution logic.
 
                 $stats{'num_snps'}++;
 
-#				warn "$stats{'num_snps'} lines parsed...\n" if(!($stats{'num_snps'} % 10000));
+#                warn "$stats{'num_snps'} lines parsed...\n" if(!($stats{'num_snps'} % 10000));
 
                 my $key = "$chrom\t$position";
 
@@ -392,7 +355,7 @@ sub execute {                               # replace with real execution logic.
 
                         if($self->verbose)
                         {
-                            $verbose_output .= "$key\t$chip_gt\t$comparison_result\t$cons_gt\t$line\n" if($self->output_file);
+                            $verbose_output .= "$key\t$chip_gt\t$comparison_result\t$cons_gt\t$line\n" if($output_file);
                             print "$key\t$chip_gt\t$comparison_result\t$cons_gt\t$line\n";
                         }
                     }
@@ -481,7 +444,7 @@ sub execute {                               # replace with real execution logic.
         print $stats{'pct_overall_match'} . "%\n";
     }
 
-    if($self->output_file)
+    if($output_file)
     {
         print OUTFILE "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
         print OUTFILE "$sample_name\t";
@@ -544,7 +507,7 @@ sub load_genotypes
     }
     close($input);
 
-#	print "$gtCounter genotypes loaded\n";
+#    print "$gtCounter genotypes loaded\n";
 
     return(%genotypes);
 }
@@ -695,7 +658,7 @@ sub code_to_genotype
     return("CT") if($code eq "Y");
     return("GT") if($code eq "K");
 
-#	warn "Unrecognized ambiguity code $code!\n";
+#    warn "Unrecognized ambiguity code $code!\n";
 
     return("NN");
 }
@@ -709,6 +672,57 @@ sub commify
     return $_;
 }
 
+sub required_rusage { '' };
+sub _needs_symlinks_followed_when_syncing { 0 };
+sub _working_dir_prefix { 'compare-snps-result' };
+sub resolve_allocation_disk_group_name { 'info_genome_models' };
+
+sub resolve_allocation_subdirectory {
+    my $self = shift;
+    my $staged_basename = File::Basename::basename($self->temp_staging_directory);
+    return join('/', 'build_merged_alignments', $self->id, 'compare-snps-' . $staged_basename);
+};
+
+sub estimated_kb_usage {
+    my $self = shift;
+    my $snvs_hq_bed = $self->_snvs_hq_bed;
+    my $bytes = -s $snvs_hq_bed;
+    return (2 * $bytes / 1000);
+}
+
+sub _gather_params_for_get_or_create {
+    my $class = shift;
+
+    my $bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
+
+    my %params = $bx->params_list;
+    my %is_input;
+    my %is_param;
+    my $class_object = $class->__meta__;
+    for my $key ($class->property_names) {
+        my $meta = $class_object->property_meta_for_name($key);
+        if ($meta->{is_input} && exists $params{$key}) {
+            $is_input{$key} = $params{$key};
+        } elsif ($meta->{is_param} && exists $params{$key}) {
+            $is_param{$key} = $params{$key};
+        }
+    }
+
+    my $inputs_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, %is_input);
+    my $params_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, %is_param);
+
+    my %software_result_params = (
+        params_id=>$params_bx->id,
+        inputs_id=>$inputs_bx->id,
+        subclass_name=>$class,
+    );
+
+    return {
+        software_result_params => \%software_result_params,
+        subclass => $class,
+        inputs=>\%is_input,
+        params=>\%is_param,
+    };
+}
 
 1;
-

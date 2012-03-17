@@ -36,19 +36,22 @@ class Genome::ModelDeprecated {
             |, 
         },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
-        type_name               => { via => 'processing_profile' },
     ],
     has_optional => [
         is_default => { 
             is => 'Boolean',
             doc => 'flag the model as the default system "answer" for its subject'
         },
-        auto_assign_inst_data => { is => 'Boolean' },
-        auto_build_alignments => { is => 'Boolean'}, # TODO: rename to auto_build
-        keep_n_most_recent_builds => { 
-            via => 'attributes', to => 'value', is_mutable => 1, 
-            where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] 
-        },
+#        auto_assign_inst_data => {
+#            is => 'Boolean',
+#            calculate_from => ['_auto_assign_inst_data'],
+#            calculate => q{ $_auto_assign_inst_data; }
+#        },
+#        auto_build_alignments => {
+#            is => 'Boolean',
+#            calculate_from => ['_auto_build_alignments'],
+#            calculate => q{ $_auto_build_alignments; }
+#        }, # TODO: rename to auto_build
         _last_complete_build_id => { 
             is => 'Number', 
             column_name => 'last_complete_build_id', 
@@ -455,23 +458,6 @@ sub get_all_objects {
     };
 
     return map { $sorter->( $self->$_ ) } (qw{ inputs builds to_model_links from_model_links });
-}
-
-sub notify_input_build_success {
-    my $self = shift;
-    my $succeeded_build = shift;
-
-    if($self->auto_build_alignments) {
-        my @from_models = $self->from_models;
-        my @last_complete_builds = map($_->last_complete_build, @from_models);
-
-        #all input models have a succeeded build
-        if(scalar @from_models eq scalar @last_complete_builds) {
-            $self->build_requested(1, 'all input models are ready');
-        }
-    }
-
-    return 1;
 }
 
 sub create_rule_limiting_instrument_data {

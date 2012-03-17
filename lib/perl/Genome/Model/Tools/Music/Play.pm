@@ -35,8 +35,9 @@ class Genome::Model::Tools::Music::Play {
             is => 'Text',
             doc => 'Tab-delimited file of pathway information',
         },
-    ],
-    has_optional_input => [
+        ],
+        has_optional_input => [
+
         numeric_clinical_data_file => {
             is => 'Text',
             doc => 'Table of samples (y) vs. numeric clinical data category (x)',
@@ -44,6 +45,24 @@ class Genome::Model::Tools::Music::Play {
         categorical_clinical_data_file => {
             is => 'Text',
             doc => 'Table of samples (y) vs. categorical clinical data category (x)',
+        },
+        numerical_data_test_method => {
+            is => 'Text',
+            doc => "Either 'cor' for Pearson Correlation or 'wilcox' for the Wilcoxon Rank-Sum Test for numerical clinical data.",
+            default => 'cor',
+        },
+        glm_model_file => {
+            is => 'Text',
+            doc => 'File outlining the type of model, response variable, covariants, etc. for the GLM analysis. (See DESCRIPTION).',
+        },
+        glm_clinical_data_file => {
+            is => 'Text',
+            doc => 'Clinical traits, mutational profiles, other mixed clinical data (See DESCRIPTION).',
+        },
+        use_maf_in_glm => {
+            is => 'Boolean',
+            doc => 'Set this flag to use the variant matrix created from the MAF file as variant input to GLM analysis.',
+            default => 0,
         },
         omimaa_dir => {
             is => 'Path',
@@ -58,9 +77,13 @@ class Genome::Model::Tools::Music::Play {
             doc => 'turn on to display larger working output',
             default => 1,
         },
-        matrix_file => {
+        clinical_correlation_matrix_file => {
             is => 'Text',
-            doc => 'Define this argument to store a mutation matrix',
+            doc => 'Optionally store the sample-vs-gene matrix used internally during calculations.',
+        },
+        mutation_relation_matrix_file => {
+            is => 'Text',
+            doc => 'Optionally store the sample-vs-gene matrix used internally during calculations.',
         },
         permutations => {
             is => 'Number',
@@ -121,6 +144,11 @@ class Genome::Model::Tools::Music::Play {
             doc => 'Group truncational mutations as a separate category',
             default => 0,
         },
+        merge_concurrent_muts => {
+            is => 'Boolean',
+            doc => 'Multiple mutations of a gene in the same sample are treated as 1',
+            default => 0,
+        },
         skip_non_coding => {
             is => 'Boolean',
             doc => 'Skip non-coding mutations from the provided MAF file',
@@ -154,9 +182,14 @@ class Genome::Model::Tools::Music::Play {
             doc => 'Put either "Build36" or "Build37"',
             is_output => 1,
             default => 'Build36',
-        }
-    ],
-    has_calculated_optional => [
+        },
+        show_known_hits => {
+            is => 'Boolean',
+            doc => "When a finding is novel, show known AA in that gene",
+            default => '1',
+        },
+        ],
+        has_calculated_optional => [
         gene_covg_dir => {
             calculate_from => ['output_dir'],
             calculate => q{ $output_dir . '/gene_covgs'; },
@@ -171,8 +204,13 @@ class Genome::Model::Tools::Music::Play {
             calculate_from => ['output_dir'],
             calculate => q{ $output_dir . '/smg'; },
         },
-    ],
-    has_constant => [
+        input_clinical_correlation_matrix_file => {
+            is => 'Text',
+            is_optional => 1,
+            doc => "Instead of calculating this from the MAF, input the sample-vs-gene matrix used internally during calculations.",
+        },
+        ],
+        has_constant => [
         cmd_list_file => { #If a workflow version of this tool is written, these parameters might be more useful
             is => 'Text',
             default_value => undef,
@@ -183,12 +221,12 @@ class Genome::Model::Tools::Music::Play {
             default_value => undef,
             is_optional => 1,
         },
-    ],
-    doc => 'Run the full suite of MuSiC tools sequentially.',
-};
+        ],
+        doc => 'Run the full suite of MuSiC tools sequentially.',
+    };
 
-sub help_synopsis {
-    return <<EOS
+    sub help_synopsis {
+        return <<EOS
 This tool takes as parameters all the information required to run the individual tools. An example usage is:
 
  ... music play \\
@@ -201,24 +239,24 @@ This tool takes as parameters all the information required to run the individual
         --roi-file input/all_coding_regions.bed \\
         --genetic-data-type gene
 EOS
-}
+    }
 
-sub help_detail {
-    return <<EOS
+    sub help_detail {
+        return <<EOS
 This command can be used to run all of the MuSiC analysis tools on a set of data. Please see the individual tools for further description of the parameters.
 EOS
-}
+    }
 
-sub _doc_credits {
-    return "Please see the credits for B<genome-music>(1).";
-}
+    sub _doc_credits {
+        return "Please see the credits for B<genome-music>(1).";
+    }
 
-sub _doc_authors {
-    return " Thomas B. Mooney, M.S.";
-}
+    sub _doc_authors {
+        return " Thomas B. Mooney, M.S.";
+    }
 
-sub _doc_see_also {
-    return <<EOS
+    sub _doc_see_also {
+        return <<EOS
 B<genome-music>(1),
 B<genome-music-path-scan>(1),
 B<genome-music-smg>(1),

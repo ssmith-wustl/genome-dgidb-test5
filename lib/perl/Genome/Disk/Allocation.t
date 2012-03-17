@@ -18,6 +18,8 @@ use_ok('Genome::Disk::Assignment') or die;
 use_ok('Genome::Disk::Volume') or die;
 use_ok('Genome::Disk::Group') or die;
 
+*Genome::Sys::current_user_is_admin = sub { return 1 };
+
 my $test_dir_base = '/gsc/var/cache/testsuite/running_testsuites/';
 my $test_dir = tempdir(
     TEMPLATE => 'allocation_testing_XXXXXX',
@@ -81,9 +83,10 @@ my $allocation_path = tempdir(
     UNLINK => 1,
 );
 
-my $user = Genome::Sys::User->create(email => 'fakeguy@genome.wustl.edu', name => 'Fake McFakerton');
+my $user = Genome::Sys::User->create(email => 'fakeguy@genome.wustl.edu', name => 'Fake McFakerton', username => 'fakeguy');
 ok($user, 'created user');
 
+$DB::single = 1;
 my %params = ( 
     disk_group_name => 'testing_group',
     mount_path => $volumes[0]->mount_path,

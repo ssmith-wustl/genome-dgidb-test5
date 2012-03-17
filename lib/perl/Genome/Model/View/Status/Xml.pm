@@ -123,7 +123,7 @@ class Genome::Model::View::Status::Xml {
                     ],
                     perspective => 'default',
                     toolkit => 'xml',
-                    subject_class_name => 'Genome::ModelDeprecated',
+                    subject_class_name => 'Genome::Model',
                 },
                 {
                     name => 'from_models',
@@ -132,7 +132,7 @@ class Genome::Model::View::Status::Xml {
                     ],
                     perspective => 'default',
                     toolkit => 'xml',
-                    subject_class_name => 'Genome::ModelDeprecated',
+                    subject_class_name => 'Genome::Model',
                 },
             ]
         }

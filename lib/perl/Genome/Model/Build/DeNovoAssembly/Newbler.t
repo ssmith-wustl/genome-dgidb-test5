@@ -22,7 +22,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Newbler') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_dir = $base_dir.'/newbler_v7';
+my $example_dir = $base_dir.'/newbler_v8';
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
@@ -41,7 +41,6 @@ ok($taxon, 'taxon') or die;
 my $sample = Genome::Sample->create(
     id => -1234,
     name => 'TEST-000',
-    taxon_id => $taxon->id,
 );
 ok($sample, 'sample') or die;
 my $library = Genome::Library->create(

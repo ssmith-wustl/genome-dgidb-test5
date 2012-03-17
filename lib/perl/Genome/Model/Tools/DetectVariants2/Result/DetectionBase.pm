@@ -50,30 +50,28 @@ class Genome::Model::Tools::DetectVariants2::Result::DetectionBase {
             doc => 'The chromosome(s) on which the detection was run',
         },
     ],
-    has_optional => [
+    has_optional_input => [
         # old API
         aligned_reads => {
             is => 'Text',
             is_optional => 1,
-            is_input => 1,
             doc => 'The path to the aligned reads file',
         },
         control_aligned_reads => {
             is => 'Text',
             is_optional => 1,
-            is_input => 1,
             doc => 'The path to the control aligned reads file',
         },
         # new API
         alignment_results => {
-            is => 'Genome::InstrumentData::AlignmentResults::Merged',
+            is => 'Text',
             is_optional => 1,
             is_many => 1,
             doc => 'The path to the aligned reads file',
         },
         control_alignment_results => {
-            is => 'Genome::InstrumentData::AlignmentResults::Merged',
-            is_optional => 1,            
+            is => 'Text',
+            is_optional => 1,
             is_many => 1,
             doc => 'The path to the control aligned reads file',
         },
@@ -125,43 +123,7 @@ sub create {
 
         my $instance = $self->_instance;
         my $instance_output = $instance->output_directory;
-
-        # if it's not a symlink then it was created before these became software results
-        # so we should archive the directory and generate software result/symlink
-        if (-e $instance_output) {
-            if (not -l $instance_output and -d $instance_output) {
-                my ($parent_dir, $sub_dir) = $instance_output =~ /(.+)\/(.+)/;
-                die $self->error_message("Unable to determine parent directory from $instance_output.") unless $parent_dir;
-                die $self->error_message("Unable to determine sub-directory from $instance_output.") unless $sub_dir;
-                die $self->error_message("Parse error when determining parent directory and sub-directory from $instance_output.") unless ($instance_output eq "$parent_dir/$sub_dir");
-
-                my $archive_name = "old_$sub_dir.tar.gz";
-                die $self->error_message("Archive already exists, $parent_dir/$archive_name.") if (-e "$parent_dir/$archive_name");
-
-                $self->status_message('Archiving old non-software-result ' . $instance_output . " to $archive_name.");
-                system("cd $parent_dir && tar -zcvf $archive_name $sub_dir && rm -rf $sub_dir");
-            }
-            else {
-                $self->warning_message('Instance output directory (' . $instance_output . ') already exists!');
-                $self->warning_message("Deleting the allocation that is in the way");
-                my $allocation_dir = readlink $instance_output;
-                my @parts = split "-", $allocation_dir;
-                my $allocation_owner_id = $parts[-1];
-                my $allocation = Genome::Disk::Allocation->get(owner_id=>$allocation_owner_id);
-                unless ($allocation) {
-                    die $self->error_message("Could not get a disk allocation for owner id $allocation_owner_id and allocation dir $allocation_dir");
-                }
-                unless ($allocation->delete) {
-                    die $self->error_message("Failed to delete allocation at $allocation_dir");
-                }
-                $self->warning_message("Removing link $instance_output");
-                unlink $instance_output;
-            }
-        # Otherwise we have a link that no longer points to an allocation, remove it
-        } elsif (-l $instance_output && !-e $instance_output) {
-            $self->warning_message("Removing link $instance_output that points to an allocation that is no longer present");
-            unlink $instance_output;
-        }
+        $self->_check_instance_output($instance_output);
 
         Genome::Sys->create_symlink_and_log_change($self, $self->output_dir, $instance_output);
 
@@ -190,7 +152,7 @@ sub create {
     unless ($c1) {
         warn "error backfilling param alignment_results_count";
     }
-    
+
     my $c2 = $self->add_param(
         param_name => 'control_alignment_results_count',
         param_value => 0,
@@ -200,6 +162,68 @@ sub create {
     }
 
     return $self;
+}
+
+sub _check_instance_output {
+    my ($class, $instance_output) = @_;
+    $class = ref $class if ref $class;
+
+    if (-e $instance_output) {
+        # If the detector output is not a symlink, it was generated before these were software results.
+        # Archive the existing stuff and regenerate so we get a nifty software result.
+        if (not -l $instance_output and -d $instance_output) {
+            my ($parent_dir, $sub_dir) = $instance_output =~ /(.+)\/(.+)/;
+            die $class->error_message("Unable to determine parent directory from $instance_output.") unless $parent_dir;
+            die $class->error_message("Unable to determine sub-directory from $instance_output.") unless $sub_dir;
+            die $class->error_message("Parse error when determining parent directory and sub-directory from $instance_output.") unless ($instance_output eq "$parent_dir/$sub_dir");
+
+            my $archive_name = "old_$sub_dir.tar.gz";
+            die $class->error_message("Archive already exists, $parent_dir/$archive_name.") if (-e "$parent_dir/$archive_name");
+
+            $class->status_message('Archiving old non-software-result ' . $instance_output . " to $archive_name.");
+            system("cd $parent_dir && tar -zcvf $archive_name $sub_dir && rm -rf $sub_dir");
+        }
+        # In this case, a symlink exists...
+        else {
+            $class->warning_message('Instance output directory (' . $instance_output . ') already exists!');
+            my $allocation_dir = readlink $instance_output;
+            my @parts = split "-", $allocation_dir;
+            my $allocation_owner_id = $parts[-1];
+            my $result = Genome::SoftwareResult->get($allocation_owner_id);
+            my $allocation = Genome::Disk::Allocation->get(owner_id => $allocation_owner_id);
+
+            if ($allocation and not $result) {
+                # Allocation exists without a result the whole time the result is being created. Ideally locks
+                # would prevent us from getting here during that window but our locks are not 100% reliable.
+                my @error_message = (
+                    "Found allocation at ($allocation_dir) but no software result for it's owner ID ($allocation_owner_id).",
+                    "This is either because the software result is currently being generated or because the allocation has been orphaned.",
+                    "If it is determined that the allocation has been orphaned then the allocation will need to be removed.",
+                );
+                die $class->error_message(join(' ', @error_message));
+            }
+            elsif ($result and not $allocation) {
+                # A result without an allocation... this really shouldn't ever happen, unless someone deleted the allocation row from the database?
+                die $class->error_message("Found a software result (" . $result->__display_name__ . ") that has output directory " .
+                    "($instance_output) but no allocation.");
+            }
+            elsif ($result and $allocation) {
+                # Finding a result and an allocation means either:
+                # 1) This work was already done, but for whatever reason we didn't find the software result before we decided to do the work.
+                # 2) We're doing different work but pointing it at a place where work has already been done for something else. Can't replace it.
+                die $class->error_message("Found allocation and software result for path $instance_output, cannot create new result!");
+            }
+            elsif (!$result && !$allocation && -l $instance_output && ! -e $allocation_dir) {
+                $class->warning_message("No allocation or software result and symlink ($instance_output) target ($allocation_dir) does not exist; removing symlink.");
+                unlink $instance_output;
+            }
+            else {
+                die $class->error_message("Unexpected condition in " . __PACKAGE__ . "::_check_instance_output");
+            }
+        }
+    }
+
+    return 1;
 }
 
 sub _gather_params_for_get_or_create {

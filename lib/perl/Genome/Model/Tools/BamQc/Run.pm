@@ -5,77 +5,103 @@ use warnings;
 
 use Genome;
 
+use Workflow;
+use Workflow::Simple;
+
 my $DEFAULT_PICARD_VERSION = Genome::Model::Tools::Picard->default_picard_version;
 my $DEFAULT_SAMSTAT_VERSION = Genome::Model::Tools::SamStat::Base->default_samstat_version;
-my $DEFAULT_FASTQC_VERSION = '0.10.0'; #Genome::Model::Tools::Fastqc->default_fastqc_version;
+my $DEFAULT_FASTQC_VERSION = '0.10.0'; #Genome::Model::Tools::Fastqc->default_fastqc_version; No idea why the class method doesn't work...
+my $DEFAULT_SAMTOOLS_VERSION = Genome::Model::Tools::Sam->default_samtools_version;
+my $DEFAULT_SAMTOOLS_MAXIMUM_MEMORY = Genome::Model::Tools::Sam->default_samtools_maximum_memory;
 
 class Genome::Model::Tools::BamQc::Run {
     is => ['Genome::Model::Tools::BamQc::Base'],
     has_input => [
         bam_file => {
-            doc => 'The input BAM file.'
+            doc => 'The input BAM file to generate metrics for.'
         },
-        output_directory => { },
+        output_directory => {
+            doc => 'The directory to write output summary metrics files to.',
+        },
         reference_sequence => {
-            is_optional => 1,
+            doc => 'The reference sequence for which the BAM file was aligned to.',
             # GRCh37-lite-build37
             default_value => '/gscmnt/ams1102/info/model_data/2869585698/build106942997/all_sequences.fasta',
         },
-        # TODO: Add option for aligner, bwasw would require some additional tools
+        # TODO: Add option for aligner, bwasw would require some additional tools to determine unique alignments
     ],
     has_optional_input => [
         roi_file_path => {
+            is => 'Text',
+            doc => 'If supplied ref-cov will run on the supplied regions of interest.',
         },
         roi_file_format => {
+            is => 'Text',
+            doc => 'The file format of the supplied ROI',
+            valid_values => ['bam','bed'],
         },
         picard_version => {
+            doc => 'The version of Picard to use.  See gmt picard --help for details.',
             default_value => $DEFAULT_PICARD_VERSION,
         },
         samstat_version => {
+            doc => 'The version of SamStat to use. See gmt sam-stat --help for details.',
             default_value => $DEFAULT_SAMSTAT_VERSION,
         },
         fastqc_version => {
+            doc => 'The version of FastQC to use.  See gmt fastqc --help for details.',
             default_value => $DEFAULT_FASTQC_VERSION,
         },
+        samtools_version => {
+            doc => 'The version of Samtools to use. See gmt sam --help for details.',
+            default_value => $DEFAULT_SAMTOOLS_VERSION,
+        },
+        samtools_maximum_memory => {
+            doc => 'The maximum amount of memory for Samtools to use. See gmt sam --help for details.',
+            default_value => $DEFAULT_SAMTOOLS_MAXIMUM_MEMORY,
+        },
         picard_maximum_memory => {
+            doc => 'The maximum amount of memory for Picard to use.  See gmt picard --help for details.',
             default_value => '30',
         },
         picard_maximum_permgen_memory => {
+            doc => 'The maximum amount of permgen memory for Picard to use.  See gmt picard --help for details.',
             default_value => '256',
         },
         picard_max_records_in_ram => {
+            doc => 'The maximum number of records for Picard to keep in memory.  See gmt picard --help for details.',
             default_value => '5000000',
+        },
+        error_rate => {
+            is => 'Boolean',
+            doc => 'A flag to run error rate calculations.  The error-rate-pileup flag determines which method of error-rate calculation is used.',
+            default_value => 1,
         },
         error_rate_pileup => {
             is => 'Boolean',
+            doc => 'A flag to run a pileup error rate calculation.  This actually compares each base in every read back to the reference sequence.  This can take a long time.  If set to false, the traditional error rate calculation will run using the Match Descriptor in the BAM alignment record.',
             default_value => 1,
         },
     ],
 };
 
-# TODO: I thought about running RefCov on the entire genome, but it may be computationally intensive(~several hours)
-#sub create {
-    #my $class = shift;
-    #my %params = @_;
-    #my $self = $class->SUPER::create(%params);
-    #unless ($self) { return; }
-    #unless ($self->roi_file_path) {
-    #    $self->roi_file_path($self->bam_file);
-    #    $self->roi_file_format('bam');
-    #}
-    #return $self;
-#}
-
 sub execute {
     my $self = shift;
     my %data;
-    # TODO: Make this a workflow to run distributed across LSF
 
+    unless (-d $self->output_directory) {
+        unless (Genome::Sys->create_directory($self->output_directory)) {
+            die('Failed to create output directory: '. $self->output_directory);
+        }
+    }
+    unless (-e $self->bam_file) {
+        die('Failed to find BAM file: '. $self->bam_file);
+    }
     my ($bam_basename,$bam_dirname,$bam_suffix) = File::Basename::fileparse($self->bam_file,qw/\.bam/);
     my $file_basename = $self->output_directory .'/'. $bam_basename;
 
     my $bam_path = $file_basename .'.bam';
-    unless (-e $bam_path) {
+    unless (-l $bam_path || -e $bam_path) {
         unless (symlink($self->bam_file,$bam_path)) {
             die('Failed to create symlink '. $bam_path .' -> '. $self->bam_file);
         }
@@ -83,137 +109,291 @@ sub execute {
 
     # SAMTOOLS
     my $bai_path = $file_basename .'.bam.bai';
-    unless (-e $bai_path) {
+    unless (-l $bai_path || -e $bai_path) {
         my $bai_file = $self->bam_file .'.bai';
-        if ($bai_file) {
+        if (-e $bai_file) {
             unless (symlink($bai_file,$bai_path)) {
                 die('Failed to create symlink '. $bai_path .' -> '. $bai_file);
             }
         } else {
-            # TODO: check if BAM is sorted (I think only Picard adds the sortorder to the header)
-            # TODO: run samtools index or Picard index
-            die('Add samtools index!')
-        }
-    }
-    my $flagstat_path = $file_basename .'.bam.flagstat';
-    unless (-e $flagstat_path) {
-        my $flagstat_file = $self->bam_file .'.flagstat';
-        if ($flagstat_file) {
-            unless (symlink($flagstat_file,$flagstat_path)) {
-                die('Failed to create symlinke '. $flagstat_path .' -> '. $flagstat_file);
+            # TODO: test if BAM file is sorted before indexing
+            unless (Genome::Model::Tools::Picard::BuildBamIndex->execute(
+                use_version => $self->picard_version,
+                maximum_permgen_memory => $self->picard_maximum_permgen_memory,
+                maximum_memory => $self->picard_maximum_memory,
+                input_file => $bam_path,
+            )) {
+                die('Failed to index BAM file: '. $bam_path);
             }
-        } else {
-            # TODO: run samtools flagstat
-            die('Add samtools flagstat!');
         }
     }
 
-    # PICARD MARKDUPLICATES
+
+    # PICARD MARK DUPLICATES
     my @mrkdup_files = glob($bam_dirname .'/*.metrics');
     unless (@mrkdup_files) {
-        # TODO: run MarkDuplicates
+        # TODO: run MarkDuplicates passing the mrkdup bam file as input to the downstream steps in workflow
+        # Not sure because some BAMs are intentionally left unmarked (ex. RNASeq)....
+    } else {
+        for my $mrkdup_file (@mrkdup_files) {
+            my ($mrkdup_basename, $mrkdup_dirname, $mrkdup_suffix) = File::Basename::fileparse($mrkdup_file,qw/\.metrics/);
+            my $mrkdup_path = $self->output_directory .'/'. $mrkdup_basename .'.metrics';
+            unless (symlink($mrkdup_file,$mrkdup_path)) {
+                die('Failed to create symlink '. $mrkdup_path .' -> '. $mrkdup_file);
+            }
+        }
     }
 
     # PICARD METRICS
     my $picard_metrics_basename = $file_basename .'-PicardMetrics';
-    my %picard_metrics_params = (
-        use_version => $self->picard_version,
-        reference_sequence => $self->reference_sequence,
-        input_file => $bam_path,
-        output_basename => $picard_metrics_basename,
-        maximum_permgen_memory => $self->picard_maximum_permgen_memory,
-        maximum_memory => $self->picard_maximum_memory,
-    );
-    unless (Genome::Model::Tools::Picard::CollectMultipleMetrics->execute(%picard_metrics_params)) {
-        die('Failed to run Picard CollectMultipleMetrics with parameters: '. Data::Dumper::Dumper(%picard_metrics_params));
-    }
 
     # PICARD GC
     my $picard_gc_metrics_file = $file_basename .'-PicardGC_metrics.txt';
     my $picard_gc_chart_file = $file_basename .'-PicardGC_chart.pdf';
     my $picard_gc_summary_file = $file_basename .'-PicardGC_summary.txt';
-    my %picard_gc_params = (
-        use_version => $self->picard_version,
-        clean_bam => 'none',
-        max_records_in_ram => $self->picard_max_records_in_ram,
-        maximum_permgen_memory => $self->picard_maximum_permgen_memory,
-        maximum_memory => $self->picard_maximum_memory,
-        refseq_file => $self->reference_sequence,
-        input_file => $bam_path,
-        output_file => $picard_gc_metrics_file,
-        chart_output => $picard_gc_chart_file,
-        summary_output => $picard_gc_summary_file,
-    );
-    unless (Genome::Model::Tools::Picard::CollectGcBiasMetrics->execute(%picard_gc_params)) {
-        die('Failed to run Picard CollectGcBiasMetrics with parameters: '. Data::Dumper::Dumper(%picard_gc_params));
-    }
 
-    # REFCOV
-    my $refcov_stats_file = $file_basename .'-RefCov_STATS.tsv';
-    if ($self->roi_file_path && $self->roi_file_format) {
-        # WARNING: MUST USE PERL 5.10.1
-        my %refcov_params = (
-            alignment_file_path => $bam_path,
-            roi_file_path => $self->roi_file_path,
-            roi_file_format => $self->roi_file_format,
-            stats_file => $refcov_stats_file,
-            print_headers => 1,
-            print_min_max => 1,
-        );
-        unless (Genome::Model::Tools::RefCov::Standard->execute(%refcov_params)) {
-            die('Failed to run RefCov Standard with parameters: '. Data::Dumper::Dumper(%refcov_params));
-        }
-        my $refcov_stats = Genome::Utility::IO::SeparatedValueReader->create(
-            input => $refcov_stats_file,
-            separator => "\t",
-        );
-        while (my $refcov_data = $refcov_stats->next) {
-            if ($data{$bam_basename}{'RefCovMetrics'}{$refcov_data->{'name'}}) {
-                die('Multiple RefCov entries found.  Probably from multiple min_depth or wingspan filters.');
-            } else {
-                $data{$bam_basename}{'RefCovMetrics'}{$refcov_data->{'name'}} = $refcov_data;
-            }
-        }
-    }
-
-    # SAMSTAT
-    my %samstat_params = (
-        use_version => $self->samstat_version,
-        input_files => $bam_path,
-    );
-    unless (Genome::Model::Tools::SamStat::HtmlReport->execute(%samstat_params)) {
-        die('Failed to run SamStat command with parameters: '. Data::Dumper::Dumper(%samstat_params));
-    }
-
-    # FASTQC
-    my %fastqc_params = (
-        use_version => $self->fastqc_version,
-        input_files => $bam_path,
-        report_directory => $self->output_directory,
-    );
-    unless (Genome::Model::Tools::Fastqc::GenerateReports->execute(%fastqc_params)) {
-        die('Failed to generate FastQC reports with parameters: '. Data::Dumper::Dumper(%fastqc_params));
-    }
-
-    # ErrorRate
-    my $error_rate_file = $file_basename .'-ErrorRate.tsv';
-    my %error_rate_params = (
+    # Read Length
+    my $read_length_summary = $file_basename .'-ReadLengthSummary.tsv';
+    my $read_length_histo = $file_basename .'-ReadLengthDistribution.tsv';
+    my $alignment_length_histo = $file_basename .'-AlignmentLengthDistribution.tsv';
+    
+    my %workflow_params = (
+        picard_version => $self->picard_version,
+        reference_sequence => $self->reference_sequence,
+        output_directory => $self->output_directory,
         bam_file => $bam_path,
-        output_file => $error_rate_file,
+        clean_bam => 'none',
+        picard_metrics_output_basename => $picard_metrics_basename,
+        picard_maximum_permgen_memory => $self->picard_maximum_permgen_memory,
+        picard_maximum_memory => $self->picard_maximum_memory,
+        picard_max_records_in_ram => $self->picard_max_records_in_ram,
+        picard_gc_metrics_file => $picard_gc_metrics_file,
+        picard_gc_chart_file => $picard_gc_chart_file,
+        picard_gc_summary_file => $picard_gc_summary_file,
+        samstat_version => $self->samstat_version,
+        fastqc_version => $self->fastqc_version,
+        read_length_summary => $read_length_summary,
+        read_length_histogram => $read_length_histo,
+        alignment_length_histogram => $alignment_length_histo,
     );
-    if ($self->error_rate_pileup) {
-        $error_rate_params{reference_fasta} = $self->reference_sequence;
-        unless (Genome::Model::Tools::BioSamtools::ErrorRatePileup->execute(%error_rate_params)) {
-            die('Failed to run ErrorRatePielup with parameters: '. Data::Dumper::Dumper(%error_rate_params));
+    my @output_properties = qw/
+                                  picard_metrics_result
+                                  picard_gc_bias_result
+                                  samstat_result
+                                  fastqc_result
+                                  read_length_result
+                              /;
+    my $flagstat_path = $file_basename .'.bam.flagstat';
+    unless (-e $flagstat_path) {
+        my $flagstat_file = $self->bam_file .'.flagstat';
+        if (-e $flagstat_file) {
+            unless (symlink($flagstat_file,$flagstat_path)) {
+                die('Failed to create symlinke '. $flagstat_path .' -> '. $flagstat_file);
+            }
+        } else {
+            $workflow_params{samtools_version} = $self->samtools_version;
+            $workflow_params{samtools_maximum_memory} = $self->samtools_maximum_memory;
+            $workflow_params{samtools_flagstat_path} = $flagstat_path;
+            push @output_properties, 'flagstat_result';
         }
-    } else {
-        unless (Genome::Model::Tools::BioSamtools::ErrorRate->execute(%error_rate_params)) {
-            die('Failed to run ErrorRatePielup with parameters: '. Data::Dumper::Dumper(%error_rate_params));
+    }
+    if ($self->error_rate) {
+        my $error_rate_file = $file_basename .'-ErrorRate.tsv';
+        if (-e $error_rate_file) {
+            die('Error rate file already exists at: '. $error_rate_file);
         }
+        $workflow_params{error_rate_file} = $error_rate_file;
+        $workflow_params{error_rate_pileup} = $self->error_rate_pileup;
+        push @output_properties, 'error_rate_result';
+    }
+    if ($self->roi_file_path) {
+        my $refcov_stats_file = $file_basename .'-RefCov_STATS.tsv';
+        $workflow_params{roi_file_path} = $self->roi_file_path;
+        $workflow_params{roi_file_format} = $self->roi_file_format;
+        $workflow_params{refcov_stats_file} = $refcov_stats_file;
+        $workflow_params{refcov_print_headers} = 1;
+        $workflow_params{refcov_print_min_max} = 1;
+
+        push @output_properties, 'refcov_result';
+    }
+
+    my @input_properties = keys %workflow_params;
+
+    my $workflow = Workflow::Model->create(
+        name => $self->id .' BamQc '. $self->bam_file,
+        input_properties => \@input_properties,
+        output_properties => \@output_properties,
+    );
+
+    $workflow->log_dir($self->output_directory);
+
+    # Samtools flagstat
+    if ($workflow_params{samtools_flagstat_path}) {
+        my %samtools_flagstat_operation_params = (
+            workflow => $workflow,
+            name => $self->id .' Samtools Flagstat '. $self->bam_file,
+            class_name => 'Genome::Model::Tools::Sam::Flagstat',
+            input_properties => {
+                'bam_file' => 'bam_file',
+                'samtools_flagstat_path' => 'output_file',
+                'samtools_version' => 'use_version',
+                'samtools_maximum_memory' => 'maximum_memory',
+            },
+            output_properties => {
+                'result' => 'flagstat_result',
+            },
+        );
+        my $samtools_flagstat_operation = $self->setup_workflow_operation(%samtools_flagstat_operation_params);
     }
     
+    # PicardMetrics
+    my %picard_metrics_operation_params = (
+        workflow => $workflow,
+        name => $self->id .' Collect Picard Metrics '. $self->bam_file,
+        class_name => 'Genome::Model::Tools::Picard::CollectMultipleMetrics',
+        input_properties => {
+            'bam_file' => 'input_file',
+            'reference_sequence' => 'reference_sequence',
+            'picard_metrics_output_basename' => 'output_basename',
+            'picard_version' => 'use_version',
+            'picard_maximum_memory' => 'maximum_memory',
+            'picard_maximum_permgen_memory' => 'maximum_permgen_memory',
+        },
+        output_properties => {
+            'result' => 'picard_metrics_result',
+        },
+    );
+    my $picard_metrics_operation = $self->setup_workflow_operation(%picard_metrics_operation_params);
+    my $max_memory = $self->picard_maximum_memory + 2;
+    $picard_metrics_operation->operation_type->lsf_resource('-M '. $max_memory .'000000 -R \'select[type==LINUX64 && model!=Opteron250 && tmp>1000 && mem>'. $max_memory.'000] rusage[tmp=1000, mem='. $max_memory.'000]\'');
+    
+    # PicardGcBias
+    my %picard_gc_bias_operation_params = (
+        workflow => $workflow,
+        name => $self->id .' Collect Picard G+C Bias '. $self->bam_file,
+        class_name => 'Genome::Model::Tools::Picard::CollectGcBiasMetrics',
+        input_properties => {
+            'bam_file' => 'input_file',
+            'reference_sequence' => 'refseq_file',
+            'clean_bam' => 'clean_bam',
+            'picard_version' => 'use_version',
+            'picard_maximum_memory' => 'maximum_memory',
+            'picard_maximum_permgen_memory' => 'maximum_permgen_memory',
+            'picard_max_records_in_ram' => 'max_records_in_ram',
+            'picard_gc_metrics_file' => 'output_file',
+            'picard_gc_chart_file' => 'chart_output',
+            'picard_gc_summary_file' => 'summary_output',
+        },
+        output_properties => {
+            'result' => 'picard_gc_bias_result',
+        },
+    );
+    my $picard_gc_bias_operation = $self->setup_workflow_operation(%picard_gc_bias_operation_params);
+    $picard_gc_bias_operation->operation_type->lsf_resource('-M '. $max_memory .'000000 -R \'select[type==LINUX64 && model!=Opteron250 && tmp>1000 && mem>'. $max_memory.'000] rusage[tmp=1000, mem='. $max_memory.'000]\'');
+    
+    # SamStat
+    my %samstat_operation_params = (
+        workflow => $workflow,
+        name => $self->id .' SamStat Html Report '. $self->bam_file,
+        class_name => 'Genome::Model::Tools::SamStat::HtmlReport',
+        input_properties => {
+            'bam_file' => 'input_files',
+            'samstat_version' => 'use_version',
+        },
+        output_properties => {
+            'result' => 'samstat_result',
+        },
+    );
+    $self->setup_workflow_operation(%samstat_operation_params);
+
+    # FastQC
+    my %fastqc_operation_params = (
+        workflow => $workflow,
+        name => $self->id .' FastQC Generate Reports '. $self->bam_file,
+        class_name => 'Genome::Model::Tools::Fastqc::GenerateReports',
+        input_properties => {
+            'bam_file' => 'input_files',
+            'fastqc_version' => 'use_version',
+            'output_directory' => 'report_directory',
+        },
+        output_properties => {
+            'result' => 'fastqc_result',
+        },
+    );
+    $self->setup_workflow_operation(%fastqc_operation_params);
+
+    # ErrorRate
+    if ($self->error_rate) {
+        my %error_rate_operation_params = (
+            workflow => $workflow,
+            name => $self->id .' BioSamtools Error Rate '. $self->bam_file,
+            class_name => 'Genome::Model::Tools::BioSamtools::ErrorRate',
+            input_properties => {
+                'bam_file' => 'bam_file',
+                'reference_sequence' => 'reference_fasta',
+                'error_rate_file' => 'output_file',
+                'error_rate_pileup' => 'pileup',
+            },
+            output_properties => {
+                'result' => 'error_rate_result',
+            },
+        );
+        $self->setup_workflow_operation(%error_rate_operation_params);
+    }
+    
+    # Read Length
+    my %read_length_operation_params = (
+        workflow => $workflow,
+        name => $self->id .' BioSamtools Read Length Distribution '. $self->bam_file,
+        class_name => 'Genome::Model::Tools::BioSamtools::ReadLengthDistribution',
+        input_properties => {
+            'bam_file' => 'bam_file',
+            read_length_summary => 'summary_file',
+            read_length_histogram => 'read_length_histogram',
+            alignment_length_histogram => 'alignment_length_histogram',
+        },
+        output_properties => {
+            'result' => 'read_length_result',
+        },
+    );
+    $self->setup_workflow_operation(%read_length_operation_params);
+
+    # RefCov
+    # WARNING: MUST USE PERL 5.10.1
+    if ($self->roi_file_path) {
+        my %refcov_operation_params = (
+            workflow => $workflow,
+            name => $self->id .' RefCov '. $self->bam_file,
+            class_name => 'Genome::Model::Tools::RefCov::Standard',
+            input_properties => {
+                'bam_file' => 'alignment_file_path',
+                'roi_file_path' => 'roi_file_path',
+                'roi_file_format' => 'roi_file_format',
+                'refcov_stats_file' => 'stats_file',
+                'refcov_print_headers' => 'print_headers',
+                'refcov_print_min_max' => 'print_min_max',
+            },
+            output_properties => {
+                'result' => 'refcov_result',
+            },
+        );
+        $self->setup_workflow_operation(%refcov_operation_params);
+    }
+
+    my @validation_errors = $workflow->validate;
+    unless ($workflow->is_valid) {
+        die('Errors encountered while validating workflow: '. join("\n", @validation_errors));
+    }
+    my $output = Workflow::Simple::run_workflow_lsf($workflow,%workflow_params);
+    my @execution_errors = @Workflow::Simple::ERROR;
+    if (@execution_errors) {
+        for (@execution_errors) {
+            print STDERR $_->error ."\n";
+        }
+        return;
+    }
+
     # SUMMARY
-    # TODO: First create tab-delimited(tsv) files for each txt output
     # TODO: Eventually create and xls spreadsheet or consolidated PDF report
     my $flagstat_data = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flagstat_path);
     $data{$bam_basename}{'FlagstatMetrics'} = $flagstat_data;
@@ -247,6 +427,19 @@ sub execute {
         my $gc_data = Genome::Model::Tools::Picard::CollectGcBiasMetrics->parse_file_into_metrics_hashref($picard_gc_summary_file);
         $data{$bam_basename}{'GcBiasSummary'} = $gc_data;
     }
+    if ($self->roi_file_path) {
+        my $refcov_stats = Genome::Utility::IO::SeparatedValueReader->create(
+            input => $workflow_params{refcov_stats_file},
+            separator => "\t",
+        );
+        while (my $refcov_data = $refcov_stats->next) {
+            if ($data{$bam_basename}{'RefCovMetrics'}{$refcov_data->{'name'}}) {
+                die('Multiple RefCov entries found.  Probably from multiple min_depth or wingspan filters.');
+            } else {
+                $data{$bam_basename}{'RefCovMetrics'}{$refcov_data->{'name'}} = $refcov_data;
+            }
+        }
+    }
     for my $mrkdup_file (@mrkdup_files) {
         my ($mrkdup_basename,$mrkdup_dir,$mrkdup_suffix) = File::Basename::fileparse($mrkdup_file,qw/\.metrics/);
         my $mrkdup_symlink = $self->output_directory.'/'. $mrkdup_basename . $mrkdup_suffix;
@@ -264,6 +457,48 @@ sub execute {
     print Data::Dumper::Dumper(%data);
     return 1;
 }
+
+sub setup_workflow_operation {
+    my $self = shift;
+    my %params = @_;
+
+    my $workflow = delete($params{'workflow'});
+    my $name = delete($params{'name'});
+    my $class_name = delete($params{'class_name'});
+    my $input_properties = delete($params{'input_properties'});
+    my $output_properties = delete($params{'output_properties'});
+
+    my $input_connector = $workflow->get_input_connector;
+    my $output_connector = $workflow->get_output_connector;
+
+    my $operation = $workflow->add_operation(
+        name => $name,
+        operation_type => Workflow::OperationType::Command->create(
+            command_class_name => $class_name,
+        )
+    );
+
+    for my $left_property (keys %{$input_properties}) {
+        my $right_property = $input_properties->{$left_property};
+        $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => $left_property,
+            right_operation => $operation,
+            right_property => $right_property,
+        );
+    }
+    for my $left_property (keys %{$output_properties}) {
+        my $right_property = $output_properties->{$left_property};
+        $workflow->add_link(
+            left_operation => $operation,
+            left_property => $left_property,
+            right_operation => $output_connector,
+            right_property => $right_property,
+        );
+    }
+    return $operation;
+}
+
 
 
 1;

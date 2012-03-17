@@ -106,6 +106,11 @@ class Sx::Metrics::Assembly {
                 contigs_t3_n50_count
                 contigs_t3_n50_length
                 contigs_t3_n50_not_reached
+
+                core_gene_present_percent
+                core_gene_group_present_count
+                core_gene_survey_result
+
                 coverage_5x
                 coverage_4x
                 coverage_3x
@@ -593,9 +598,9 @@ sub calculate_metrics {
         $main_metrics->{reads_assembled_success} = sprintf(
             '%0.3f', $main_metrics->{reads_assembled} / $main_metrics->{reads_processed}
         );
-        $main_metrics->{reads_assembled_success_percent} = sprintf( '%.1f', $main_metrics->{reads_assembled} / $main_metrics->{reads_processed} * 100 );
+        $main_metrics->{reads_assembled_success_percent} = sprintf( '%.1f', $main_metrics->{reads_assembled_unique} / $main_metrics->{reads_processed} * 100 );
         $main_metrics->{reads_not_assembled} = $main_metrics->{reads_assembled} - $main_metrics->{reads_processed};
-        $main_metrics->{reads_not_assembled_percent} = sprintf( '%.1f', ( $main_metrics->{reads_processed} - $main_metrics->{reads_assembled} ) / $main_metrics->{reads_processed} * 100 );
+        $main_metrics->{reads_not_assembled_percent} = sprintf( '%.1f', ( $main_metrics->{reads_processed} - $main_metrics->{reads_assembled_unique} ) / $main_metrics->{reads_processed} * 100 );
     }
 
     $self->_are_metrics_calculated(1);

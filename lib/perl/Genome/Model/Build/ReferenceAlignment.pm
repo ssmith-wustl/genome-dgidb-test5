@@ -573,9 +573,9 @@ sub final_result_for_variant_type {
     my $self = shift;
     my $variant_type = shift;
 
-    my @users = Genome::SoftwareResult::User->get(user => $self);
-    my @results = Genome::SoftwareResult->get([map($_->software_result_id, @users)]);
+    my @results = $self->results;
     my @dv2_results = grep($_->class =~ /Genome::Model::Tools::DetectVariants2::Result/, @results);
+    @dv2_results = grep($_->class !~ /::Vcf/, @dv2_results);
     my @relevant_results = grep(scalar( @{[ glob($_->output_dir . '/' . $variant_type .'*') ]} ), @dv2_results);
 
     if(!@relevant_results) {
@@ -774,30 +774,6 @@ sub whole_rmdup_bam_flagstat_file {
 
     return $flag_file;
 }
-
-sub generate_tcga_file_name {
-    my $self = shift;
-    my $model = $self->model;
-    my $dna_id  = $model->subject_id;
-
-    my $ex_species_name = GSC::DNAExternalName->get( dna_id => $dna_id, name_type => 'biospecimen id',);
-    if ( !defined($ex_species_name) ) {
-        $self->error_message("The external species name via the name type of 'biospecimen id' is not defined for this model.  Cannot generate a TCGA file name.");
-        return;
-    }
-   
-    my $ex_plate_name = GSC::DNAExternalName->get( dna_id => $dna_id, name_type => 'plate id',);
-    if ( !defined($ex_plate_name) ) {
-        $self->error_message("The external plate name via the name type of 'palate id' is not defined for this model.  Cannot generate a TCGA file name.");
-        return;
-    }
-
-    return $ex_species_name->name."-".$ex_plate_name->name."-09"; 
-}
-
-####BEGIN CAPTURE SECTION####
-
-####END CAPTURE SECTION####
 
 ####BEGIN CDNA SECTION####
 

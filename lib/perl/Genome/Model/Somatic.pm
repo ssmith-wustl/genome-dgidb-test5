@@ -1,5 +1,4 @@
 package Genome::Model::Somatic;
-#:adukes short term, keep_n_most_recent_builds shouldn't have to be overridden like this here.  If this kind of default behavior is acceptable, it belongs in the base class
 
 use strict;
 use warnings;
@@ -93,15 +92,6 @@ sub create {
     $self->add_from_model(from_model => $tumor_model, role => 'tumor');
 
     return $self;
-}
-
-
-# we get a failure during verify successful completion
-# if we don't have this...
-sub keep_n_most_recent_builds
-{
-    my $self = shift;
-    return;
 }
 
 sub get_all_objects {

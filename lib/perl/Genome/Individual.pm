@@ -7,7 +7,7 @@ use Genome;
 use Carp;
 
 class Genome::Individual {
-    is => ['Genome::Subject','Genome::Searchable'],
+    is => ['Genome::SampleSource','Genome::Searchable'],
     has => [
         individual_id => {
             calculate_from => 'id',
@@ -26,12 +26,12 @@ class Genome::Individual {
             is_mutable => 1,
             doc => 'Taxon ID for this individual',
         },
-        taxon => { 
-            is => 'Genome::Taxon', 
-            id_by => 'taxon_id', 
+        taxon => {
+            is => 'Genome::Taxon',
+            id_by => 'taxon_id',
         },
-        species_name => { 
-            via => 'taxon' 
+        species_name => {
+            via => 'taxon'
         },
     ],
     has_optional => [
@@ -43,14 +43,14 @@ class Genome::Individual {
             is_mutable => 1,
             doc => 'ID of this individual\' father',
         },
-        father => { 
-            is => 'Genome::Individual', 
+        father => {
+            is => 'Genome::Individual',
             id_by => 'father_id',
             doc => 'Genome::Individual object that represents this individual\'s father',
         },
-        father_name => { 
-            via => 'father', 
-            to => 'name', 
+        father_name => {
+            via => 'father',
+            to => 'name',
             doc => 'Name of this individual\'s father',
         },
         mother_id => {
@@ -61,41 +61,41 @@ class Genome::Individual {
             is_mutable => 1,
             doc => 'ID of this individual\'s mother',
         },
-        mother => { 
-            is => 'Genome::Individual', 
+        mother => {
+            is => 'Genome::Individual',
             id_by => 'mother_id',
             doc => 'Your mom',
         },
-        mother_name => { 
-            via => 'mother', 
-            to => 'name', 
+        mother_name => {
+            via => 'mother',
+            to => 'name',
             doc => 'Name of this individual\'s mother',
         },
-        upn => { 
-            is => 'Text', 
+        upn => {
+            is => 'Text',
             via => 'attributes',
             to => 'attribute_value',
             where => [ attribute_label => 'upn' ],
             is_mutable => 1,
-            doc => 'Fully qualified internal name for the patient', 
+            doc => 'Fully qualified internal name for the patient',
         },
-        common_name => { 
+        common_name => {
             is => 'Text',
             via => 'attributes',
             to => 'attribute_value',
             where => [ attribute_label => 'common_name' ],
             is_mutable => 1,
-            doc => 'A name like "aml1" for the patient, by which the patient is commonly referred-to in the lab' 
+            doc => 'A name like "aml1" for the patient, by which the patient is commonly referred-to in the lab'
         },
-        gender => { 
+        gender => {
             is => 'Text',
             via => 'attributes',
             to => 'attribute_value',
             where => [ attribute_label => 'gender' ],
             is_mutable => 1,
-            doc => 'when the gender of the individual is known, this value is set to male/female/...' 
+            doc => 'when the gender of the individual is known, this value is set to male/female/...'
         },
-        ethnicity => { 
+        ethnicity => {
             is => 'Text',
             via => 'attributes',
             to => 'attribute_value',
@@ -103,7 +103,7 @@ class Genome::Individual {
             is_mutable => 1,
             doc => 'The "ethnicity" of the individual, Hispanic/Non-Hispanic/...'
         },
-        race => { 
+        race => {
             is => 'Text',
             via => 'attributes',
             to => 'attribute_value',
@@ -113,8 +113,8 @@ class Genome::Individual {
         },
     ],
     has_many_optional => [
-        samples => { 
-            is => 'Genome::Sample', 
+        samples => {
+            is => 'Genome::Sample',
             reverse_id_by => 'source',
             doc => 'Sample extracted from this individual',
         },
@@ -125,6 +125,11 @@ class Genome::Individual {
         },
     ],
 };
+
+sub get_source {
+    my $self = shift;
+    return $self->taxon;
+}
 
 1;
 

@@ -7,21 +7,23 @@ use Genome;
 
 class Genome::Model::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has => [
+    has_field => [
         type => {
             is => 'Text',
             calculate_from => ['subject'],
-            calculate => sub { 
+            calculate => sub {
                 my ($model) = @_;
                 my $pp_type = $model->type_name();
                 my $solr_type;
-                
-                if ($pp_type eq 'reference alignment') {
+
+                if ($model->isa('Genome::Model::ReferenceAlignment') && $model->is_lane_qc) {
+                    $solr_type = 'model - lane_qc';
+                } elsif ($pp_type eq 'reference alignment') {
                     $solr_type = 'model - alignment';
                 } elsif ($pp_type =~ /somatic/i) {
                     $solr_type = 'model - somatic';
                 } elsif ($pp_type =~ /rna/i) {
-                    $solr_type = 'model - rna';   
+                    $solr_type = 'model - rna';
                 } elsif ($pp_type =~ /microarray/i) {
                     $solr_type = 'model - microarray';
                 } else {
@@ -32,12 +34,14 @@ class Genome::Model::View::Solr::Xml {
         display_type => {
             is  => 'Text',
             calculate_from => ['subject'],
-            calculate => sub { 
+            calculate => sub {
                 my ($model) = @_;
                 my $pp_type = $model->type_name();
                 my $solr_type;
-                
-                if ($pp_type eq 'reference alignment') {
+
+                if ($model->isa('Genome::Model::ReferenceAlignment') && $model->is_lane_qc) {
+                    $solr_type = 'Lane QC Model';
+                } elsif ($pp_type eq 'reference alignment') {
                     $solr_type = 'Alignment Model';
                 } elsif ($pp_type =~ /somatic/i) {
                     $pp_type =~ s/\b(\w)/\U$1/g; # capitalize words
@@ -59,8 +63,8 @@ class Genome::Model::View::Solr::Xml {
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
-            calculate => sub { 
-                return join ('?id=', '/view/genome/model/status.html', $_[0]->genome_model_id()); 
+            calculate => sub {
+                return join ('?id=', '/view/genome/model/status.html', $_[0]->genome_model_id());
             },
         },
         display_label1 => {
@@ -70,10 +74,10 @@ class Genome::Model::View::Solr::Xml {
         display_url1 => {
             is  => 'Text',
             calculate_from => ['subject'],
-            calculate => sub { 
+            calculate => sub {
                 my $build = $_[0]->last_succeeded_build();
                 return 'none' if !$build;
-                return join ('?id=', '/view/genome/model/build/status.html',$build->id()); 
+                return join ('?id=', '/view/genome/model/build/status.html',$build->id());
             },
         },
         display_label2 => {
@@ -83,7 +87,7 @@ class Genome::Model::View::Solr::Xml {
         display_url2 => {
             is  => 'Text',
             calculate_from => ['subject'],
-            calculate => sub { 
+            calculate => sub {
                 my $build = $_[0]->last_succeeded_build();
                 return 'none' if !$build;
                 return join ('/','https://gscweb.gsc.wustl.edu', $build->data_directory());
@@ -127,7 +131,7 @@ class Genome::Model::View::Solr::Xml {
                     name => 'processing_profile',
                     position => 'content',
                     perspective => 'default',
-                    toolkit => 'text',
+                    toolkit => 'xml',
                     aspects => [
                         'id',
                         'name'
@@ -184,13 +188,13 @@ sub display_url {
 #x display_title
 #x display_icon_url
 #x display_type
-#                
-#display_label1 
+#
+#display_label1
 #display_url1
-#                
+#
 #display_label2
 #display_url2
-#                
+#
 #display_label3
 #display_url3
 

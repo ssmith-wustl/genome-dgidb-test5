@@ -33,8 +33,8 @@ sub skip_first_line {
     return 0;
 }
 
-sub constant_values { [qw/ data_directory /] };
-sub required_for_get { [qw( transcript_id data_directory)] }
+sub constant_values { [qw/ data_directory reference_build_id /] };
+sub required_for_get { [qw( transcript_id data_directory reference_build_id)] }
 
 sub file_resolver {
     my($composite_id, $data_directory) = @_;

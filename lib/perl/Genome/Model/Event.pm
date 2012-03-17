@@ -18,7 +18,7 @@ class Genome::Model::Event {
         genome_model_event_id => { is => 'NUMBER', len => 11 },
     ],
     has => [
-        model        => { is => 'Genome::ModelDeprecated', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
+        model        => { is => 'Genome::Model', id_by => 'model_id', constraint_name => 'GME_GM_FK' },
         event_type   => { is => 'VARCHAR2', len => 255 },
         event_status => { is => 'VARCHAR2', len => 32, is_optional => 1 },
         user_name    => { is => 'VARCHAR2', len => 64, is_optional => 1 },

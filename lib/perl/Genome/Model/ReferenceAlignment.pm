@@ -387,7 +387,7 @@ sub check_and_update_genotype_input {
 }
 
 
-sub default_qc_model_name_for_instrument_data {
+sub default_lane_qc_model_name_for_instrument_data {
     my $self = shift;
     my $instrument_data = shift;
 
@@ -404,21 +404,58 @@ sub default_qc_model_name_for_instrument_data {
     return $model_name;
 }
 
+sub default_lane_qc_model_for_instrument_data {
+    my $class           = shift;
+    my @instrument_data = @_;
+
+    my @lane_qc_models;
+    for my $instrument_data (@instrument_data) {
+        my $lane_qc_model_name = $class->default_lane_qc_model_name_for_instrument_data($instrument_data);
+        my $lane_qc_model = Genome::Model::ReferenceAlignment->get(name => $lane_qc_model_name);
+        push @lane_qc_models, $lane_qc_model if $lane_qc_model;
+    }
+
+    return @lane_qc_models;
+}
+
+sub qc_processing_profile_id_hashref {
+    return { # Map alignment processing profile to lane QC version
+        'wgs' => {
+            2635769 => '2653572', # Nov 2011 Default Reference Alignment
+            2644306 => '2653579', # Nov 2011 Default Reference Alignment (PCGP)
+            2574937 => '2597031', # bwa 0.5.5 untrimmed and samtools r453 and picard_align 1.17 and picard_dedup 1.29
+            2580856 => '2581081', # Feb 2011 Default Reference Alignment
+            2582616 => '2589389', # old february 2011 default genome and exome with build37 annotation
+            2580859 => '2589388', # Feb 2011 Default Reference Alignment (PCGP)
+            2586039 => '2589390', # Mar 2011 Default Reference Alignment (PCGP Untrimmed)
+        },
+        'capture' => {
+            2635769 => '2684691', # Nov 2011 Default Reference Alignment
+            2644306 => '2684692', # Nov 2011 Default Reference Alignment (PCGP)
+            2574937 => '2684716', # bwa 0.5.5 untrimmed and samtools r453 and picard_align 1.17 and picard_dedup 1.29
+            2580856 => '2684689', # Feb 2011 Default Reference Alignment
+            2582616 => '2684689', # old february 2011 default genome and exome with build37 annotation
+            2580859 => '2684690', # Feb 2011 Default Reference Alignment (PCGP)
+            2586039 => '2684690', # Mar 2011 Default Reference Alignment (PCGP Untrimmed)
+        },
+    };
+}
 
 sub qc_processing_profile_id {
     my $self = shift;
+    my %arg  = @_;
 
-    my %qc_pp_id = ( # Map alignment processing profile to lane QC version
-        2635769 => '2653572', # Nov 2011 Default Reference Alignment
-        2644306 => '2653579', # Nov 2011 Default Reference Alignment (PCGP)
-        2574937 => '2597031', # bwa 0.5.5 untrimmed and samtools r453 and picard_align 1.17 and picard_dedup 1.29
-        2580856 => '2581081', # Feb 2011 Default Reference Alignment
-        2582616 => '2589389', # old february 2011 default genome and exome with build37 annotation
-        2580859 => '2589388', # Feb 2011 Default Reference Alignment (PCGP)
-        2586039 => '2589390', # Mar 2011 Default Reference Alignment (PCGP Untrimmed)
-    );
+    my $parent_pp_id = delete $arg{parent_pp_id} || $self->processing_profile_id;
+    my $type         = delete $arg{type}         || $self->qc_type_for_target_region_set_name($self->target_region_set_name);
 
-    return $qc_pp_id{ $self->processing_profile_id };
+    my $qc_pp_id = $self->qc_processing_profile_id_hashref;
+    return $qc_pp_id->{ $type }{ $parent_pp_id };
+}
+
+sub qc_type_for_target_region_set_name {
+    my $class = shift;
+    my $target_region_set_name = shift;
+    return ($target_region_set_name ? 'capture' : 'wgs');
 }
 
 # FIXME This needs to be renamed/refactored. The method name does not accurately describe what
@@ -442,7 +479,7 @@ sub get_or_create_lane_qc_models {
     my @lane_qc_models;
     my @instrument_data = sort { $a->run_name . $a->subset_name cmp $b->run_name . $b->subset_name } $self->instrument_data;
     for my $instrument_data (@instrument_data) {
-        my $lane_qc_model_name = $self->default_qc_model_name_for_instrument_data($instrument_data);
+        my $lane_qc_model_name = $self->default_lane_qc_model_name_for_instrument_data($instrument_data);
 
         my $existing_model = Genome::Model->get(name => $lane_qc_model_name);
         if ($existing_model) {
@@ -479,9 +516,26 @@ sub get_or_create_lane_qc_models {
             build_requested => 0,
             reference_sequence_build => $self->reference_sequence_build,
         );
+
         unless ($qc_model) {
             $self->error_message("Could not create lane qc model for instrument data " . $instrument_data->id);
             next;
+        }
+
+        # target_region_set_name means this is Capture data whose QC needs RefCov done
+        my $region_of_interest_set_input = $self->inputs(name => 'region_of_interest_set_name');
+        my $target_region_set_name_input = $self->inputs(name => 'target_region_set_name');
+        if ($target_region_set_name_input && $region_of_interest_set_input) {
+            $qc_model->add_input(
+                name => $target_region_set_name_input->name,
+                value_class_name => $target_region_set_name_input->value_class_name,
+                value_id => $target_region_set_name_input->value_id,
+            );
+            $qc_model->add_input(
+                name => $region_of_interest_set_input->name,
+                value_class_name => $region_of_interest_set_input->value_class_name,
+                value_id => $region_of_interest_set_input->value_id,
+            );
         }
 
         push @lane_qc_models, $qc_model;

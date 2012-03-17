@@ -298,6 +298,7 @@ sub required_rusage_for_building_index {
     return sprintf("-R '%s %s' %s", $select, $rusage, $options);
 }
 
+
 sub _working_dir_prefix {
     "alignment";
 }
@@ -469,6 +470,7 @@ sub create {
         unless ($self->_disk_allocation->reallocate(%params)) {
             $self->warning_message("Failed to reallocate my disk allocation: " . $self->_disk_allocation->id);
         }
+        $self->output_dir($self->_disk_allocation->absolute_path); #update if was moved
     }
 
     $self->status_message("Alignment complete.");
@@ -584,7 +586,7 @@ sub _extract_input_read_group_bam {
                                                                   read_group_id=>$self->instrument_data_segment_id);
 
     unless ($cmd->execute) {
-        $self->error_message($cmd->error_mesage);
+        $self->error_message($cmd->error_message);
         return;
     }
      
@@ -948,14 +950,6 @@ sub _compute_alignment_metrics {
     $self->singleton_base_count         ($res->{singleton_bp});
     return;
 }
-
-
-sub alignment_directory {
-    # TODO: refactor to just use output_dir.
-    my $self = shift;
-    return $self->output_dir;
-}
-
 
 sub _create_bam_index {
     my $self = shift;
@@ -1590,7 +1584,7 @@ sub verify_alignment_data {
 sub alignment_bam_file_paths {
     my $self = shift;
 
-    return glob($self->alignment_directory . "/*.bam");
+    return glob($self->output_dir . "/*.bam");
 }
 
 sub requires_read_group_addition {

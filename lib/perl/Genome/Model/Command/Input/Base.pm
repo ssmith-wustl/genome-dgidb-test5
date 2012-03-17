@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Input::Base {
-    is => 'Genome::Command::Base',
+    is => 'Command::V2',
     is_abstract => 1,
     has => [
         models => {

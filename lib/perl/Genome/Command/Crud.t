@@ -10,7 +10,8 @@ use Test::More;
 
 use_ok('Genome::Command::Crud') or die;
 use_ok('Genome::Command::Create') or die;
-use_ok('Genome::Command::Update') or die;
+use_ok('Genome::Command::UpdateTree') or die;
+use_ok('Genome::Command::UpdateProperty') or die;
 use_ok('Genome::Command::Delete') or die;
 
 # classes
@@ -23,6 +24,7 @@ class Person::Job {
         name => { is => 'Text', },
     ],
 };
+sub Person::Job::__display_name__ { return $_[0]->name; }
 my $president = Person::Job->create(name => 'President');
 ok($president, 'create job for president');
 my $vice_president = Person::Job->create(name => 'Vice President');
@@ -113,13 +115,20 @@ sub Person::__display_name__ {
 # INIT
 my %config = (
     target_class => 'Person',
-    update => { only_if_null => [qw/ job title mom /], include_only => [qw/ name job has_pets mom friends best_friend /], },
+    target_name_pl => 'people',
+    create => {
+        before => sub{ return 'before', },
+    },
+    update => { only_if_null => [qw/ name mom /], include_only => [qw/ name title job has_pets mom friends best_friend /], },
 );
 ok(Genome::Command::Crud->init_sub_commands(%config), 'init crud commands') or die;
+is_deeply([sort Person::Command->sub_command_classes], [sort map { 'Person::Command::'.$_ } (qw/ Create List Update Delete /)], 'person command classes');
+print Person::Command->help_usage_complete_text;
 
 # MAIN TREE
 my $main_tree_meta = Person::Command->__meta__;
 ok($main_tree_meta, 'MAIN TREE meta');
+#print Person::Command->help_usage_complete_text;
 
 # CREATE
 # meta 
@@ -127,8 +136,8 @@ my $create_meta = Person::Command::Create->__meta__;
 ok($create_meta, 'CREATE meta');
 print Person::Command::Create->help_usage_complete_text;
 
-is(Person::Command::Create->_target_name, 'person', 'CREATE: _target_name');
 is(Person::Command::Create->_target_class, 'Person', 'CREATE: _target_class');
+is(Person::Command::Create->_target_name, 'person', 'CREATE: _target_name');
 
 # fail - w/o params
 my $create_fail = Person::Command::Create->create();
@@ -146,6 +155,7 @@ my $create_mom = Person::Command::Create->create(
 );
 ok($create_mom, "CREATE create: Mom");
 $create_mom->dump_status_messages(1);
+is($create_mom->_before, 'before', 'CREATE mom: before create overloaded');
 ok(($create_mom->execute && $create_mom->result), 'CREATE execute');
 my $mom = Person->get(name => 'Mother Nature');
 ok($mom, 'created Mom');
@@ -178,6 +188,7 @@ ok(!$ronnie->best_friend, 'Ronnie  does not have a best friend');
 my $create_george = Person::Command::Create->create(
     name =>  'George HW Bush',
     title => 'mr',
+    job => $vice_president,
     has_pets => 'yes', 
     best_friend => $ronnie,
     friends => [ $ronnie ],
@@ -190,7 +201,7 @@ my $george = Person->get(name => 'George HW Bush');
 ok($george, 'created George');
 is($george->title, 'mr', 'George title is mr');
 is($george->has_pets, 'yes', 'George has pets!');
-ok(!$george->job, 'George does not have a job');
+is_deeply($george->job, $vice_president, 'George is vice president');
 ok(!$george->mom, 'George does not have a mom');
 is_deeply([$george->friends], [$ronnie], 'George has a friends');
 is_deeply($george->best_friend, $ronnie, 'George is best friends w/ Ronnie');
@@ -198,116 +209,181 @@ is_deeply($george->best_friend, $ronnie, 'George is best friends w/ Ronnie');
 # LIST - this is in UR::Object::Command...
 my $list_meta = Person::Command::List->__meta__;
 ok($list_meta, 'LIST meta');
+print Person::Command::List->help_usage_complete_text;
 
 # UPDATE
 # meta
-my $update_meta = Person::Command::Update->__meta__;
-ok($update_meta, 'update meta');
+my $update_tree_meta = Person::Command::Update->__meta__;
+ok($update_tree_meta, 'update tree meta');
+is_deeply([Person::Command::Update->sub_command_classes], [map { 'Person::Command::Update::'.$_ } (qw/ BestFriend Friends HasPets Job Mom Name Title /)], 'update sub command classes');
 print Person::Command::Update->help_usage_complete_text;
+print Person::Command::Update::Title->help_usage_complete_text;
+print Person::Command::Update::BestFriend->help_usage_complete_text;
 
-is(Person::Command::Update->_target_name_pl, 'persons', 'UPDATE: _target_name_pl');
-is(Person::Command::Update->_target_name_pl_ub, 'persons', 'UPDATE: _target_name_pl_ub');
-is_deeply(Person::Command::Update->_only_if_null, [qw/ job title mom /], 'UPDATE: _only_if_null');
-
-# fail w/o objects
-my $update_fail = Person::Command::Update->create();
-ok($update_fail, 'UPDATE COMMAND: create w/o persons');
-$update_fail->dump_status_messages(1);
-ok((!$update_fail->execute && !$update_fail->result), 'UPDATE COMMAND: failed execute as expected');
-$update_fail->delete;
-
-# fail w/o prop to update
-$update_fail = Person::Command::Update->create(
-    persons => [ $ronnie ],
+# update property
+# text 
+my $update_title = Person::Command::Update::Title->create(
+    people => [$ronnie, $george],
+    value => 'mr',
 );
-ok($update_fail, 'UPDATE COMMAND: create w/o property');
-$update_fail->dump_status_messages(1);
-ok(!$update_fail->execute, 'UPDATE COMMAND: failed execute as expected');
-$update_fail->delete;
+ok($update_title, 'UPDATE PROPERTY title: create');
+$update_title->dump_status_messages(1);
+ok($update_title->execute, 'UPDATE PROPERTY title: execute');
+is($ronnie->title, 'mr', 'UPDATE PROPERTY title: ronnie updated to mr');
+is($george->title, 'mr', 'UPDATE PROPERTY title: george updated to mr');
 
-# fail to update non null property that is text (title)
-my $old_title = $ronnie->title;
-$update_fail = eval{ 
-    Person::Command::Update->create(
-        persons => [ $ronnie ],
-        title => 'dr',
-    );
-};
-ok(!$update_fail, 'UPDATE COMMAND: create with a property not included failed as expected');
-#$update_fail->dump_status_messages(1);
-#ok((!$update_fail->execute && !$update_fail->result), 'UPDATE COMMAND: execute');
-#is($ronnie->title, $old_title, 'Ronnie title not updated b/c it was not null');
-#$update_fail->delete;
-
-# fail to update non null property that is an object 
-$update_fail = Person::Command::Update->create(
-    persons => [ $ronnie ],
-    mom => $george,
-);
-ok($update_fail, 'UPDATE COMMAND: create attempt to update not null property (object)');
-$update_fail->dump_status_messages(1);
-ok((!$update_fail->execute && !$update_fail->result), 'UPDATE COMMAND: execute');
-is($ronnie->mom, $mom, 'Ronnie mom not updated b/c it was not null');
-$update_fail->delete;
-
-# fail to update title not in valid values
-my $has_pets = $ronnie->has_pets;
-$update_fail = Person::Command::Update->create(
-    persons => [ $ronnie ],
-    has_pets => 'blah',
-);
-ok($update_fail, 'UPDATE create: Ronnie set has_pets to blah');
-$update_fail->dump_status_messages(1);
-ok(!$update_fail->execute, 'UPDATE execute: failed as expected');
-is($ronnie->has_pets, $has_pets, 'Ronnie has_pets was not updated b/c "blah" was not in list of valid values');
-$update_fail->delete;
-
-# update has pets (text)
+# text w/ valid values
 is($ronnie->has_pets, 'no', 'Ronnie does not have pets, but soon will!');
-my $update_success = Person::Command::Update->create(
-    persons => [ $ronnie ],
-    has_pets => 'yes',
+my $update_pets = Person::Command::Update::HasPets->create(
+    people => [$ronnie],
+    value => 'yes',
 );
-ok($update_success, 'UPDATE create" Ronnie set has_pets to yes');
-$update_success->dump_status_messages(1);
-ok($update_success->execute, "UPDATE execute");
-is($ronnie->has_pets, 'yes', 'Ronnie has pets!');
+ok($update_pets, 'UPDATE PROPERTY has_pets: create');
+$update_pets->dump_status_messages(1);
+ok($update_pets->execute, "UPDATE PROPERTY has_pets: execute");
+is($ronnie->has_pets, 'yes', 'UPDATE PROPERTY has_pets: Ronnie has pets!');
 
-# update job (direct object)
-$update_success = Person::Command::Update->create(
-    persons => [ $george ],
-    job => $vice_president,
+# object
+my $update_job = Person::Command::Update::Job->create(
+    people => [$george],
+    value => $vice_president,
 );
-ok($update_success, 'UPDATE create: w/ job vp');
-$update_success->dump_status_messages(1);
-ok(($update_success->execute && $update_success->result), 'UPDATE execute');
+ok($update_job, 'UPDATE PROPERTY job: create');
+$update_job->dump_status_messages(1);
+ok(($update_job->execute && $update_job->result), 'UPDATE PROPERTY job: execute');
 my @vps = Person->get(job => $vice_president);
-is_deeply(\@vps, [ $george ], "George is now VP!");
+is_deeply(\@vps, [ $george ], "UPDATE PROPERTY job: George is now VP!");
 
-# update 2 things at a time - add friend and best friend
-is_deeply([ $ronnie->friends ], [ ], "Ronnie does not have any friends");
+# object, only if null
+ok(!$george->mom, "George does not have a mom");
+my $update_mom = Person::Command::Update::Mom->create(
+    people => [$george],
+    value => $mom,
+);
+ok($update_mom, 'UPDATE PROPERTY mom: create');
+$update_mom->dump_status_messages(1);
+ok(($update_mom->execute && $update_mom->result), "UPDATE PROPERTY mom: execute");
+is($george->mom, $mom, 'UPDATE PROPERTY mom: Geroge now has a mom');
+
+# object, indirect
 ok(!$ronnie->best_friend, "Ronnie does not have a best friend");
-$update_success = Person::Command::Update->create(
-    persons => [ $ronnie ],
-    add_friend => $george,
-    best_friend => $george,
+my $update_bf = Person::Command::Update::BestFriend->create(
+    people => [$ronnie],
+    value => $george,
 );
-ok($update_success, 'UPDATE create: Give Ronnie a friend');
-$update_success->dump_status_messages(1);
-ok(($update_success->execute && $update_success->result), "UPDATE execute");
-is_deeply([$ronnie->friends], [$george], "Ronnie is now friends w/ George!");
-is_deeply($ronnie->best_friend, $george, "Ronnie is now best friends w/ George!");
+ok($update_bf, 'UPDATE PROPERTY best_friend: create');
+$update_bf->dump_status_messages(1);
+ok(($update_bf->execute && $update_bf->result), "UPDATE PROPERTY best_friend: execute");
+is_deeply($ronnie->best_friend, $george, "UPDATE PROPERTY best_friend: Ronnie is now best friends w/ George!");
 
-# update mom - this is update only if null, and George does not have a mom
-ok(!$george->mom, "Georege does not have a mom");
-$update_success = Person::Command::Update->create(
-    persons => [ $george ],
-    mom => $mom,
+# FIXME per Scott this is to fail - object to null/undef
+my $update_job_null = Person::Command::Update::Job->create(
+    people => [$george],
+    value => '',
 );
-ok($update_success, 'UPDATE create: Give Georege a mom');
-$update_success->dump_status_messages(1);
-ok(($update_success->execute && $update_success->result), "UPDATE execute");
-is($george->mom, $mom, 'Geroge now has a mom');
+ok($update_job_null, 'UPDATE PROPERTY job: create to set undef');
+$update_job_null->dump_status_messages(1);
+ok(eval{(!$update_job_null->execute && !$update_job_null->result)}, 'UPDATE PROPERTY job: execute to set undef');
+is_deeply($george->job, $vice_president, 'UPDATE PROPERTY job: George does not have a job.');
+
+# FIXME per Scott this is to fail - object, single prop via a many property
+my $update_bf_null = Person::Command::Update::BestFriend->create(
+    people => [$ronnie],
+    value => '',
+);
+ok($update_bf_null, 'UPDATE PROPERTY best_friend: create to set to NULL');
+$update_bf_null->dump_status_messages(1);
+ok(eval{(!$update_bf_null->execute && !$update_bf_null->result)}, "UPDATE PROPERTY best_friend: execute to set to NULL");
+is_deeply($ronnie->best_friend, $george, "UPDATE PROPERTY best_friend: Ronnie still has a best friend");
+
+# fail: text only if null
+my $update_no_people_fail = Person::Command::Update::Name->create(
+    value => 'Bob Robertson',
+); 
+ok($update_no_people_fail, 'UPDATE PROPERTY name: create w/o people');
+$update_no_people_fail->dump_status_messages(1);
+ok((!$update_no_people_fail->execute && !$update_no_people_fail->result), 'UPDATE PROPERTY name: execute failed w/o people');
+$update_no_people_fail->delete;
+
+# fail: text only if null
+my $georges_name = $george->name;
+my $update_name_fail = Person::Command::Update::Name->create(
+    people => [$george],
+    value => 'Bob Robertson',
+);
+ok($update_name_fail, 'UPDATE PROPERTY name: create w/o name');
+$update_name_fail->dump_status_messages(1);
+ok(($update_name_fail->execute && $update_name_fail->result), 'UPDATE PROPERTY name: execute fails w/o name');
+is($george->name, $georges_name, 'UPDATE PROPERTY name: unchanged');
+$update_name_fail->delete;
+
+# fail: object only if null
+my $ronnies_mom = $ronnie->mom;
+my $update_mom_fail = Person::Command::Update::Mom->create(
+    people => [$ronnie],
+    value => $ronnie,
+);
+ok($update_mom_fail, 'UPDATE PROPERTY mom: create not null object');
+$update_mom_fail->dump_status_messages(1);
+ok(($update_mom_fail->execute && $update_mom_fail->result), 'UPDATE PROPERTY: execute failed b/c mom is not null');
+is_deeply($ronnie->mom, $ronnies_mom, 'UPDATE PROPERTY: ronnie mom unchanged');
+$update_mom_fail->delete;
+
+# fail: valid values
+my $ronnie_has_pets = $ronnie->has_pets;
+my $update_pets_fail = Person::Command::Update::HasPets->create(
+    people => [$ronnie],
+    value => 'blah',
+);
+ok($update_pets_fail, 'UPDATE PROPERTY has pets: create w/ invalid value');
+$update_pets_fail->dump_status_messages(1);
+ok((!$update_pets_fail->execute && !$update_pets_fail->result), 'UPDATE PROPERTY has pets: execute failed b/c value was not in list');
+is($ronnie->has_pets, $ronnie_has_pets, 'UPDATE PROPERTY has pets: unchanged');
+$update_pets_fail->delete;
+
+# add/remove
+my $friends_tree_meta = Person::Command::Update->__meta__;
+ok($friends_tree_meta, 'friends tree meta');
+is_deeply([Person::Command::Update::Friends->sub_command_classes], [map { 'Person::Command::Update::Friends::'.$_ } (qw/ Add Remove /)], 'friend sub command classes');
+print Person::Command::Update::Friends->help_usage_complete_text;
+print Person::Command::Update::Friends::Add->help_usage_complete_text;
+print Person::Command::Update::Friends::Remove->help_usage_complete_text;
+
+my @georges_friends = $george->friends;
+is_deeply(\@georges_friends, [$ronnie], 'geroge has one friend, ronnie');
+my $update_add_friends = Person::Command::Update::Friends::Add->create(
+    people => [$george],
+    'values' => [$mom],
+);
+ok($update_add_friends, 'UPDATE ADD friends: create');
+$update_add_friends->dump_status_messages(1);
+ok(($update_add_friends->execute && $update_add_friends->result), 'UPDATE ADD friends: execute');
+is_deeply([$george->friends], [$mom, @georges_friends], 'UPDATE ADD friends: added mom to georges friends');
+
+my $update_remove_friends = Person::Command::Update::Friends::Remove->create(
+    people => [$george],
+    'values' => [$ronnie],
+);
+ok($update_remove_friends, 'UPDATE REMOVE friends: create');
+$update_remove_friends->dump_status_messages(1);
+ok(($update_remove_friends->execute && $update_remove_friends->result), 'UPDATE REMOVE friends: execute');
+is_deeply([$george->friends], [$mom], 'UPDATE REMOVE friends: rm ronnie from georges friends');
+
+my $update_add_fail_no_people = Person::Command::Update::Friends::Add->create(
+    'values' => [$george],
+);
+ok($update_add_fail_no_people, 'UPDATE ADD friends: create w/o people');
+$update_add_fail_no_people->dump_status_messages(1);
+ok((!$update_add_fail_no_people->execute && !$update_add_fail_no_people->result), 'UPDATE ADD friends: execute fails as expected, no people');
+$update_add_fail_no_people->delete;
+
+my $update_add_fail_no_values = Person::Command::Update::Friends::Add->create(
+    people => [$george],
+);
+ok($update_add_fail_no_values, 'UPDATE ADD friends: create w/o values');
+$update_add_fail_no_values->dump_status_messages(1);
+ok((!$update_add_fail_no_values->execute && !$update_add_fail_no_values->result), 'UPDATE ADD friends: execute fails as expected, no values');
+$update_add_fail_no_values->delete;
 
 # DELETE
 # meta
@@ -315,8 +391,8 @@ my $delete_meta = Person::Command::Delete->__meta__;
 ok($delete_meta, 'DELETE meta');
 print Person::Command::Delete->help_usage_complete_text;
 
-is(Person::Command::Delete->_target_name_pl, 'persons', 'DELETE: _target_name_pl');
-is(Person::Command::Delete->_target_name_pl_ub, 'persons', 'DELETE: _target_name_pl_ub');
+is(Person::Command::Delete->_target_name_pl, 'people', 'DELETE: _target_name_pl');
+is(Person::Command::Delete->_target_name_pl_ub, 'people', 'DELETE: _target_name_pl_ub');
 
 # fail w/o objects
 my $delete_fail = Person::Command::Delete->create();
@@ -327,7 +403,7 @@ $delete_fail->delete;
 
 # success
 my $delete_success = Person::Command::Delete->create(
-    persons => [ $george ],
+    people => [ $george ],
 );
 ok($delete_success, 'DELETE create: George');
 $delete_success->dump_status_messages(1);
@@ -343,6 +419,7 @@ ok(UR::Context->commit, 'commit');
 # DISPLAY NAME
 is(Genome::Command::Crud->display_name_for_value(100), 100, 'display name for "100"');
 is(Genome::Command::Crud->display_name_for_value([qw/100 200/]), '100 200', 'display name for "100 200"');
+is(Genome::Command::Crud->display_name_for_value([1..11]), '11 items', 'display name for more than 10 items');
 is(Genome::Command::Crud->display_name_for_value($mom), $mom->name, 'display name for $mom');
 is(Genome::Command::Crud->display_name_for_value([ $ronnie, $mom ]), $ronnie->name.' '.$mom->name, 'display name for [ $ronnie $mom ]');
 

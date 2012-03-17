@@ -22,14 +22,14 @@ class Genome::InstrumentData {
         sequencing_platform => { is => 'Text' },
         library => { is => 'Genome::Library', id_by => 'library_id' },
         library_name => { via => 'library', to => 'name' },
-        sample_id => { is => 'Number', is_delegated => 1, via => 'library', to => 'sample_id' }, 
+        sample_id => { is => 'Number', is_delegated => 1, via => 'library', to => 'sample_id' },
         sample => { is => 'Genome::Sample', id_by => 'sample_id' },
         sample_name => { via => 'sample', to => 'name' },
     ],
     has_optional => [
         #TODO: may want to make these immutable, but needed them for
         #backfilling purposes
-        original_est_fragment_size => { 
+        original_est_fragment_size => {
             is => 'Number',
             is_mutable => 1,
             via => 'attributes',
@@ -53,21 +53,14 @@ class Genome::InstrumentData {
         original_est_fragment_std_dev => {
             is => 'Number',
             is_calculated => 1,
-            calculate_from => ['original_est_fragment_size_max', 'original_est_fragment_size_min'],
-            calculate => q|($original_est_fragment_size_max - $original_est_fragment_size_min)/6|,
-        },
-        final_est_fragment_size => {
-            is => 'Number',
-            is_mutable => 1,
-            via => 'attributes',
-            to => 'attribute_value',
-            where => [attribute_label => 'final_est_fragment_size'],
-        },
-        final_est_fragment_std_dev => {
-            is => 'Number',
-            is_calculated => 1,
-            calculate_from => ['final_est_fragment_size'],
-            calculate => q|$final_est_fragment_size*.05|,
+            calculate_from => ['original_est_fragment_size_max', 'original_est_fragment_size_min','original_est_fragment_size'],
+            calculate => q|
+                if ($original_est_fragment_size_max and 
+                    $original_est_fragment_size_min) {
+                ($original_est_fragment_size_max - $original_est_fragment_size_min)/6; }
+                else {
+                    $original_est_fragment_size*.1;
+                }|,
         },
         read_orientation => {
             is => 'Text',
@@ -79,10 +72,10 @@ class Genome::InstrumentData {
         },
         run_name => { is => 'Text' },
         subset_name => { is => 'Text' },
-        full_name => { 
-            calculate_from => ['run_name','subset_name'], 
-            calculate => q|"$run_name/$subset_name"|, 
-        },        
+        full_name => {
+            calculate_from => ['run_name','subset_name'],
+            calculate => q|"$run_name/$subset_name"|,
+        },
         full_path => {
             is => 'Text',
             via => 'attributes',
@@ -109,11 +102,11 @@ class Genome::InstrumentData {
             is => 'Genome::InstrumentDataAttribute',
             reverse_as => 'instrument_data',
         },
-        events => { 
-            is => 'Genome::Model::Event', 
+        events => {
+            is => 'Genome::Model::Event',
             reverse_id_by => "instrument_data"
         },
-        allocations => { 
+        allocations => {
             is => 'Genome::Disk::Allocation',
             reverse_as => 'owner',
         },
@@ -204,8 +197,8 @@ sub _expunge_assignments{
     my $instrument_data_id = $self->id;
     my %affected_users;
 
-    my @inputs = Genome::Model::Input->get( 
-        name => 'instrument_data', 
+    my @inputs = Genome::Model::Input->get(
+        name => 'instrument_data',
         value_id => $instrument_data_id
     );
     my @models = map( $_->model, @inputs);
@@ -217,9 +210,9 @@ sub _expunge_assignments{
     }
 
     # There may be builds using this instrument data even though it had previously been unassigned from the model
-    my @build_inputs = Genome::Model::Build::Input->get( 
-        name => 'instrument_data', 
-        value_id => $instrument_data_id 
+    my @build_inputs = Genome::Model::Build::Input->get(
+        name => 'instrument_data',
+        value_id => $instrument_data_id
     );
     my @builds = map($_->build, @build_inputs);
     for my $build (@builds) {
@@ -230,7 +223,7 @@ sub _expunge_assignments{
     my @merged_results = Genome::InstrumentData::AlignmentResult::Merged->get(instrument_data_id => $self->id);
     for my $merged_result (@merged_results) {
         unless ($merged_result->delete) {
-            die $self->error_message("Could not remove instrument data " . $self->__display_name__ . 
+            die $self->error_message("Could not remove instrument data " . $self->__display_name__ .
                 " because merged alignment result " . $merged_result->__display_name__ .
                 " that uses this instrument data could not be deleted!");
         }
@@ -243,7 +236,15 @@ sub _expunge_assignments{
             " an alignment result (" . $alignment_result->__display_name__ . ") that could not be deleted!");
         }
     }
-                            
+
+    my @tophat_alignment_results = Genome::InstrumentData::AlignmentResult::Tophat->get(instrument_data_id => $self->id);
+    for my $tophat_alignment_result (@tophat_alignment_results) {
+        unless($tophat_alignment_result->delete){
+            die $self->error_message("Could not remove instrument data " . $self->__display_name__ . " because it has " .
+            " a tophat alignment result (" . $tophat_alignment_result->__display_name__ . ") that could not be deleted!");
+        }
+    }
+
     return 1, %affected_users;
 }
 
@@ -276,7 +277,7 @@ sub sample_type {
     my $self = shift;
     my $sample_extraction_type = $self->sample->extraction_type;
     return unless defined $sample_extraction_type;
-    
+
     if ($sample_extraction_type eq 'genomic_dna' or $sample_extraction_type eq 'pooled dna') {
         return 'dna';
     }
@@ -292,7 +293,7 @@ sub create_mock {
 }
 
 sub run_identifier  {
-    die "run_identifier not defined in instrument data subclass.  please define this. this method should " . 
+    die "run_identifier not defined in instrument data subclass.  please define this. this method should " .
          "provide a unique identifier for the experiment/run (eg flow_cell_id, ptp barcode, etc).";
 }
 
@@ -300,13 +301,22 @@ sub dump_fastqs_from_bam {
     my $self = shift;
     my %p = @_;
 
-    die "cannot call bam path" if (!$self->can('bam_path'));
-    
-    unless (-e $self->bam_path) {
-        $self->error_message("Attempted to dump a bam but the path does not exist:" . $self->bam_path);
-        die $self->error_message;
+    unless ($self->can('bam_path')) {
+        my $error = 'cannot call bam path';
+        $self->error_message($error);
+        die $error;
     }
-    
+    unless ($self->bam_path) {
+        my $error = 'Attempted to dump a bam but the path is not defined.';
+        $self->error_message($error);
+        die $error;
+    }
+    unless (-e $self->bam_path) {
+        my $error = 'Attempted to dump a bam but the path does not exist:' . $self->bam_path;
+        $self->error_message($error);
+        die $error;
+    }
+
     my $directory = delete $p{directory};
     $directory ||= Genome::Sys->create_temp_directory('unpacked_bam_'.$self->id);
 
@@ -317,7 +327,7 @@ sub dump_fastqs_from_bam {
     if (defined $p{read_group_id}) {
         $read_group_params{read_group_id} = delete $p{read_group_id};
         $self->status_message("Using read group id " . $read_group_params{read_group_id});
-    } 
+    }
 
     my $fwd_file = sprintf("%s/s_%s_1_sequence.txt", $directory, $subset);
     my $rev_file = sprintf("%s/s_%s_2_sequence.txt", $directory, $subset);
@@ -333,19 +343,19 @@ sub dump_fastqs_from_bam {
 
     if ((-s $fwd_file && !-s $rev_file) ||
         (!-s $fwd_file && -s $rev_file)) {
-        $self->error_message("Fwd & Rev files are lopsided; one has content and the other doesn't. Can't proceed"); 
+        $self->error_message("Fwd & Rev files are lopsided; one has content and the other doesn't. Can't proceed");
         die $self->error_message;
     }
 
     my @files;
-    if (-s $fwd_file && -s $rev_file) { 
+    if (-s $fwd_file && -s $rev_file) {
         push @files, ($fwd_file, $rev_file);
     }
     if (-s $fragment_file && !$p{discard_fragments}) {
         push @files, $fragment_file;
     }
-   
-    return @files; 
+
+    return @files;
 }
 
 sub lane_qc_models {

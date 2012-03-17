@@ -1,12 +1,7 @@
 package Genome::ProcessingProfile::Command::List::Base;
 
-use strict;
 use warnings;
-
 use Genome;
-#use Command; 
-#use Data::Dumper;
-#use Genome::ProcessingProfile;
 
 class Genome::ProcessingProfile::Command::List::Base {
     is => 'UR::Object::Command::List',
@@ -14,7 +9,7 @@ class Genome::ProcessingProfile::Command::List::Base {
     has => [
         subject_class_name  => {
             is_constant => 1, 
-            value => 'Genome::ProcessingProfile' 
+            value => 'Genome::ProcessingProfile',
         },
         show => { default_value => 'id,type_name,name' },
     ],
@@ -26,6 +21,7 @@ sub execute {
     # it's actually faster to load everything in one shot than to query carefully
     my @pp = Genome::ProcessingProfile::Param->get();
     my @p = Genome::ProcessingProfile->get();
+    $DB::single = 1;
     return $self->SUPER::_execute_body(@_);
 }
 

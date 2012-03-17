@@ -13,26 +13,12 @@ class Genome::Model::ImportedAnnotation{
             is => 'String',
             via => 'processing_profile',
         },
-        annotation_data_source_directory => {
-            via => 'inputs',
-            is => 'UR::Value',
-            to => 'value_id',
-            where => [ name => 'annotation_data_source_directory', value_class_name => 'UR::Value'],
-            is_mutable => 1 
-        },
         species_name => {
             is => 'UR::Value',
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'species_name' ],
             is_mutable => 1,
-        },
-        version => { 
-            via => 'inputs',
-            is => 'Text',
-            to => 'value_id', 
-            where => [ name => 'version', value_class_name => 'UR::Value'], 
-            is_mutable => 1
         },
         reference_sequence_id => {
             is => 'Text',
@@ -56,7 +42,8 @@ sub build_by_version {
     my $self = shift;
     my $version = shift;
 
-    my @builds =  grep { $_->version eq $version } $self->completed_builds;
+    my @builds =  grep { $_->version eq $version } $self->builds;
+    @builds = grep{ $_->status eq 'Succeeded' || $_->status eq 'Running' } @builds;
     if (@builds > 1) {
         my $versions_string = join("\n", map { "model_id ".$_->model_id." build_id ".$_->build_id." version ".$_->version } @builds);
         $self->error_message("Multiple builds for version $version of model " . $self->genome_model_id.", ".$self->name."\n".$versions_string."\n");
@@ -71,19 +58,6 @@ sub annotation_data_directory{
     return $build->determine_data_directory;
 }
 
-sub notify_input_build_success {
-    my $self = shift;
-    my $succeeded_build = shift;
-
-    #TODO We don't want to automatically build anything right now.
-    #In the future check for a completed build on the other input model(s)
-    #that match(es) the inputs to the one that just completed and thus
-    #trigger the running of the combined model.
-    #The preceding advice courtesy of jweible --TM
-
-    return 1;
-}
-
 sub annotation_build_for_reference {
     my ($class, $reference) = @_;
     my $build;
@@ -91,10 +65,10 @@ sub annotation_build_for_reference {
     #TODO: Remove this hardcoded crap and come up with an intelligent heuristic
 
     if($reference->name eq 'NCBI-human-build36'){
-        $build = Genome::Model::Build::ImportedAnnotation->get(113115679);
+        $build = Genome::Model::Build::ImportedAnnotation->get(113049382);
     }
     elsif($reference->name eq 'GRCh37-lite-build37' || $reference->name eq 'g1k-human-build37'){
-        $build = Genome::Model::Build::ImportedAnnotation->get(106409619);
+        $build = Genome::Model::Build::ImportedAnnotation->get(106409296);
     }
     elsif($reference->name eq 'UCSC-mouse-buildmm9'){
         $build = Genome::Model::Build::ImportedAnnotation->get(106410073);

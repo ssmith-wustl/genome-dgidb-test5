@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::WorkOrder::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has => [
+    has_field => [
         type => {
             is => 'Text',
             default => 'work-order'
@@ -35,7 +35,7 @@ class Genome::WorkOrder::View::Solr::Xml {
                     name => 'project',
                     position => 'content',
                     perspective => 'default',
-                    toolkit => 'text',
+                    toolkit => 'xml',
                     aspects => [
                         'id',
                         'name',

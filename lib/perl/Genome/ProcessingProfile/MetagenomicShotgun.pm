@@ -14,8 +14,12 @@ class Genome::ProcessingProfile::MetagenomicShotgun {
     has_param => [
         filter_contaminant_fragments => {
             is => 'Boolean',
-            doc => 'when true reads with mate mapping to contamination reference are considered contaminated',
+            doc => 'when set, reads with mate mapping to contamination reference are considered contaminated, and not passed on to subsequent alignments',
             default => 0,
+        },
+        filter_duplicates => {
+            is => 'Boolean',
+            doc =>  'when set, duplicate reads are filtered out when extracting unaligned reads from contamination screen alignment',
         },
         contamination_screen_pp_id => {
             is => 'Text',
@@ -81,8 +85,6 @@ sub _resource_requirements_for_execute_build {
 sub _execute_build {
     my ($self, $build) = @_;
 
-    $DB::single=1;
-
     my $model = $build->model;
     $self->status_message('Build '.$model->__display_name__);
     my $contamination_screen_model = $model->_contamination_screen_model;
@@ -142,6 +144,7 @@ sub _execute_build {
                 $self->error_message("Failed to execute build (".$build->__display_name__."). Status: ".$build->status);
                 return;
             }
+            $self->status_message($build->__display_name__." succeeded");
         }
     };
 
@@ -165,7 +168,7 @@ sub _execute_build {
             $self->status_message("processing instrument data assignment ".$assignment->__display_name__." for unaligned reads import");
 
             my $alignment_result = $alignment_results[0];
-            my @extracted_instrument_data_for_alignment_result = $self->_extract_data_from_alignment_result($alignment_result, $extraction_type);
+            my @extracted_instrument_data_for_alignment_result = $self->_extract_data_from_alignment_result($alignment_result, $extraction_type,$self->filter_duplicates);
 
             push @extracted_instrument_data, \@extracted_instrument_data_for_alignment_result
         }
@@ -179,14 +182,11 @@ sub _execute_build {
     my @original_instdata = $build->instrument_data;
 
     my $cs_build = $start_build->($contamination_screen_model, @original_instdata);
-    #$cs_build = Genome::Model::Build->get(116461442);  ##### for testsing ignore the build we just made above and use this one which is done
-    #$DB::single = 1;
     $wait_build->($cs_build);
 
     my @cs_unaligned;
-    $DB::single = 1;
     if ($self->filter_contaminant_fragments){
-        @cs_unaligned = $extract_data->($cs_build, "unaligned-paired");
+        @cs_unaligned = $extract_data->($cs_build, "unaligned paired");
     }
     else{
         @cs_unaligned = $extract_data->($cs_build, "unaligned");
@@ -342,24 +342,33 @@ sub wait_for_build {
             $self->status_message("Waiting for build(~$time sec) ".$build->id.", status: $status");
         }
         sleep $inc;
-        $time += 30;
+        $time += $inc;
         $last_status = $status;
     }
 }
 
 ##### support methods for extract_data
 sub _extract_data_from_alignment_result{
-    my ($self, $alignment, $extraction_type) = @_;
+    my ($self, $alignment, $extraction_type, $filter_duplicates) = @_;
 
     my $instrument_data = $alignment->instrument_data;
     my $lane = $instrument_data->lane;
     my $instrument_data_id = $instrument_data->id;
 
+    my $aligner_name = $alignment->aligner_name; #we need to do special handling for rtg mapx alignments, which are protein space and do not produce bam files
+
     my $dir = $alignment->output_dir;
-    my $bam = $dir . '/all_sequences.bam';
-    unless (-e $bam) {
-        $self->error_message("Failed to find expected BAM file $bam\n");
-        return;
+    my $alignment_output;
+    if ($aligner_name eq 'rtg mapx'){
+        unless ($extraction_type eq 'aligned'){
+            die $self->error_message("metagenomic shotgun pipeline should only extract aligned reads from mapx output");
+        }
+        $alignment_output = $dir . '/alignments.txt';
+    }else{
+        $alignment_output = $dir . '/all_sequences.bam';
+    }
+    unless (-e $alignment_output) {
+        die $self->error_message("Failed to find expected alignment output file $alignment_output\n");
     }
 
     # come up with the import "original_data_path", used to find existing data, and when uploading new data
@@ -369,6 +378,9 @@ sub _extract_data_from_alignment_result{
     my @instrument_data;
     my $subdir = $extraction_type;
     $subdir =~ s/\s/_/g;
+    if ($filter_duplicates){
+        $subdir .= "/deduplicated";
+    }
     $self->status_message("Preparing imported instrument data for import path $tmp_dir/$subdir");
 
     my $forward_basename = "s_$lane" . "_1_sequence.txt";
@@ -393,7 +405,7 @@ sub _extract_data_from_alignment_result{
         $self->status_message("imported instrument data already found for path $expected_se_path, skipping");
     }
     else {
-        my $lock = basename($expected_se_path);
+        my $lock = $fragment_basename;
         $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
         $self->status_message("Creating lock on $lock...");
@@ -406,21 +418,24 @@ sub _extract_data_from_alignment_result{
         }
     }
 
-    my $pe_instdata = Genome::InstrumentData::Imported->get(original_data_path => $expected_pe_path);
-    if ($pe_instdata) {
-        $self->status_message("imported instrument data already found for path $expected_pe_path, skipping");
-    }
-    elsif ( $instrument_data->is_paired_end ) {
-        my $lock = basename($expected_pe_path);
-        $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
+    my $pe_instdata;
+    if ( $instrument_data->is_paired_end ){
+        $pe_instdata = Genome::InstrumentData::Imported->get(original_data_path => $expected_pe_path);
+        if ($pe_instdata) {
+            $self->status_message("imported instrument data already found for path $expected_pe_path, skipping");
+        }
+        else  {
+            my $lock = "s_$lane"."_1-2_sequence.txt";
+            $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
-        $self->status_message("Creating lock on $lock...");
-        $pe_lock = Genome::Sys->lock_resource(
-            resource_lock => "$lock",
-            max_try => 2,
-        );
-        unless ($pe_lock) {
-            die $self->error_message("Failed to lock $expected_pe_path.");
+            $self->status_message("Creating lock on $lock...");
+            $pe_lock = Genome::Sys->lock_resource(
+                resource_lock => "$lock",
+                max_try => 2,
+            );
+            unless ($pe_lock) {
+                die $self->error_message("Failed to lock $expected_pe_path.");
+            }
         }
     }
 
@@ -436,15 +451,23 @@ sub _extract_data_from_alignment_result{
     my $reverse_unaligned_data_path     = "$working_dir/$instrument_data_id/$reverse_basename";
     my $fragment_unaligned_data_path    = "$working_dir/$instrument_data_id/$fragment_basename";
 
-    my $cmd = "/usr/bin/perl `which gmt` sam bam-to-unaligned-fastq --bam-file $bam --output-directory $working_dir --ignore-bitflags"; #add ignore bitflags here because some of the aligners used in this pipeline produce untrustworthy flag information
-    if ($extraction_type eq 'aligned'){
-        $cmd.=" --print-aligned";
-    }
-    elsif($extraction_type eq 'unaligned'){
-        #default
-    }
-    else{
-        die $self->error_message("Unhandled extraction_type $extraction_type");
+    my $cmd;
+    if ($aligner_name eq 'rtg mapx'){
+        $cmd = "/usr/bin/perl `which genome` model metagenomic-shotgun mapx-alignment-to-aligned-fastq --mapx-alignment $alignment_output --output-directory $working_dir --instrument-data $instrument_data_id";
+    }else{
+        $cmd = "/usr/bin/perl `which gmt` sam bam-to-unaligned-fastq --bam-file $alignment_output --output-directory $working_dir --ignore-bitflags"; #add ignore bitflags here because some of the aligners used in this pipeline produce untrustworthy flag information
+        if ($extraction_type eq 'aligned'){
+            $cmd.=" --print-aligned";
+        }
+        elsif($extraction_type eq 'unaligned'){
+            #default
+        }
+        else{
+            die $self->error_message("Unhandled extraction_type $extraction_type");
+        }
+        if ($filter_duplicates){
+            $cmd.=" --filter-duplicates";
+        }
     }
 
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
@@ -483,7 +506,11 @@ sub _extract_data_from_alignment_result{
     }
     $properties_from_prior{subset_name} = $instrument_data->lane;
 
-    for my $source_data_files ($fragment_unaligned_data_path,"$forward_unaligned_data_path,$reverse_unaligned_data_path") {
+    my @source_paths = ( $instrument_data->is_paired_end )
+        ?  ($fragment_unaligned_data_path, "$forward_unaligned_data_path,$reverse_unaligned_data_path" )
+        :  ($fragment_unaligned_data_path);
+    
+    for my $source_data_files (@source_paths) {
         $self->status_message("Attempting to upload $source_data_files...");
         my $original_data_path;
         if ($source_data_files =~ /,/){

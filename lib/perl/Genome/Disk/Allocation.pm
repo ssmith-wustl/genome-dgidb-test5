@@ -731,7 +731,7 @@ sub _remove_directory_closure {
 sub _mark_for_deletion_closure {
     my ($class, $path) = @_;
     return sub {
-        if (-d $path) {
+        if (-d $path and not $ENV{UR_DBI_NO_COMMIT}) {
             print STDERR "Marking directory at $path as deallocated\n";
             system("touch $path/ALLOCATION_DELETED"); 
         }

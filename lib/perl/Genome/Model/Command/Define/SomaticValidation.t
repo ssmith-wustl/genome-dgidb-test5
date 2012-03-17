@@ -9,7 +9,7 @@ BEGIN {
 };
 
 use above "Genome";
-use Test::More tests => 33;
+use Test::More tests => 36;
 
 use Cwd;
 #use Carp::Always;
@@ -146,7 +146,37 @@ ok(!$m_5->normal_sample, 'no normal sample set');
 isnt($m_5->processing_profile, $m_4->processing_profile, 'assigned different default processing profile for single-sample case');
 
 
+my $fake_individual = Genome::Individual->create(
+    common_name => 'FAKE1',
+    name => 'fake_individual_1',
+);
 
+my @fake_samples;
+for my $i (1...8) {
+    push @fake_samples,
+        Genome::Sample->create(
+            name => 'fake_sample_' . $i,
+            source_id => $fake_individual->id,
+        );
+}
+
+my $sample_list_file = Genome::Sys->create_temp_file_path;
+Genome::Sys->write_file($sample_list_file, join("\n",
+    join("\t", $fake_samples[0]->name, $fake_samples[1]->name),
+    join("\t", $fake_samples[2]->name, $fake_samples[3]->name, $fake_samples[4]->name, $fake_samples[5]->name, $fake_samples[6]->name),
+    $fake_samples[7]->name
+));
+
+my $define_6 = Genome::Model::Command::Define::SomaticValidation->create(
+    sample_list_file => $sample_list_file,
+    target => $test_targets,
+);
+isa_ok($define_6, 'Genome::Model::Command::Define::SomaticValidation', 'sixth creation command');
+$define_6->dump_status_messages(1);
+
+ok($define_6->execute, 'executed sixth creation command');
+my @m_6 = Genome::Model->get([$define_6->result_model_ids]);
+is(scalar(@m_6), 12, 'created twelve models based on sample file');
 
 # Create some test models with builds and all of their prerequisites
 sub setup_somatic_variation_build {

@@ -1,8 +1,7 @@
 #!/usr/bin/perl
-#Written by Jason Walker, modified by Malachi Griffith
-#Get a list of patient common names from the user.  
-#Use the Genome API to list information about each of these patients relating to exome or other capture data sets
-  
+#Written by Malachi Griffith
+#From a list of patient common names
+#Create commands to generate and launch run RefAlign and somatic variation models
 
 use strict;
 use warnings;
@@ -13,119 +12,117 @@ use Genome;
 
 #Required
 my $common_names = '';
-my $sample_names = '';
 
-GetOptions ('common_names=s'=>\$common_names, 'sample_names=s'=>\$sample_names);
+GetOptions ('common_names=s'=>\$common_names);
 
 my $usage=<<INFO;
   Example usage: 
   
-  listWgsDatasets.pl  --common_names='BRC18,BRC36,BRC38'
-
-  OR
-
-  listWgsDatasets.pl  --sample_names='H_MF-Vaco432-1106984,H_MF-Vaco432-50.1R-1106985'
+  createWgsRefAlignSomaticVarJobs.pl  --common_names='LUC1,LUC2,LUC4,LUC6,LUC7,LUC8,LUC9,LUC10,LUC11,LUC12,LUC13,LUC14,LUC15,LUC16,LUC17,LUC18,LUC20'
 
 INFO
 
-if ($common_names){
-  print GREEN, "\n\nAttempting to find WGS datasets for: $common_names\n\n", RESET;
-}elsif($sample_names){
-  print GREEN, "\n\nAttempt to find WGS datasets for: $sample_names", RESET;
-}else{
-  print RED, "\n\nRequired parameter missing", RESET;
-  print GREEN, "\n\n$usage", RESET;
+unless ($common_names){
+  print GREEN, "\n\n$usage\n\n", RESET;
+  exit(1);
 }
 
 
-if ($common_names){
-  my @common_names = split(",", $common_names);
+#Define some model input parameters
+my $reference_sequence_build = 106942997; #GRCh37-lite (2869585698)
+my $reference_sequence_build_shortname = "Build37/hg19";
+my $annotation_reference_build = 106409619; #NCBI-human.combined-annotation (2771411739): NCBI-human.combined-annotation/58_37c_v2 = NCBI-human.ensembl + NCBI-human.genbank
+my $annotation_reference_build_shortname =  "58_37c_v2";
+my $refalign_processing_profile_name = "Nov 2011 Default Reference Alignment"; #Processing Profile: Nov 2011 Default Reference Alignment (2635769)
+my $refalign_processing_profile_id = 2635769;
+my $refalign_processing_profile_shortname= "Nov 2011 PP";
+my $somaticvariation_processing_profile_name = "Nov 2011 Default Somatic Variation WGS"; #Nov 2011 Default Somatic Variation WGS (2642137)
+my $somaticvariation_processing_profile_id = 2642137;
+my $somaticvariation_processing_profile_shortname = "Nov 2011 PP";
+my $previously_discovered_variations_build = 110108854; #NCBI-human-build37-dbsnp132-whitelist (g1k-human-build37)
 
-  for my $common_name (@common_names) {
+my @common_names = split(",", $common_names);
 
-    #Get an 'individual object using the patient common name
-    print BLUE, "\n\n$common_name", RESET;
-    my $individual = Genome::Individual->get(
-      common_name => $common_name,
-    );
-    #Get sample objects associated with the individual object
-    my @samples = $individual->samples;
-    my $scount = scalar(@samples);
-    print BLUE, "\n\tFound $scount samples", RESET;
-  
-    #Get additional info for each sample 
-    for my $sample (@samples) {
-      #Display basic sample info
-      my $sample_name = $sample->name || "UNDEF";
-      my $extraction_type = $sample->extraction_type || "UNDEF";
-      my $sample_common_name = $sample->common_name || "UNDEF";
-      my $tissue_desc = $sample->tissue_desc || "UNDEF";
-      my $cell_type = $sample->cell_type || "UNDEF";
-      print MAGENTA, "\n\t\tSAMPLE\tCN: $common_name\tSN: $sample_name\tET: $extraction_type\tSCN: $sample_common_name\tTD: $tissue_desc\tCT: $cell_type", RESET;
+for my $common_name (@common_names) {
+  my $new_model_count = 0;
+  my %normal_subjects;
+  my %tumor_subjects;
 
-      #Get libraries associated with each sample
-      my @libraries = $sample->libraries;
+  #Get an 'individual object using the patient common name
+  print "\n\n\n#$common_name";
+  my $individual = Genome::Individual->get(
+    common_name => $common_name,
+  );
+  #Get sample objects associated with the individual object
+  my @samples = $individual->samples;
+  my $scount = scalar(@samples);
+  #print BLUE, "\n\tFound $scount samples", RESET;
 
-      for my $library (@libraries) {
-        #Get instrument data for each sample
-        # or my @instrument_data = $sample->solexa_lanes;
-        my @instrument_data = Genome::InstrumentData::Solexa->get( library_name => $library->name, );
-        my @id_list;
-        for my $id (@instrument_data) {
-          #If a target region set name is defined, this is not WGS data, do not list
-          unless ($id->target_region_set_name){
-           push (@id_list, $id->id);
-          }
-        }
-        
-        #If a target region set name is defined, this is not WGS data, do not list
-        print BLUE, "\n\t\t\tLIBRARY\t". $library->name, RESET;
-        print BLUE, "\n\t\t\t\tINSTRUMENT_DATA\t@id_list", RESET;
-
-      }
-    }
-  }
-}
-
-
-if ($sample_names){
-  my @sample_names = split(",", $sample_names);
-
-  for my $sample_name (@sample_names) {
-
-    my $sample = Genome::Sample->get( name => $sample_name);
-
+  #Get additional info for each sample 
+  for my $sample (@samples) {
     #Display basic sample info
     my $sample_name = $sample->name || "UNDEF";
     my $extraction_type = $sample->extraction_type || "UNDEF";
     my $sample_common_name = $sample->common_name || "UNDEF";
     my $tissue_desc = $sample->tissue_desc || "UNDEF";
     my $cell_type = $sample->cell_type || "UNDEF";
-    print MAGENTA, "\nSAMPLE\tSN: $sample_name\tET: $extraction_type\tSCN: $sample_common_name\tTD: $tissue_desc\tCT: $cell_type", RESET;
 
-    #Get libraries associated with each sample
-    my @libraries = $sample->libraries;
+    #Skip all but 'genomic dna' samples
+    unless ($extraction_type eq "genomic dna"){
+      next();
+    }
+    #Skip samples where the sample common name is undefined
+    unless ($sample->common_name){
+      next();
+    }
 
-    for my $library (@libraries) {
-      #Get instrument data for each sample
-      # or my @instrument_data = $sample->solexa_lanes;
-      my @instrument_data = Genome::InstrumentData::Solexa->get( library_name => $library->name, );
-      my @id_list;
-      for my $id (@instrument_data) {
-        #If a target region set name is defined, this is not WGS data, do not list
-        unless ($id->target_region_set_name){
-         push (@id_list, $id->id);
-        }
+    if ($sample_common_name eq "normal"){
+      $normal_subjects{$sample_name}{type}="normal";
+    }else{
+      $tumor_subjects{$sample_name}{type}=$sample_common_name;
+    }
+    #print MAGENTA, "\n\t\tSAMPLE\tCN: $common_name\tSN: $sample_name\tET: $extraction_type\tSCN: $sample_common_name\tTD: $tissue_desc\tCT: $cell_type", RESET;
+  }
+
+  my $normal_count = keys %normal_subjects;
+  my $tumor_count = keys %tumor_subjects;
+
+  if ($normal_count > 0 && $tumor_count > 0){
+
+    #Set up the Reference alignment models for tumors then normals
+
+    foreach my $subject_name (sort keys %tumor_subjects){
+      $new_model_count++;
+      my $sample_type = $tumor_subjects{$subject_name}{type};
+      my $model_name = "RefAlign - $common_name - $sample_type - $reference_sequence_build_shortname - $annotation_reference_build_shortname - $refalign_processing_profile_shortname";
+      print "\n\n# $new_model_count. Tumor RefAlign Model\t$subject_name\t$common_name\t$refalign_processing_profile_name ($refalign_processing_profile_id)";
+      print "\ngenome model define reference-alignment  --model-name='$model_name'  --reference-sequence-build=$reference_sequence_build  --annotation-reference-build=$annotation_reference_build  --subject='$subject_name'  --processing-profile-name='$refalign_processing_profile_name'";
+      print "\ngenome model instrument-data assign  --model-id=''  --all";
+      print "\ngenome model build start ''";
+    }
+
+    foreach my $subject_name (sort keys %normal_subjects){
+      $new_model_count++;
+      my $sample_type = $normal_subjects{$subject_name}{type};
+      my $model_name = "RefAlign - $common_name - $sample_type - $reference_sequence_build_shortname - $annotation_reference_build_shortname - $refalign_processing_profile_shortname";
+      print "\n\n# $new_model_count. Normal RefAlign Model\t$subject_name\t$common_name\t$refalign_processing_profile_name ($refalign_processing_profile_id)";
+      print "\ngenome model define reference-alignment  --model-name='$model_name'  --reference-sequence-build=$reference_sequence_build  --annotation-reference-build=$annotation_reference_build  --subject='$subject_name'  --processing-profile-name='$refalign_processing_profile_name'";
+      print "\ngenome model instrument-data assign  --model-id=''  --all";
+      print "\ngenome model build start ''";
+    }
+
+    #Set up the Somatic variation models for each tumor/normal comparison
+    foreach my $normal_subject_name (sort keys %normal_subjects){
+      my $normal_sample_type = $normal_subjects{$normal_subject_name}{type};
+      foreach my $tumor_subject_name (sort keys %tumor_subjects){
+        $new_model_count++;
+        my $tumor_sample_type = $tumor_subjects{$tumor_subject_name}{type};
+        print "\n\n# $new_model_count. SomaticVariation Model\t$tumor_sample_type vs. $normal_sample_type ($tumor_subject_name vs. $normal_subject_name)\t$common_name\t$somaticvariation_processing_profile_name ($somaticvariation_processing_profile_id)";
+        my $model_name = "SomVar - $common_name - $reference_sequence_build_shortname - $annotation_reference_build_shortname - $somaticvariation_processing_profile_shortname";
+        print "\ngenome model define somatic-variation  --model-name='$model_name'  --tumor-model=''  --normal-model=''  --processing-profile-name='$somaticvariation_processing_profile_name'  --previously-discovered-variations-build='$previously_discovered_variations_build'  --annotation-build='$annotation_reference_build'";
+        print "\ngenome model build start ''";
+
       }
-      
-      my $ii_count = scalar(@id_list);
-
-      #If a target region set name is defined, this is not WGS data, do not list
-      if ($ii_count > 0){
-        print BLUE, "\n\tLIBRARY\t". $library->name, RESET;
-        print BLUE, "\n\t\tINSTRUMENT_DATA\t@id_list", RESET;
-      }
-
     }
   }
 }

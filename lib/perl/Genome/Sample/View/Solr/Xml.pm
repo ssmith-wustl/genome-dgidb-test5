@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Sample::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has => [
+    has_field => [
         type => {
             is => 'Text',
             default => 'sample'
@@ -23,7 +23,7 @@ class Genome::Sample::View::Solr::Xml {
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
-            calculate => sub { return join ('?id=', '/view/genome/sample/detail.html',$_[0]->id()); },
+            calculate => sub { return join ('?id=', '/view/genome/sample/status.html',$_[0]->id()); },
         },
         display_label1 => {
             is  => 'Text',

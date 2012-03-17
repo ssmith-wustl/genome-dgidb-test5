@@ -22,6 +22,12 @@ class Genome::Model::Tools::Sam::ExtractReadGroup {
             doc         => 'Individual read group requested',
             is_optional => 0,
         },
+		include_qc_failed => {
+			is 			=> 'Boolean',
+			doc			=> 'Include reads that were marked within the bam as having failed QC',
+			is_optional	=> 1,
+			default		=> 0,
+		}
     ],
     has_output => [
         read_count => { is => 'Number',
@@ -59,13 +65,15 @@ sub execute {
         $self->error_message ("There were no reads in this read group requested: " . $self->read_group_id);
         die $self->error_message;
     } 
+	
+    my $qc_filter_spec = (! $self->include_qc_failed ? "-F 0x200" : "");
 
     my $samtools_strip_cmd = sprintf(
-        "%s view -h -r%s %s | %s view -S -b -o %s -",
+        "%s view -b -h -r%s %s %s > %s",
         $samtools_path,
         $self->read_group_id,
+		$qc_filter_spec,
         $input_file, 
-        $samtools_path,
         $temp_bam_file,
     );
 

@@ -250,6 +250,40 @@ sub get{
     }
 }
 
+#TODO: we need to figure out the ucsc api to download new ones when needed
+#For now, this is hard-coded
+sub get_or_create_ucsc_tiering_directory {
+    my $self = shift;
+    if ($self->id eq "10194788") {
+        return "/gscmnt/sata921/info/medseq/make_tier_bed_files/hg18_build36_ucsc_files";
+    }
+    elsif ($self->id eq "106942997") {
+        return "/gscmnt/sata921/info/medseq/make_tier_bed_files/NCBI-human-build37/hg19_files";
+    }
+    elsif ($self->id eq "107494762") {
+        return "/gscmnt/sata921/info/medseq/make_tier_bed_files/NCBI-mouse-build37/mm9";
+    }
+    else {
+        $self->status_message("UCSC Tiering Directory not currently available for this species: ".$self->species_name);
+        return;
+    }
+}
+
+#TODO: figure out how to get this and make it a real result
+sub get_or_create_ucsc_conservation_directory {
+    my $self = shift;
+    if ($self->id eq "10194788") {
+        return "/gscmnt/ams1161/info/model_data/2771411739/build113115679/annotation_data/ucsc_conservation/";
+    }
+    elsif ($self->id eq "106942997") {
+        return "/gscmnt/ams1102/info/model_data/2771411739/build106409619/annotation_data/ucsc_conservation/"
+    }
+    else {
+        $self->status_message("UCSC conservation scores are not currently available in the system for this species: ".$self->species_name);
+        return;
+    }
+}
+
 sub is_derived_from {
     my ($self, $build, $seen) = @_;
     $seen = {} if !defined $seen;
@@ -368,11 +402,8 @@ sub get_bases_file {
 }
 
 sub primary_consensus_path {
-    my ($self, $format, %params) = @_;
+    my ($self, $format) = @_;
 
-    # we want this to default to true, the old behavior
-    my $allow_cached = 1;
-    $allow_cached = $params{allow_cached} if exists $params{allow_cached};
     return $self->full_consensus_path($format) unless $self->append_to;
 
     $format ||= 'bfa';
@@ -381,12 +412,8 @@ sub primary_consensus_path {
 }
 
 sub full_consensus_path {
-    my ($self, $format, %params) = @_;
+    my ($self, $format) = @_;
     $format ||= 'bfa';
-
-    # we want this to default to true, the old behavior
-    my $allow_cached = 1;
-    $allow_cached = $params{allow_cached} if exists $params{allow_cached};
 
     my $file = $self->data_directory . '/all_sequences.'. $format;
     unless (-e $file){
@@ -524,6 +551,8 @@ sub get_sequence_dictionary {
             $self->error_message("Failed to to create sequence dictionary for $path. Quiting");
             return;
         }
+
+        $self->reallocate;
 
         return $path;
 
@@ -856,6 +885,33 @@ sub verify_or_create_local_cache {
     $self->status_message('Verify or create local cache...OK');
 
     return $local_cache_dir;
+}
+
+
+sub get_or_create_genome_file {
+    my $self = shift;
+
+    my $genome_file = $self->data_directory .'/all_sequences.genome';
+    unless (-s $genome_file) {
+        my $seqdict_sam = $self->get_sequence_dictionary('sam');
+        my $genome_fh = Genome::Sys->open_file_for_writing($genome_file);
+        unless ($genome_fh) {
+            die('Failed to open genome file for writing: '. $genome_file);
+        }
+        my $seqdict_fh = Genome::Sys->open_file_for_reading($seqdict_sam);
+        unless ($seqdict_fh) {
+            die('Failed to open seqdict file for reading: '. $seqdict_sam);
+        }
+        while (my $line = $seqdict_fh->getline) {
+            chomp($line);
+            if ($line =~ /^\@SQ\s+SN:(.+)\s+LN:(\d+)\s*/) {
+                print $genome_fh $1 ."\t". $2 ."\n";
+            }
+        }
+        $seqdict_fh->close;
+        $genome_fh->close;
+    }
+    return $genome_file;
 }
 
 1;

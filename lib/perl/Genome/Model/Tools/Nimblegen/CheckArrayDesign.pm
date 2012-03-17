@@ -20,8 +20,8 @@ class Genome::Model::Tools::Nimblegen::CheckArrayDesign {
         doc => 'A comma-delimited list of files that went into the array design',
     },
     design_file_list => {
-	type => 'String',
-	is_optional => 1,
+        type => 'String',
+        is_optional => 1,
         doc => 'Absolute path to a file containing list of all the files (1 per line) that went into the array design. If specified, will override design-files option',
     },
     design_summary_outfile => {
@@ -29,30 +29,37 @@ class Genome::Model::Tools::Nimblegen::CheckArrayDesign {
         is_optional => 1,
         doc => 'An output summary file giving the number of input sites that came from each array design input file as compared to the number of these respective sites covered in the array design. If this option is not defined, STDOUT will be used.',
     },
+    design_file_flank => {
+        type => 'Integer',
+        is_optional => 1,
+        default => '0',
+        doc => 'The number of bases to pad each side of events from the design files with when looking for overlap from the probe bedfile',
+    },
     ]
 };
 
 sub execute {
     my $self = shift;
+    $DB::single=1;
 
     #parse inputs
     my $probe_bed = $self->nimblegen_probe_bedfile;
-    my $summary_file = $self->design_summary_outfile;    
-    
+    my $summary_file = $self->design_summary_outfile;
+    my $design_flank = $self->design_file_flank;
+
     my @design_files;
     if($self->design_file_list) {
-	@design_files = process_design_file_list($self->design_file_list);
-	my $x = 1;
-    }else {
-	@design_files = split(/,/,$self->design_files);
+        @design_files = process_design_file_list($self->design_file_list);
+    } else {
+        @design_files = split(/,/,$self->design_files);
     }
-    
+
 
     #put the tiled regions from the probe set into a hash
     my %probes;
     my $probe_fh = new IO::File $probe_bed,"r";
     my $track_found = 0;
-    
+
     while (my $line = $probe_fh->getline) {
         if (($line =~ /track name=tiled_region description="NimbleGen Tiled Regions"/i) ||
             ($line =~ /track name=hg18_tiled_region description="hg18 NimbleGen Tiled Regions"/ )) {
@@ -68,8 +75,6 @@ sub execute {
         }
     }
     $probe_fh->close;
-
-    print STDERR "test1: " . keys(%probes) . "\n";
 
     #set up summary filehandle and header
     my $sum_fh;
@@ -87,7 +92,6 @@ sub execute {
             return;
         }
     }
-    #my $sum_fh = new IO::File $summary_file,"w";
     print $sum_fh "Design_File\t#_Sites\t#_Tiled_Sites\t%_Tiled_Sites\n";
 
 
@@ -101,31 +105,45 @@ sub execute {
 
         #variables to record statistics for summary file
         my $sites;
-        my $covered_sites;
+        my $covered_sites = '0';
+        my $is_SV_file = '0';
 
+        #loop through sites in each file
         while (my $line = $infh->getline) {
-            $sites++;
             chomp $line;
-            my ($chr,$start,$stop) = split /\t/,$line;
-	    if($chr !~ /^chr/){ #in case the chromosome number is formatted differently
-		$chr = "chr".$chr;
-	    }
 
-            #find out if site was tiled
-            my $site_is_tiled = 0;
-            for my $probe_start (keys %{$probes{$chr}}) {
-                my $probe_stop = $probes{$chr}{$probe_start};
-                if ($start <= $probe_stop && $stop >= $probe_start) {
-                    $covered_sites++;
-                    $site_is_tiled++;
-                    last;
+            #check to see if this is an SV file, with two sides of event to be checked on each line
+            if ($line =~ /OUTER_START/) { $is_SV_file = '1'; next; }
+
+            #snp or indel file
+            if ( !$is_SV_file ) {
+
+                my ($chr,$start,$stop) = split /\t/,$line;
+                if ($chr =~ /MT/) { next; } #ignore MT contig sites (build 36)
+                if($chr !~ /^chr/){ $chr = "chr".$chr; } #in case the chromosome number is formatted differently
+                $sites++;
+                if (site_was_tiled(\%probes,$chr,$start,$stop,$design_flank)) { $covered_sites++; }
+                else { print $uncov_fh "$line\n"; }
+            }
+            #sv file (two sides to each event)
+            else {
+                my ($id,$chr1,$start1,$stop1,$chr2,$start2,$stop2) = split /\t/,$line;
+                if ($chr1 !~ /^chr/){ $chr1 = "chr".$chr1;}
+                if ($chr2 !~ /^chr/){ $chr2 = "chr".$chr2;}
+                $sites++;
+                if (site_was_tiled(\%probes,$chr1,$start1,$stop1,$design_flank)) { #left side
+                    if (site_was_tiled(\%probes,$chr2,$start2,$stop2,$design_flank)) { #right side
+                        $covered_sites++;
+                    }
+                    else {
+                        print $uncov_fh "$line\n";
+                    }
+                }
+                else {
+                    print $uncov_fh "$line\n";
                 }
             }
 
-            #actions to take if site was found to not be tiled
-            unless ($site_is_tiled) {
-                print $uncov_fh "$line\n";
-            }
         }
         $infh->close;
         $uncov_fh->close;
@@ -138,6 +156,21 @@ sub execute {
     return 1;
 }
 
+sub site_was_tiled {
+    my ($probes,$chr,$start,$stop,$design_flank) = @_;
+    $start -= $design_flank;
+    $stop += $design_flank;
+    my $site_is_tiled = 0;
+    for my $probe_start (keys %{$probes->{$chr}}) {
+        my $probe_stop = $probes->{$chr}->{$probe_start};
+        if ($start <= $probe_stop && $stop >= $probe_start) {
+            $site_is_tiled++;
+            last;
+        }
+    }
+    return ($site_is_tiled);
+}
+
 
 sub process_design_file_list {
 #return a list of files from a file to process;
@@ -147,21 +180,17 @@ sub process_design_file_list {
     my $fh = IO::File->new($file,"r");
     my @list=();
     while(my $line = $fh->getline) {
-	chomp $line;
-	next if($line =~ /^\s+$/ || $line =~ /^\#/ || $line =~ /^$/); #ignore comment and blank lines
-	push(@list,$line);
+        chomp $line;
+        next if($line =~ /^\s+$/ || $line =~ /^\#/ || $line =~ /^$/); #ignore comment and blank lines
+        push(@list,$line);
     }
     $fh->close;
-    
+
     #check to see if files exists and readable
     my @bad_files = grep {!-e $_ } @list;
     my @good_files = grep {-e $_ } @list;
     print STDERR "$_ NOT FOUND\n" for(@bad_files);
-
     return (@good_files);
-    
-
-
 }
 
 sub help_brief {

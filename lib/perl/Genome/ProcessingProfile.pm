@@ -27,14 +27,18 @@ class Genome::ProcessingProfile {
                            doc => 'The type of processing profile' },
         supersedes    => { via => 'params', to => 'value', is_mutable => 1, where => [ name => 'supersedes' ], is_optional => 1, 
                            doc => 'The processing profile replaces the one named here.' },
-        subclass_name => { is => 'VARCHAR2', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
-                           calculate_from => ['type_name'],
-                           calculate => sub { 
-                                            my($type_name) = @_;
-                                            confess "No type name given to resolve subclass name" unless $type_name;
-                                            return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($type_name);
-                                          }
-                          },
+        subclass_name => {
+            is => 'VARCHAR2',
+            len => 255,
+            is_mutable => 0,
+            column_name => 'SUBCLASS_NAME',
+            calculate_from => ['type_name'],
+            calculate => sub { 
+                my($type_name) = @_;
+                confess "No type name given to resolve subclass name" unless $type_name;
+                return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($type_name);
+            }
+        },
     ],
     has_many_optional => [
         params => { is => 'Genome::ProcessingProfile::Param', reverse_as => 'processing_profile' },
@@ -57,20 +61,6 @@ sub _initialize_build {
     if ($model->can('_initialize_build')) {
         return $model->_initialize_build($build);
     }
-    return 1;
-}
-
-sub _build_success_callback {
-    my ($self, $build) = @_;
-    # override in sub-classes to get custom commit hook when a build succeeds
-    my $model = $build->model;
-
-    #Notify any models set to depend on this one that a new build is ready
-    my @to_models = $model->to_models;
-    for my $to_model (@to_models) {
-        $to_model->notify_input_build_success($build);
-    }
-
     return 1;
 }
 
@@ -457,10 +447,24 @@ sub _expand_param_properties {
     my ($class, $desc) = @_;
     while (my ($prop_name, $prop_desc) = each(%{ $desc->{has} })) {
         if (exists $prop_desc->{'is_param'} and $prop_desc->{'is_param'}) {
-            $prop_desc->{'to'} = 'value';
+            if (exists $prop_desc->{'data_type'} and $prop_desc->{'data_type'}) {
+                my $prop_class = UR::Object::Property->_convert_data_type_for_source_class_to_final_class(
+                    $prop_desc->{'data_type'},
+                    $class
+                );
+                if ($prop_class->isa("UR::Value")) {
+                    $prop_desc->{'to'} = 'value_id';
+                } else {
+                    $prop_desc->{'to'} = 'value_obj';
+                }
+            } else {
+                $prop_desc->{'to'} = 'value_id';
+            }
+
             $prop_desc->{'is_delegated'} = 1;
             $prop_desc->{'where'} = [
-                'name' => $prop_name
+                'name' => $prop_name,
+                #'value_class_name' => $prop_class,
             ];
             $prop_desc->{'via'} = 'params';
             $prop_desc->{'is_mutable'} = 1;

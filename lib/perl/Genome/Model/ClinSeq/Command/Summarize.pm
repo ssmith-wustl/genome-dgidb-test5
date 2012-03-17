@@ -19,6 +19,7 @@ class Genome::Model::ClinSeq::Command::Summarize {
 
 sub help_synopsis {
     return <<EOS
+
 genome model clin-seq summarize 12345
 
 genome model clin-seq summarize mymodelname
@@ -26,6 +27,7 @@ genome model clin-seq summarize mymodelname
 genome model clin-seq summarize subject.common_name=HG1
 
 genome model clin-seq summarize subject.common_name=HG%
+
 EOS
 }
 
@@ -42,7 +44,8 @@ sub execute {
     my @models = $self->models;
     
     for my $model (@models) {
-        $self->status_message("***** " . $model->__display_name__ . " ****");
+        $self->status_message("\n***** " . $model->__display_name__ . " ****");
+	$self->status_message("\n\nSamples and instrument data");
 
         my $patient = $model->subject;
         my @samples = $patient->samples;
@@ -51,12 +54,15 @@ sub execute {
             $self->status_message("sample " . $sample->__display_name__ . " has " . scalar(@instdata) . " instrument data");
         }
 
+	#Check for a complete build of the clinseq model specified
         my $clinseq_build = $model->last_complete_build;
         unless ($clinseq_build) {
             $self->status_message("NO COMPLETE CLINSEQ BUILD!");
             next;
         }
 
+	#Summarize the build IDs and status of each build comprising the ClinSeq model
+	$self->status_message("\n\nBuilds and status of each");
         my $wgs_build = $clinseq_build->wgs_build;
         my $exome_build = $clinseq_build->exome_build;
         my $tumor_rnaseq_build = $clinseq_build->tumor_rnaseq_build;
@@ -64,9 +70,11 @@ sub execute {
 
         for my $build ($wgs_build, $exome_build, $tumor_rnaseq_build, $normal_rnaseq_build, $clinseq_build) {
             next unless $build;
-            $self->status_message("build " . $build->__display_name__ . " has status " . $build->status);
+            $self->status_message("build '" . $build->__display_name__ . "' has status " . $build->status);
         }
     }
+
+    $self->status_message("\n\n");
 
     return 1;
 }

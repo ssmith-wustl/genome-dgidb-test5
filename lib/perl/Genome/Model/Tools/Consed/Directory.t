@@ -17,7 +17,8 @@ $processing_profile->fake_module('Genome::ProcessingProfile');
 $processing_profile->set_always('type_name', 'reference alignment');
 =cut
 
-my $path = "/tmp/consed_test_dir";
+my $path = Genome::Sys->create_temp_directory;
+rmtree $path; # Want the path, but not the directory... yet
 
 my $consed_dir = Genome::Model::Tools::Consed::Directory->create(directory => $path);
 ok (!$consed_dir, "Didn't create a Genome::Model::Tools::Consed::Directory without an existing directory");

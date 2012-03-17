@@ -304,7 +304,7 @@ sub find_or_create_assembly_model {
             $self->status_message("Successfully created assembly model with ID $model_id, now assigning data!");
 
             my $assembly_assign_obj = Genome::Model::Command::InstrumentData::Assign->create(
-                model_id => $model_id,
+                model => $assembly_model,
                 all => 1,
             );
             unless ($assembly_assign_obj) {

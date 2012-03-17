@@ -31,7 +31,12 @@ sub execute {
         or die "Failed to create parser from grammar";
 
     my $tree = $parser->startrule($str);
+    if ( not $tree ) {
+        $self->error_message('Failed to parse strategy: '.$self->strategy);
+        return;
+    }
     $self->tree($tree);
+
     return $tree;
 }
 

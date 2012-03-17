@@ -6,6 +6,10 @@ package Genome::Model::SmallRna::Command::Spreadsheet;
 #10/13/2011
 # added two additional column names for normalization in column header
 
+# 2012-01-06 Header added : Tracking strandedness
+# 2012-01-13 Header changed:  Normalization log transformed
+# 2012-03-07 Header added : #Major Loci for sub-clusters
+
 use strict;
 use warnings;
 use Statistics::Descriptive;
@@ -70,8 +74,10 @@ sub execute {
 				"Avg Depth",
 				"Zenith Depth",
 				"Length of Raw Cluster",
-				"Normalization -17_70",
-				"Normalization -per bin",
+				"Positive Strand",
+				"Negative Strand",
+				"Log Normalization -17_70",
+				"Log Normalization -per bin",
 				"% Mismatches",
 				"ZeroMM",
 				"1MM",
@@ -82,7 +88,9 @@ sub execute {
 				"Avg MapQ",
 				"Std Dev Map Q",
 				"%Zero MapQ",
-				"Avg BaseQ")	;
+				"Avg BaseQ",
+				"Major Subcluster Loci"
+				);
 		
 	my $annotation_fh = Genome::Sys->open_file_for_reading( $sorted_temp_name);		
 		

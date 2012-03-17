@@ -241,7 +241,13 @@ sub _load_genotyopes {
     }
 
     my $genotype_file;
-    my @possible_file_names = ( 'snpreport/'.$instrument_data->id, $instrument_data->id.'.genotype', $instrument_data->sample->id.'.genotype' );
+    my @possible_file_names = (
+        'snpreport/'.$instrument_data->id,
+        'snpreport/'.$instrument_data->sample->id,
+        $instrument_data->id.'.genotype',
+        $instrument_data->sample->id.'.genotype',
+    );
+
     for my $possible_file_name ( @possible_file_names ) {
         my $possible_file = $data_directory.'/'.$possible_file_name;
         next if not -e $possible_file;
@@ -263,7 +269,11 @@ sub _load_genotyopes {
 
     $self->status_message('Load genotypes...');
     my $header_line;
-    do { $header_line = $genotype_fh->getline; } until $header_line =~ /,/;
+    do { $header_line = $genotype_fh->getline; } until not $header_line or $header_line =~ /,/;
+    if ( not $header_line ) {
+        $self->error_message('Failed to get header line for genotype file!');
+        return;
+    }
     chomp $header_line;
     my @headers = map { s/\s/_/g; s/_\-\_top$//i; lc } split(',', $header_line);
     $self->status_message('Genotype headers: '. join(', ', @headers));

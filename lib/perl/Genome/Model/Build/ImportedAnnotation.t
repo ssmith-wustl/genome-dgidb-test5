@@ -7,7 +7,7 @@ BEGIN {
 }
 
 use above "Genome";
-use Test::More tests => 27;
+use Test::More tests => 34;
 use Data::Dumper;
 use_ok('Genome::Model::Build::ImportedAnnotation');
 
@@ -19,8 +19,9 @@ my $data_dir = File::Temp::tempdir('ImportedAnnotationTest-XXXXX', DIR => '/gsc/
 
 my %samples;
 for my $sn (@species_names) {
-    my $p = Genome::Individual->create(name => "test-$sn-patient", common_name => 'testpatient');
-    my $s = Genome::Sample->create(name => "test-$sn-patient", species_name => $sn, common_name => 'tumor', source => $p);
+    my $t = Genome::Taxon->__define__(name => $sn);
+    my $p = Genome::Individual->create(name => "test-$sn-patient", common_name => 'testpatient', taxon => $t);
+    my $s = Genome::Sample->create(name => "test-$sn-patient", common_name => 'tumor', source => $p);
     ok($s, 'created sample');
     $samples{$sn} = $s;
 }
@@ -76,6 +77,41 @@ $abuild->reference_sequence($rbuilds{'mouse'}[0]);
 my @errs = $abuild->validate_for_start;
 is(scalar @errs, 1, "attempting to specify a reference build from the wrong model is an error");
 like($errs[0]->desc, qr/is not a build of model/, "error string looks correct");
+
+my $roi_data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Build-ImportedAnnotation";
+my $roi_expected_file = $roi_data_dir."/expected.bed";
+my $roi_model = Genome::Model::ImportedAnnotation->create(
+    name                => "test_roi",
+    processing_profile  => $ann_pp,
+    subject_class_name  => ref($samples{'human'}),
+    subject_id          => $samples{'human'}->id,
+    reference_sequence  => $rbuilds{'human'}->[0]->model,
+    );
+
+ok ($roi_model, 'Model to test roi created');
+
+my $roi_build = Genome::Model::Build::ImportedAnnotation->create(
+    name => "test_roi_build",
+    model => $roi_model,
+    data_directory => $roi_data_dir,
+    version             => $versions[0],
+    reference_sequence  => $rbuilds{'human'}->[0],
+    );
+
+ok ($roi_build,'Build to test roi created');
+my $roi_feature_list = $roi_build->get_or_create_roi_bed;
+
+ok ($roi_feature_list, 'ROI feature list created');
+isa_ok($roi_feature_list, 'Genome::FeatureList', 'is a FeatureList');
+is($roi_feature_list->reference, $rbuilds{'human'}->[0], 'FeatureList has the same reference as the build');
+
+ok(-s $roi_feature_list->file_path, 'ROI file exists at '.$roi_feature_list->file_path);
+
+my $file_path = $roi_feature_list->file_path;
+
+my $roi_diff = Genome::Sys->diff_file_vs_file($roi_feature_list->file_path, $roi_expected_file);
+
+ok(!$roi_diff, 'Content of ROI was as expected');
 
 done_testing();
 

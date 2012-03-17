@@ -52,8 +52,8 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                     <xsl:call-template name='object_link_button'>
                       <xsl:with-param name='type' select="'Genome::DruggableGene::DrugNameReport::Set'"/>
                       <xsl:with-param name="key" select="'name'"/>
-                      <xsl:with-param name="id" select="normalize-space(aspect[@name='drug_name_report_name']/value)"/>
-                      <xsl:with-param name="linktext" select="normalize-space(aspect[@name='drug_name_report_name']/value)"/>
+                      <xsl:with-param name="id" select="normalize-space(aspect[@name='drug_name']/value)"/>
+                      <xsl:with-param name="linktext" select="normalize-space(aspect[@name='drug_name']/value)"/>
                     </xsl:call-template>
                   </td>
                 </tr>
@@ -64,8 +64,8 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                     <xsl:call-template name='object_link_button'>
                       <xsl:with-param name='type' select="'Genome::DruggableGene::GeneNameReport::Set'"/>
                       <xsl:with-param name="key" select="'name'"/>
-                      <xsl:with-param name="id" select="normalize-space(aspect[@name='gene_name_report_name']/value)"/>
-                      <xsl:with-param name="linktext" select="normalize-space(aspect[@name='gene_name_report_name']/value)"/>
+                      <xsl:with-param name="id" select="normalize-space(aspect[@name='gene_name']/value)"/>
+                      <xsl:with-param name="linktext" select="normalize-space(aspect[@name='gene_name']/value)"/>
                     </xsl:call-template>
                   </td>
                 </tr>
@@ -73,7 +73,11 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                   <td class="name">Interaction Type:
                   </td>
                   <td class="value">
-                    <xsl:value-of select="normalize-space(aspect[@name='interaction_type']/value)"/>
+                    <ul>
+                      <xsl:for-each select="aspect[@name='interaction_types']/value">
+                        <li><xsl:value-of select="normalize-space(.)"/></li>
+                      </xsl:for-each>
+                    </ul>
                   </td>
                 </tr>
               </tbody>

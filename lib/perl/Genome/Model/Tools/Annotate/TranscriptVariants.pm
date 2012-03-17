@@ -196,7 +196,7 @@ sub help_detail {
     my $self = shift;
 
     #Generate the currently available annotation models on the fly
-    my @currently_available_models = Genome::Model->get(type_name => "imported annotation");
+    my @currently_available_models = Genome::Model->get(subclass_name => 'Genome::Model::ImportedAnnotation');
     my $currently_available_builds; 
     foreach my $model (@currently_available_models) {
         next unless $model;
@@ -354,7 +354,17 @@ sub execute {
         return;
     }
 
-    $self->_convert_bed_file if $self->variant_bed_file;
+    if ($self->variant_bed_file) {
+        unless (-s $self->variant_bed_file) {
+            die $self->error_message("Variant bed file has no size, exiting");
+        }
+
+        $self->_convert_bed_file;
+
+        unless(-s $self->variant_file){
+            die $self->error_message("After converting to annotation format, the variant file has no size, exiting");
+        }
+    }
 
     my $variant_file = $self->variant_file;
 
@@ -436,21 +446,7 @@ sub execute {
         return;
     }
 
-    if ($self->build) {
-        my $version = $self->build->version;
-        my $name = $self->build->model->name;
-        if ($name =~ /human/i) {
-            my $model = Genome::Model->get(name => "NCBI-human.combined-annotation");
-            my $build = $model->build_by_version($version);
-            $self->build($build);
-        }
-        elsif ($name =~ /mouse/i) {
-            my $model = Genome::Model->get(name => "NCBI-mouse.combined-annotation");
-            my $build = $model->build_by_version($version);
-            $self->build($build);
-        }
-    }
-    else {
+    unless($self->build) {
         my $ref = $self->reference_transcripts;
         my ($name, $version) = split(/\//, $ref); # For now, version is ignored since only v2 is usable
                                         # This will need to be changed when other versions are available

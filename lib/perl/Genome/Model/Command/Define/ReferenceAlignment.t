@@ -18,8 +18,9 @@ my $model_name = "test-define-refalign-model-$$";
 use_ok($model_class);
 
 # set up required test data
-my $individual = Genome::Individual->create(name => 'test-patient', common_name => 'testpatient');
-my $sample = Genome::Sample->create(name => 'test-patient-sample', species_name => 'human', common_name => 'normal', source => $individual);
+my $taxon = Genome::Taxon->get(name => 'human');
+my $individual = Genome::Individual->create(name => 'test-patient', common_name => 'testpatient', taxon => $taxon);
+my $sample = Genome::Sample->create(name => 'test-patient-sample', common_name => 'normal', source => $individual);
 my ($rbuild, $rbuild2, $abuild) = create_reference_builds(); # (reference_build, annotation_build)
 
 my $dbsnp_pp = Genome::ProcessingProfile->get(name => "imported-variation-list");

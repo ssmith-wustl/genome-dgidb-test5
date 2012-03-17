@@ -18,7 +18,12 @@ class Genome::ModelGroup::Command::CreateSimulationPopulation {
     coverage_target => {
         is => 'Text',
         is_optional => 1,
-        doc => 'Set this to cause no more than N vcfs to be merged into a single operation at a time',
+        doc => 'How much coverage should each bam end up with',
+    },
+    region => {
+        is => 'Text', 
+        is_optional => 1,
+        doc=>"chr:start-stop format",
     },
     ref_fasta => {
         default=>"/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa",
@@ -37,15 +42,17 @@ class Genome::ModelGroup::Command::CreateSimulationPopulation {
     disease_snps => {
         is =>'Text',
         is_optional=>0,
-        doc => "see generate haplotypes doc",
+        doc => "see generate haplotypes doc on how to specify this (basically, <pos>, <which allele is the disease allele>, <het rel risk>, <hom rel risk>",
     },
     exome_regions=> {
         is =>'Text',
         is_optional=>0,
+        doc => "a bed file to use to simulate exome sequencing.  supply a sureselect/nimblegen feature list for build36, it will emulate wingspan for you",
     },
     model_group_name => {
         is =>'Text',
         is_optional=>0,
+        doc =>"what to name the resulting model group.  Don't make this too long as its integrated into the lib name which has a 64 character limit, and some stuff gets appended on",
     }
     ],
     has_transient_optional=> [
@@ -157,8 +164,8 @@ sub execute {
         }
         $DB::single=1;
         my $id_cmd = Genome::Model::Command::InstrumentData::Assign->create(
-            model_id=>$model->id,
-            instrument_data_id=>$import_cmd->import_instrument_data_id,
+            model=>$model,
+            instrument_data=>[$import_cmd->_inst_data],
         );
         eval{ 
             $id_cmd->execute();
@@ -230,7 +237,7 @@ sub generate_fastas {
     my @files = glob("$bed_dir*.bed");
     my %inputs ; 
     $inputs{ref_fasta} = $self->ref_fasta;
-    $inputs{region} = '22'; #FIXME: pass this through when we want to support more or less than all of 22
+    $inputs{region} = $self->region; #FIXME: pass this through when we want to support more or less than all of 22
     $inputs{limit_regions}=$self->exome_regions;
     $inputs{mutation_bed}=\@files;
     my $op = Workflow::Operation->create(

@@ -82,7 +82,7 @@ sub create {
             if ($self->can($name)) {
                 my $specified_value = $self->$name;
                 if (not defined $specified_value or not length $specified_value) {
-                    $self->$name($param->value);
+                    $self->$name($other_profile->$name);
                 }
                 elsif ( $specified_value eq 'UNDEF' ) { # allow the undef-ing of params, cannot be done from the command line
                     $self->$name(undef);
@@ -172,10 +172,11 @@ sub _properties_for_class {
             return;
         }
         my $property_name = $property->property_name;
+        no warnings;
         $properties{ $property_name } = {
             is => exists $property->{data_type} ? $property->{data_type} : 'Text',
-            is_optional => $property->is_optional,
-            doc => $property->doc,
+            is_optional => 1,
+            doc =>  $property->doc . ($property->is_optional ? " (optional)" : ""),
         };
         if (defined $property->default_value) {
             $properties{ $property_name }->{'default_value'} = $property->default_value;

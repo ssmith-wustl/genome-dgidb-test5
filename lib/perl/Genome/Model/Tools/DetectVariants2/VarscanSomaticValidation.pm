@@ -12,6 +12,11 @@ class Genome::Model::Tools::DetectVariants2::VarscanSomaticValidation {
             default => '--min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.01 --validation 1 --min-coverage 8',
         },
     ],
+    has_param => [
+        lsf_resource => {
+            default_value => "-M 6000000 -R 'select[mem>6000] rusage[mem=6000]'",
+        },
+    ],
     doc => 'This tool is a wrapper around `gmt varscan validation` to make it meet the API for variant detection in pipelines'
 };
 

@@ -14,7 +14,7 @@ use Data::Dumper;
 require File::Temp;
 require File::Compare;
 require Test::MockObject;
-use Test::More;
+use Test::More tests=>9;
 
 use_ok('Genome::InstrumentData::Command::Microarray::Extract') or die;
 
@@ -74,8 +74,3 @@ ok($cmd, 'create');
 $cmd->dump_status_messages(1);
 ok($cmd->execute, 'execute');
 is(File::Compare::compare($output, $expected_output), 0, 'output file matches');
-
-#print "$tmpdir\n"; <STDIN>;
-done_testing();
-exit;
-

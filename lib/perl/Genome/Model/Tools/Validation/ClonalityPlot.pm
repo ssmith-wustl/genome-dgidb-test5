@@ -27,10 +27,16 @@ class Genome::Model::Tools::Validation::ClonalityPlot {
             doc => "File of cnvhmm whole genome predictions",
             is_optional => 1,
             is_input => 1 },        
+
+        cbs_file => { 
+            is => 'Text',
+            doc => "File of CN-altered segments according to CBS",
+            is_optional => 1,
+            is_input => 1 },        
         
         varscan_r_library => {
             is => 'Text',
-            doc => "File of cnvhmm whole genome predictions",
+            doc => "R library containing critical functions",
             is_optional => 0,
             is_input => 1,
             default => '/gscmnt/sata423/info/medseq/analysis/CaptureValidationGraphs/VarScanGraphLib.R'},
@@ -130,7 +136,8 @@ sub execute {
     ##inputs##
     my $varscan_file = $self->varscan_file;
     my $varscan_file_with_cn = $self->varscan_file_with_cn;
-    my $copynumber_file = $self->cnvhmm_file;
+    my $cnvhmm_file = $self->cnvhmm_file;
+    my $cbs_file = $self->cbs_file;
     my $sample_id = $self->sample_id;
     my $readcount_cutoff;
     my $chr_highlight = $self->chr_highlight;
@@ -199,11 +206,12 @@ sub execute {
     $temp_path2 =~ s/\:/\\\:/g;
 
     my %copynumber_hash_tumor;
-    my %copynumber_hash_normal;
-    if(defined($copynumber_file)){
+    if(defined($cnvhmm_file)){
         #build the copy number hashes
-        %copynumber_hash_tumor=%{&build_hash($copynumber_file,'tumor')};
-        %copynumber_hash_normal=%{&build_hash($copynumber_file,'normal')};
+        %copynumber_hash_tumor=%{&build_hash($cnvhmm_file)};
+    } elsif(defined($cbs_file)){
+        #build the copy number hashes
+        %copynumber_hash_tumor=%{&build_hash($cbs_file)};
     } 
 
 
@@ -217,9 +225,8 @@ sub execute {
             $varscan_call, $germline_pvalue, $somatic_pvalue, @otherstuff) = split(/\t/, $line2);
 
         my $varscan_cn_tumor=&get_cn($chr,$pos,$pos,\%copynumber_hash_tumor);
-        my $varscan_cn_normal=&get_cn($chr,$pos,$pos,\%copynumber_hash_normal);
 
-        print $tfh "$line2\t$varscan_cn_tumor\t$varscan_cn_normal\n";
+        print $tfh "$line2\t$varscan_cn_tumor\n";
         if ($positions_highlight && -s $positions_highlight) {
             my $matcher = "$chr\t$pos";
             if (defined $position_highlight_hash{$matcher}) {
@@ -345,6 +352,8 @@ _END_OF_R_
     cn2xchr100=subset(xchr100, xchr100\$V20 >= 1.75 & xchr100\$V20 <= 2.25);
     cn3xchr100=subset(xchr100, xchr100\$V20 >= 2.25 & xchr100\$V20 <= 3.5);
     cn4xchr100=subset(xchr100, xchr100\$V20 >= 3.5);
+
+
 
     cov20x=subset(z1, (z1\$V9+z1\$V10) <= 20);
     cov50x=subset(z1, (z1\$V9+z1\$V10) >= 20 & (z1\$V9+z1\$V10) <= 50);
@@ -588,13 +597,13 @@ _END_OF_R_
 
 
         #if cn is being plotted
-        if(defined($copynumber_file) && !($plot_only_CN2)){
-            print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
-            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";
-            print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
-            print R_COMMANDS 'drawPlot(z1, cn4plus, cn4xchr, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
+        if((defined($cnvhmm_file) || (defined($cbs_file))) && !($plot_only_CN2)){
+            print R_COMMANDS 'drawPlot(z1, cn1minus100x, cn1xchr100, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn2100x, cn2xchr100, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn3100x, cn3xchr100, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn4plus100x, cn4xchr100, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
         } else {
-            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn2100x, cn2xchr100, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
         }
 #-------------------------------------------------
         $R_command = <<"_END_OF_R_";
@@ -683,7 +692,7 @@ _END_OF_R_
         print R_COMMANDS "$R_command\n";
 
         #if cn is being plotted
-        if(defined($copynumber_file) && !($plot_only_CN2)){
+        if((defined($cnvhmm_file) || defined($cbs_file)) && !($plot_only_CN2)){
             print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
             print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";        
             print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
@@ -741,7 +750,7 @@ sub get_cn
 
 sub build_hash
 {
-    my ($file, $tumnor)=@_;
+    my ($file)=@_;
     my %info_hash;
     my $fh=new FileHandle($file);
     while(my $line = <$fh>)
@@ -750,12 +759,24 @@ sub build_hash
         unless ($line =~ /^\w+\t\d+\t\d+\t/) { next;}
         my ($chr,$start,$end,$size,$nmarkers,$cn,$adjusted_cn,$cn_normal,$adjusted_cn_normal,$score)=split(/\t/, $line);
         my $pos=$start."_".$end;
-        if ($tumnor eq 'tumor') {
-            $info_hash{$chr}{$pos}=$adjusted_cn;
-        }
-        elsif ($tumnor eq 'normal') {
-            $info_hash{$chr}{$pos}=$adjusted_cn_normal;
-        }
+        $info_hash{$chr}{$pos}=$adjusted_cn;
+    }
+    return \%info_hash;
+}
+
+
+sub build_hash_cbs
+{
+    my ($file)=@_;
+    my %info_hash;
+    my $fh=new FileHandle($file);
+    while(my $line = <$fh>)
+    {
+        chomp($line);
+        unless ($line =~ /^#/){ next;}
+        my ($chr,$start,$end,$nmarkers,$adjusted_cn);
+        my $pos=$start."_".$end;
+        $info_hash{$chr}{$pos}=$adjusted_cn;
     }
     return \%info_hash;
 }

@@ -292,6 +292,7 @@ sub get_coverage_summary_node {
     my $model_ids_by_depths = {};
 
     my @min_depths;
+    my %builds_with_depth_mismatch;
     BUILD:
     for my $build (@builds) {
         my $model = $build->model;
@@ -329,6 +330,11 @@ sub get_coverage_summary_node {
 
             my $coverage_stats_summary_hash_ref = $result->coverage_stats_summary_hash_ref;
             for my $min_depth (keys %{$coverage_stats_summary_hash_ref->{0}}) {
+                unless (grep {$_ eq $min_depth} @min_depths) {
+                    $builds_with_depth_mismatch{$result->build_id} = $min_depth;
+                    next BUILD;
+                }
+                
                 my $min_depth_node = $model_node->addChild( $xml_doc->createElement('minimum_depth') );
                 $min_depth_node->addChild( $xml_doc->createAttribute('value',$min_depth) );
                 for my $key (keys %{$coverage_stats_summary_hash_ref->{0}->{$min_depth}}) {
@@ -351,6 +357,21 @@ sub get_coverage_summary_node {
                     .  join('&id=', keys %{$model_ids_by_depths->{$depth_grouping}} );
             $group_node->addChild( $xml_doc->createAttribute('url',$url) );
         }
+    }
+
+    # different things have gone wrong: some builds contain data for depths not expected by the processing profile
+    if (keys %builds_with_depth_mismatch > 0) {
+        my $error = "ERROR: Could not render coverage charts and tables, as some builds in this set provided spurrious data for depths not indicated by their processing profile (expecting depths " . join(', ', @min_depths) . ").";
+        $cs_node = $self->get_error_node($error);
+
+        my $builds_node = $cs_node->addChild( $xml_doc->createElement('erroneous_builds') );
+        $builds_node->addChild( $xml_doc->createAttribute('expected_depths', join(',', @min_depths)) );
+        for my $build_id (keys %builds_with_depth_mismatch) {
+            my $build_node = $builds_node->addChild( $xml_doc->createElement('build') );
+            $build_node->addChild( $xml_doc->createAttribute('id',$build_id) );
+            $build_node->addChild( $xml_doc->createAttribute('unexpected_depth', $builds_with_depth_mismatch{$build_id}) );
+        }
+
     }
 
     return $cs_node;

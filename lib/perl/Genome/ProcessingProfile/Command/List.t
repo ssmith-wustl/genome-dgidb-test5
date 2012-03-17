@@ -3,13 +3,19 @@
 use strict;
 use warnings;
 use above 'Genome';
-use Test::More tests => 3;
+use Test::More tests => 1;
 
-my $test_class = 'Genome::ProcessingProfile::Command::List';
-use_ok($test_class);
+class Genome::Model::TestPipeLine {
+    is => 'Genome::Model'
+};
 
-my $expect = Genome::ProcessingProfile::Command::List::TestPipeline->create();
-ok($expect, "made a command to list cases of the test pipeline");
+my $dir = $INC{"Genome.pm"};
+use File::Basename;
+$dir = dirname($dir);
+chdir $dir;
 
-ok($expect->execute(), "list executes");
+my $exit_code = system "genome processing-profile list small-rna 2>/dev/null 1>/dev/null";
+$exit_code /= 256;
+is($exit_code, 0, "list for the small-rna processing profiles works");
+
 

@@ -191,7 +191,7 @@ sub successful_create_model {
 
     for my $param ($pp->params) {
         my $accessor = $param->name;
-        my $value = $param->value;
+        my $value = $pp->$accessor;
         if ($accessor eq 'read_aligner_name' && $value =~ /^maq/) {
             $value = 'maq';
         }

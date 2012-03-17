@@ -67,25 +67,25 @@
           <xsl:otherwise>
             0
           </xsl:otherwise>
-        </xsl:choose>,
+          </xsl:choose>,
 
-        "duplicate_off_target_aligned_bp": <xsl:choose>
-        <xsl:when test="duplicate_off_target_aligned_bp">
-          <xsl:value-of select="duplicate_off_target_aligned_bp"/>
-        </xsl:when>
-        <xsl:otherwise>
-          0
-        </xsl:otherwise>
-        </xsl:choose>,
+          "duplicate_off_target_aligned_bp": <xsl:choose>
+          <xsl:when test="duplicate_off_target_aligned_bp">
+            <xsl:value-of select="duplicate_off_target_aligned_bp"/>
+          </xsl:when>
+          <xsl:otherwise>
+            0
+          </xsl:otherwise>
+          </xsl:choose>,
 
-        "duplicate_target_aligned_bp": <xsl:choose>
-        <xsl:when test="duplicate_target_aligned_bp">
-        <xsl:value-of select="duplicate_target_aligned_bp"/>
-        </xsl:when>
-        <xsl:otherwise>
-          0
-        </xsl:otherwise>
-        </xsl:choose>,
+          "duplicate_target_aligned_bp": <xsl:choose>
+          <xsl:when test="duplicate_target_aligned_bp">
+            <xsl:value-of select="duplicate_target_aligned_bp"/>
+          </xsl:when>
+          <xsl:otherwise>
+            0
+          </xsl:otherwise>
+          </xsl:choose>,
           <xsl:choose>
             <!-- if we have wingspan 500 data, we'll want to show both off target and wingspan 500 off target -->
             <xsl:when test="$wingspan_500 &gt; 0">
@@ -137,9 +137,9 @@
         "subject_name": "<xsl:value-of select="@subject_name"/>",
         "model_name": "<xsl:value-of select="@model_name"/>",
         "enrichment_factors": {
-          "unique_on_target": <xsl:value-of select="unique_on_target_enrichment_factor"/>,
-          "total_on_target": <xsl:value-of select="total_on_target_enrichment_factor"/>,
-          "theoretical_max": <xsl:value-of select="theoretical_max_enrichment_factor"/>
+        "unique_on_target": <xsl:value-of select="unique_on_target_enrichment_factor"/>,
+        "total_on_target": <xsl:value-of select="total_on_target_enrichment_factor"/>,
+        "theoretical_max": <xsl:value-of select="theoretical_max_enrichment_factor"/>
         }
         }<xsl:if test="position() != last()"><xsl:text>,</xsl:text></xsl:if>
       </xsl:for-each>
@@ -161,48 +161,53 @@
     <div class="content rounded shadow">
       <div class="container">
         <div class="span-11">
-<!-- JTAL: THERE IS A PROBLEM HERE WITH A DIV
-http://linus221:8090/view/genome/model-group/coverage.html?id=16646
--->
+          <!-- JTAL: THERE IS A PROBLEM HERE WITH A DIV
+               http://linus221:8090/view/genome/model-group/coverage.html?id=16646
+          -->
 
-        <xsl:variable name="coverage_error" select="/object/coverage-summary/@error"/>
-        <xsl:choose>
-        <xsl:when test="$coverage_error">
-          <div class="box_header rounded-top span-11 last">
-            <div class="box_title" style="position: relative">
-				  <h3 class="nontyped">coverage</h3>
-	    </div>
-          </div>
-          <div class="box_content rounded-bottom span-11 last">
-            <div id="coverage-error" style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
-                <xsl:value-of select="$coverage_error" />
-                <xsl:for-each select="/object[1]/coverage-summary[1]/depth_group">
-                    <br/>
-                    <a><xsl:attribute name="href"><xsl:value-of select="@url"/></xsl:attribute>View graph</a>
-                        for models with coverage stats depths: <xsl:value-of select="@description"/>
-                </xsl:for-each>
-            </div>
-          </div>
+          <xsl:variable name="coverage_error" select="/object/coverage-summary/@error"/>
+          <xsl:choose>
+            <xsl:when test="$coverage_error">
+              <div class="box_header rounded-top span-11 last">
+                <div class="box_title" style="position: relative">
+                  <h3 class="nontyped">coverage</h3>
+                </div>
+              </div>
+              <div class="box_content rounded-bottom span-11 last">
+                <div id="coverage-error" style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
+                  <strong><xsl:value-of select="$coverage_error" /></strong>
+                  <p>
+                    <xsl:for-each select="/object[1]/coverage-summary[1]/depth_group">
+                      <br/>
+                      <a><xsl:attribute name="href"><xsl:value-of select="@url"/></xsl:attribute>View graph</a>
+                      for models with coverage stats depths: <xsl:value-of select="@description"/>
+                    </xsl:for-each>
+                    <xsl:for-each select="/object[1]/coverage-summary[1]/erroneous_builds/build">
+                      <strong>Build: </strong> <xsl:value-of select="@id"/>; <strong>Unexpected Depth: </strong> <xsl:value-of select="@unexpected_depth"/><br/>
+                    </xsl:for-each>
+                  </p>
+                </div>
+              </div>
 
-        </xsl:when>
-        <xsl:otherwise>
-          <div class="box_header rounded-top span-11 last">
-            <div class="box_title" style="position: relative">
-				  <h3 class="nontyped">coverage</h3>
-				  <div class="color_controls">
-					 <span>color scheme:</span>
-					 <input name="scheme_select" value="analogous" id="analogous" type="radio" onchange="coverage_vis.render()" checked="checked"/><label for="analogous">analogous</label>
-					 <input name="scheme_select" value="complementary" id="complementary" type="radio" onchange="coverage_vis.render()"/><label for="complementary">complementary</label>
-				  </div>
-            </div>
-          </div>
-          <div class="box_content rounded-bottom span-11 last">
-            <div id="coverage" style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
-				  <script type="text/javascript" src="/res/js/app/genome_model_coverage_chart.js"></script>
-            </div>
-          </div>
-        </xsl:otherwise>
-        </xsl:choose>
+            </xsl:when>
+            <xsl:otherwise>
+              <div class="box_header rounded-top span-11 last">
+                <div class="box_title" style="position: relative">
+                  <h3 class="nontyped">coverage</h3>
+                  <div class="color_controls">
+                    <span>color scheme:</span>
+                    <input name="scheme_select" value="analogous" id="analogous" type="radio" onchange="coverage_vis.render()" checked="checked"/><label for="analogous">analogous</label>
+                    <input name="scheme_select" value="complementary" id="complementary" type="radio" onchange="coverage_vis.render()"/><label for="complementary">complementary</label>
+                  </div>
+                </div>
+              </div>
+              <div class="box_content rounded-bottom span-11 last">
+                <div id="coverage" style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
+                  <script type="text/javascript" src="/res/js/app/genome_model_coverage_chart.js"></script>
+                </div>
+              </div>
+            </xsl:otherwise>
+          </xsl:choose>
 
         </div> <!-- span-11 -->
         <div class="span-8">
@@ -218,7 +223,7 @@ http://linus221:8090/view/genome/model-group/coverage.html?id=16646
           </div>
         </div>
 
-        
+
 
         <div class="span-5 last">
           <div class="box_header span-5 last rounded-top">
@@ -301,6 +306,11 @@ http://linus221:8090/view/genome/model-group/coverage.html?id=16646
                   <th class="right">
                     <xsl:value-of select="@value"/>X
                   </th>
+                  <xsl:if test="@value = 1">
+                    <th>
+                      <span class="small" style="line-height: 10px">mean depth</span>
+                    </th>
+                  </xsl:if>
                 </xsl:for-each>
               </tr>
             </thead>
@@ -311,6 +321,7 @@ http://linus221:8090/view/genome/model-group/coverage.html?id=16646
                 <tr>
                   <td>
                     <xsl:attribute name="title"><xsl:value-of select="../@subject_name"/></xsl:attribute>
+
                     <xsl:if test="@result_id">
                       <xsl:call-template name="object_link_button_tiny">
                         <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
@@ -320,6 +331,7 @@ http://linus221:8090/view/genome/model-group/coverage.html?id=16646
                       </xsl:call-template>
                       <xsl:text> </xsl:text>
                     </xsl:if>
+
                     <xsl:value-of select="@model_name"/> (<xsl:value-of select="@lane_count"/> lane<xsl:if test="@lane_count &gt; 1">s</xsl:if>)
                   </td>
                   <xsl:for-each select="minimum_depth">
@@ -327,6 +339,11 @@ http://linus221:8090/view/genome/model-group/coverage.html?id=16646
                     <td class="right">
                       <xsl:value-of select="pc_target_space_covered"/>%
                     </td>
+                    <xsl:if test="@value = 1">
+                      <td>
+                        <span class="small"><xsl:value-of select="mean_depth"/></span>
+                      </td>
+                    </xsl:if>
                   </xsl:for-each>
                 </tr>
               </xsl:for-each>

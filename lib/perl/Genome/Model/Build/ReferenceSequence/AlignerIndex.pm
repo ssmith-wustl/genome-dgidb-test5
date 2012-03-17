@@ -211,9 +211,9 @@ sub _prepare_reference_index {
 
     my $reference_fasta_file;
     if ($self->_supports_multiple_reference) {
-        $reference_fasta_file = $self->reference_build->primary_consensus_path('fa', allow_cached => 0);
+        $reference_fasta_file = $self->reference_build->primary_consensus_path('fa');
     } else {
-        $reference_fasta_file = $self->reference_build->full_consensus_path('fa', allow_cached => 0);
+        $reference_fasta_file = $self->reference_build->full_consensus_path('fa');
     }
 
     unless (-s $reference_fasta_file) {
@@ -238,6 +238,8 @@ sub _prepare_reference_index {
         $self->error_message("Failed to de-stage data into output path " . $self->output_dir);
         return;
     }
+
+    $self->_reallocate_disk_allocation;
 
     $self->status_message("Prepared alignment reference index!");
 

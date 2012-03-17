@@ -45,6 +45,7 @@ sub new {
         return;
     }
     $self->{_build} = $build;
+    $self->{_reference_build_id} = $build->reference_sequence_id;
 
     my @custom_domains =();
     if(defined($arg{custom_domains})) {
@@ -114,7 +115,7 @@ sub Annotation {
             my $transcript;
             my @features;
             for my $data_directory ($build->determine_data_directory){
-                $transcript = Genome::Transcript->get(data_directory => $data_directory, transcript_name => $transcript_name);
+                $transcript = Genome::Transcript->get(data_directory => $data_directory, transcript_name => $transcript_name, reference_build_id => $self->{_reference_build_id});
                 next unless $transcript;
                 my @transcript_features = Genome::InterproResult->get(data_directory => $data_directory, transcript_name => $transcript_name, chrom_name => $transcript->chrom_name);
                 @features = (@features, @transcript_features);
@@ -163,7 +164,7 @@ sub get_protein_length{
     my $build = $self->{_build};
     my $transcript;
     for my $dir ($build->determine_data_directory){
-        $transcript = Genome::Transcript->get(data_directory => $dir, transcript_name => $transcript_name);
+        $transcript = Genome::Transcript->get(data_directory => $dir, transcript_name => $transcript_name, reference_build_id => $self->{_reference_build_id});
         last if $transcript;
     }
     return 0 unless $transcript;
@@ -182,6 +183,10 @@ sub MakeDiagrams {
     my $basename = $self->{_basename};
     foreach my $hugo (keys %{$data}) {
         foreach my $transcript (keys %{$data->{$hugo}}) {
+            unless($self->{_data}{$hugo}{$transcript}{length}) {
+                warn "$transcript has no protein length and is likely non-coding. Skipping...\n";
+                next;
+            }
             my $svg_file = $basename . $hugo . '_' . $transcript . '.svg';
             my $svg_fh = new FileHandle;
             unless ($svg_fh->open (">$svg_file")) {
@@ -201,13 +206,14 @@ sub MakeDiagrams {
 
 sub Draw {
     my ($self, $svg_fh, $hugo, $transcript, $length, $domains, $mutations) = @_;
-
+    $DB::single = 1;
     my $document = Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram::View->new(width=>'800',height=>'600',
         'viewport' => {x => 0, y => 0,
-            width => 800,
-            height => 600},
+            width => 1600,
+            height => 1200},
         left_margin => 50,
-        right_margin => 50,);
+        right_margin => 50,
+        id => "main_document");
     my $svg = $document->svg;
 
     my $backbone = Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram::Backbone->new(parent => $document,
@@ -217,6 +223,7 @@ sub Draw {
         =>
         50,
         style => {fill => 'none', stroke => 'black'},
+        id => "protein_diagram",
         $document->content_view);
     $backbone->draw;
 

@@ -44,7 +44,7 @@ class Genome::Project {
             doc => 'All the parts that compose this project',
         },
         creator => {
-            is => 'Genome::Sys::Username',
+            is => 'Genome::Sys::User',
             is_calculated => 1,
             calculate_from => ['parts'],
             calculate => sub {
@@ -108,7 +108,18 @@ sub create {
     return $self;
 }
 
-sub __display_name {
+sub get_part {
+    my ($self, $obj) = @_;
+
+    my @parts = Genome::ProjectPart->get(
+        entity_class_name => $obj->class,
+        entity_id => $obj->id
+    );
+
+    return @parts;
+}
+
+sub __display_name__ {
     my $self = shift;
     return $self->name."(".$self->id.")";
 }
@@ -170,6 +181,7 @@ sub delete {
 
     return $self->SUPER::delete();
 }
+
 
 
 1;

@@ -17,13 +17,17 @@ class Genome::Model::RnaSeq::Command::PicardRnaSeqMetrics {
             is_optional => 1,
             is_input => 1,
         },
-        build => { is => 'Genome::Model::Build::RnaSeq', id_by => 'build_id', },
+        build => { is => 'Genome::Model::Build', id_by => 'build_id', },
     ],
     has_param => [
         lsf_resource => { default_value => $DEFAULT_LSF_RESOURCE },
     ],
+    doc => 'generate metrics on pipeline results' 
 };
 
+sub sub_command_category { 'pipeline' }
+
+sub sub_command_sort_position { 5 }
 
 sub execute {
     my $self = shift;
@@ -108,6 +112,14 @@ sub execute {
         chart_output => $self->build->picard_rna_seq_chart,
     )) {
         $self->error_message('Failed to run Picard CollectRnaSeqMetrics for build: '. $self->build_id);
+        return;
+    }
+    unless (Genome::Model::Tools::Picard::PlotRnaSeqMetrics->execute(
+        input_file => $self->build->picard_rna_seq_metrics,
+        output_file => $self->build->picard_rna_seq_pie_chart,
+        label => $self->build->model->subject_name .' '. $self->build_id,
+    )) {
+        $self->error_message('Failed to run PlotRnaSeqMetrics for build: '. $self->build_id);
         return;
     }
     unless ($self->_save_metrics) {

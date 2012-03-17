@@ -27,6 +27,11 @@ class Genome::ModelGroup {
         model_count => {
             calculate => q| my @models = $self->models; return scalar @models; |,
         },
+        instrument_data => {
+             via => 'models',
+             to => 'instrument_data',
+             doc => 'Instrument data assigned to models of this group.',
+         },
         convergence_model   => { is => 'Genome::Model::Convergence',
                                     is_many     => 1, # We really should only have 1 here, however reverse_as requires this
                                     reverse_as  => 'group',
@@ -106,7 +111,7 @@ sub rename {
 
     my @model_groups = Genome::ModelGroup->get(name => $new_name);
     if ( @model_groups ) {
-        $self->error_message("Failed to rename model group (".$self->id.") from ".$self->name." to $new_name because one the nwe name already exists.");
+        $self->error_message("Failed to rename model group (".$self->id.") from ".$self->name." to $new_name because one the new name already exists.");
         return;
     }
 

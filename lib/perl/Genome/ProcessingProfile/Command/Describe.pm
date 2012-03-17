@@ -38,6 +38,9 @@ sub execute {
 
         for my $param ( sort { $a cmp $b } $pp->params_for_class ) {
             my $value = $pp->$param;
+            if (Scalar::Util::blessed($value)) {
+                $value = $value->__display_name__;
+            }
             printf(
                 "%s: %s\n",
                 $param,

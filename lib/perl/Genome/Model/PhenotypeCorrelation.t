@@ -16,7 +16,7 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
-    plan  tests => 16;
+    plan  tests => 18;
 }
 
 my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-PhenotypeCorrelation/2011-12-30.3/";
@@ -80,6 +80,9 @@ ok($p2, "created a processing profile for samtools") or diag(Genome::ProcessingP
 my $roi_list = Genome::FeatureList->get('3fd525e8de924f87862312cf4f2fc9dd');
 my $refseq = Genome::Model::Build->get(101947881);
 
+my $nom = Genome::Nomenclature->get( name => 'ASMS residuals' );
+ok($nom,'using a real nomenclature for our test (this should turn out well)');
+
 for my $p ($p1) {
 
     my $m = $p->add_model(
@@ -90,6 +93,7 @@ for my $p ($p1) {
     ok($m, "created a model") or diag(Genome::Model->error_message);
 
     ok($m->reference_sequence_build($refseq), "set the reference sequence");
+    ok($m->nomenclature($nom),'set nomenclature');
     ok($m->roi_list($roi_list), "set the roi_list");
 
     my @instrument_data_assigned;

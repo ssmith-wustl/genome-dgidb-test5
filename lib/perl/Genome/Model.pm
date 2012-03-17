@@ -22,8 +22,9 @@ class Genome::Model {
     ],
     has => [
         name => { is => 'Text' },
-        subclass_name => { 
-            is => 'VARCHAR2',is_mutable => 0, column_name => 'SUBCLASS_NAME',
+        type_name => { is => 'Text', via => 'processing_profile' },
+        subclass_name => {
+            is => 'Text',is_mutable => 0, column_name => 'SUBCLASS_NAME',
             calculate_from => 'processing_profile_id',
             calculate => sub {
                 my $pp_id = shift;
@@ -35,18 +36,18 @@ class Genome::Model {
                 return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($pp->type_name);
             },
         },
-        subject => { 
+        subject => {
             is => 'Genome::Subject',
             id_by => 'subject_id',
         },
-        # FIXME This can be removed once the subject_class_name column is dropped. 
+        # FIXME This can be removed once the subject_class_name column is dropped.
         subject_class_name => {
             is => 'Text',
             is_optional => 1,
         },
-        processing_profile => { 
-            is => 'Genome::ProcessingProfile', 
-            id_by => 'processing_profile_id' 
+        processing_profile => {
+            is => 'Genome::ProcessingProfile',
+            id_by => 'processing_profile_id'
         },
     ],
     has_optional => [
@@ -63,15 +64,15 @@ class Genome::Model {
         build_requested => { is => 'Boolean'},
     ],
     has_optional_many => [
-        builds  => { 
-            is => 'Genome::Model::Build', 
+        builds  => {
+            is => 'Genome::Model::Build',
             reverse_as => 'model',
-            doc => 'Versions of a model over time, with varying quantities of evidence' 
+            doc => 'Versions of a model over time, with varying quantities of evidence'
         },
-        inputs => { 
-            is => 'Genome::Model::Input', 
+        inputs => {
+            is => 'Genome::Model::Input',
             reverse_as => 'model',
-            doc => 'links to data currently assigned to the model for processing' 
+            doc => 'links to data currently assigned to the model for processing'
         },
         instrument_data => {
             is => 'Genome::InstrumentData',
@@ -81,35 +82,43 @@ class Genome::Model {
             where => [ name => 'instrument_data' ],
             doc => 'Instrument data currently assigned to the model.'
         },
-        projects => { 
-            is => 'Genome::Project', 
-            via => 'project_parts', 
-            to => 'project', 
-            is_many => 1, 
-            is_mutable => 1, 
-            doc => 'Projects that include this model', 
+        projects => {
+            is => 'Genome::Project',
+            via => 'project_parts',
+            to => 'project',
+            is_many => 1,
+            is_mutable => 1,
+            doc => 'Projects that include this model',
         },
-        project_parts => { 
-            is => 'Genome::ProjectPart', 
-            reverse_as => 'entity', 
-            is_many => 1, 
-            is_mutable => 1, 
+        project_parts => {
+            is => 'Genome::ProjectPart',
+            reverse_as => 'entity',
+            is_many => 1,
+            is_mutable => 1,
         },
-        model_groups => { 
-            is => 'Genome::ModelGroup', 
-            via => 'model_bridges', 
+        model_groups => {
+            is => 'Genome::ModelGroup',
+            via => 'model_bridges',
             to => 'model_group',
             is_mutable => 1
         },
-        model_bridges => { 
-            is => 'Genome::ModelGroupBridge', 
-            reverse_as => 'model' 
+        model_bridges => {
+            is => 'Genome::ModelGroupBridge',
+            reverse_as => 'model'
         },
-    ],    
+    ],
+    has_optional_deprecated => [
+        auto_assign_inst_data => {
+            is => 'Boolean',
+        },
+        auto_build_alignments => {
+            is => 'Boolean',
+        },
+    ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
     table_name => 'GENOME_MODEL',
-    doc => 'a versioned data model describing one the sequence and features of a genome' 
+    doc => 'a versioned data model describing one the sequence and features of a genome'
 };
 
 # Override in subclasses to have additional stuff appended to the model's default name
@@ -135,8 +144,8 @@ sub _input_counts_are_ok {
     return ($input_count == $build_input_count);
 }
 
-# Override in subclasses for custom behavior. Updates the model as necessary prior to starting a 
-# build. Useful for ensuring that the build is incorporating all of the latest information. 
+# Override in subclasses for custom behavior. Updates the model as necessary prior to starting a
+# build. Useful for ensuring that the build is incorporating all of the latest information.
 # TODO Make sure this is necessary, could be removed
 sub check_for_updates {
     return 1;
@@ -150,6 +159,11 @@ sub _resolve_subject {
 # Override in subclasses, should figure out an appropriate processing profile for the model and return it
 sub _resolve_processing_profile {
     return;
+}
+
+# Set to true in subclasses if downstream triggering of builds should be enabled
+sub _should_trigger_downstream_builds {
+    return 0;
 }
 
 # Default string to be displayed, can be overridden in subclasses
@@ -169,12 +183,12 @@ sub create {
     }
     my $self = $class->SUPER::create(@_);
 
+    $self->user_name(Genome::Sys->username) unless $self->user_name;
+    $self->creation_date(UR::Context->now);
+
     $self->_validate_processing_profile;
     $self->_validate_subject;
     $self->_validate_name;
-
-    $self->user_name(Genome::Sys->username) unless $self->user_name;
-    $self->creation_date(UR::Context->now);
 
     $self->_verify_no_other_models_with_same_name_and_type_exist;
 
@@ -187,7 +201,6 @@ sub create {
     return $self;
 }
 
-
 # Delete the model and all of its builds/inputs
 sub delete {
     my $self = shift;
@@ -199,7 +212,7 @@ sub delete {
         $self->debug_message("Deleting model input " . $input->__display_name__);
         my $rv = $input->delete;
         unless ($rv) {
-            Carp::confess $self->error_message("Could not delete model input " . $input->__display_name__ . 
+            Carp::confess $self->error_message("Could not delete model input " . $input->__display_name__ .
                 " prior to deleting model " . $self->__display_name__);
         }
     }
@@ -216,33 +229,36 @@ sub delete {
     return $self->SUPER::delete;
 }
 
+# Returns a list of models for which this model is an input
+sub to_models {
+    my $self = shift;
+    my @inputs = Genome::Model::Input->get(value => $self);
+    return map { $_->model } @inputs;
+}
+
+# Returns a list of models that this model uses as inputs
+sub from_models {
+    my $self = shift;
+    my @inputs = grep { $_->value_class_name->isa('Genome::Model') } $self->inputs;
+    return map { $_->value } @inputs;
+}
+
 # Returns a list of builds (all statuses) sorted from oldest to newest
 sub sorted_builds {
-    my $self = shift;
-    my @builds = $self->builds;
-    return sort { $a->date_scheduled cmp $b->date_scheduled } @builds;
+    return shift->builds(-order_by => 'date_scheduled');
 }
 
 # Returns a list of succeeded builds sorted from oldest to newest
 sub succeeded_builds { return $_[0]->completed_builds; }
 sub completed_builds {
-    my $self = shift;
-    my @completed_builds = grep { 
-        defined $_->status and 
-        $_->status eq 'Succeeded' and
-        $_->date_completed
-    } $self->sorted_builds;
-    return @completed_builds;
+    return shift->builds(status => 'Succeeded', -order_by => 'date_scheduled');
 }
 
 # Returns the latest build of the model, regardless of status
 sub latest_build {
     my $self = shift;
     my @builds = $self->sorted_builds;
-    if (@builds) {
-        return $builds[-1];
-    }
-    return;
+    return pop @builds;
 }
 
 # Returns the latest build of the model that successfully completed
@@ -251,10 +267,7 @@ sub last_complete_build { return $_[0]->resolve_last_complete_build; }
 sub resolve_last_complete_build {
     my $self = shift;
     my @completed_builds = $self->completed_builds;
-    if (@completed_builds) {
-        return $completed_builds[-1];
-    }
-    return;
+    return pop @completed_builds;
 }
 
 # Returns a list of builds with the specified status sorted from oldest to newest
@@ -265,10 +278,10 @@ sub builds_with_status {
         $_->status eq $status
     } $self->sorted_builds;
 }
-    
+
 # Overriding build_requested to add a note to the model with information about who requested a build
 sub build_requested {
-    my ($self, $value, $reason) = @_; 
+    my ($self, $value, $reason) = @_;
     # Writing the if like this allows someone to do build_requested(undef)
     if (@_ > 1) {
         my ($calling_package, $calling_subroutine) = (caller(1))[0,3];
@@ -296,6 +309,8 @@ sub current_build {
     }
     return;
 }
+# Just so current_build_id can be "easily" shown in listers.
+sub current_build_id { shift->current_build->id }
 
 # Returns true if no non-abandoned build is found that has inputs that match the current state of the model
 sub build_needed {
@@ -389,7 +404,7 @@ sub copy {
 
 sub params_for_class {
     my $meta = shift->class->__meta__;
-    
+
     my @param_names = map {
         $_->property_name
     } sort {
@@ -397,8 +412,40 @@ sub params_for_class {
     } grep {
         defined $_->{is_param} && $_->{is_param}
     } $meta->property_metas;
-    
+
     return @param_names;
+}
+
+# Called when a build of this model succeeds, requests builds for "downstream" models
+# (eg, models that have this model as an input)
+sub _trigger_downstream_builds {
+    my ($self, $build) = @_;
+    return 1 unless $self->_should_trigger_downstream_builds;
+
+    # TODO The observer has to go on build events because that's where build status is 
+    # currently stored. Once the status is stored directly on the build itself, the
+    # subject_class_name below should be changed to Genome::Model::Build, which should
+    # simplify any callbacks as well (since they wouldn't have to check if they are
+    # the master event of the build prior to doing anything).
+    my @observers = UR::Observer->get(
+        subject_class_name => 'Genome::Model::Event::Build',
+        aspect => 'event_status',
+        note => 'build_success',
+    );
+
+    # Only perform this default behavior if no observers for build_success exist for this type
+    unless (@observers) {
+        my @to_models = $self->to_models;
+        for my $model (@to_models) {
+            $model->build_requested(
+                1,
+                'build requested due to successful build ' . $build->id .
+                    ' of input model ' . $self->__display_name__
+            );
+        }
+    }
+
+    return 1;
 }
 
 # Ensures that processing profile is set. If not, an attempt is made to resolve one before exiting
@@ -451,14 +498,13 @@ sub _validate_name {
 
 # TODO This method should return a generic default model name and be overridden in subclasses.
 sub default_model_name {
-    $DB::single = 1;
     my ($self, %params) = @_;
 
     my $auto_increment = delete $params{auto_increment};
     $auto_increment = 1 unless defined $auto_increment;
 
-    my $name_template = ($self->subject_name).'.';
-    $name_template .= 'prod-' if ($self->user_name eq 'apipe-builder' || $params{prod});
+    my $name_template = ($self->subject->name).'.';
+    $name_template .= 'prod-' if (($self->user_name && $self->user_name eq 'apipe-builder') || $params{prod});
 
     my $type_name = $self->processing_profile->type_name;
     my %short_names = (
@@ -486,7 +532,7 @@ sub default_model_name {
 
     my $name = sprintf($name_template, '', '');
     my $cnt = 0;
-    while ( $auto_increment && Genome::Model->get(name => $name) ) {
+    while ( $auto_increment && scalar @{[Genome::Model->get(name => $name)]} ) {
         $name = sprintf($name_template, '-', ++$cnt);
     }
 
@@ -509,7 +555,7 @@ sub _verify_no_other_models_with_same_name_and_type_exist {
             $message .= sprintf(
                 "Name: %s\nSubject Name: %s\nId: %s\nProcessing Profile Id: %s\nSubclass: %s\n\n",
                 $model->name,
-                $model->subject_name,
+                $model->subject->name,
                 $model->id,
                 $model->processing_profile_id,
                 $model->subclass_name,
@@ -537,7 +583,7 @@ sub _preprocess_subclass_description {
         next if $prop_desc->{via};
         next if $prop_desc->{reverse_as};
         next if $prop_desc->{implied_by};
-        
+
         if ($prop_desc->{is_param} and $prop_desc->{is_input}) {
             die "class $class has is_param and is_input on the same property! $prop_name";
         }
@@ -561,7 +607,7 @@ sub _preprocess_subclass_description {
                 property_name => $assoc,
                 implied_by => $prop_name,
                 is => 'Genome::Model::Input',
-                reverse_as => 'model', 
+                reverse_as => 'model',
                 where => [ name => $prop_name ],
                 is_mutable => $prop_desc->{is_mutable},
                 is_optional => $prop_desc->{is_optional},
@@ -572,7 +618,7 @@ sub _preprocess_subclass_description {
             # If we do duplicate the code below for value_id
 
             %$prop_desc = (%$prop_desc,
-                via => $assoc, 
+                via => $assoc,
                 to => 'value',
             );
         }
@@ -581,20 +627,21 @@ sub _preprocess_subclass_description {
     my ($ext) = ($desc->{class_name} =~ /Genome::Model::(.*)/);
     return $desc unless $ext;
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
-    
-    my $pp_data = $desc->{has}{processing_profile} = {};
-    $pp_data->{data_type} = $pp_subclass_name;
-    $pp_data->{id_by} = ['processing_profile_id'];
 
-    $pp_data = $desc->{has}{processing_profile_id} = {};
-    $pp_data->{data_type} = 'Number';
+    unless ($desc->{has}{processing_profile}) {
+        my $pp_data = $desc->{has}{processing_profile} = {};
+        $pp_data->{data_type} = $pp_subclass_name;
+        $pp_data->{id_by} = ['processing_profile_id'];
+
+        $pp_data = $desc->{has}{processing_profile_id} = {};
+        $pp_data->{data_type} = 'Number';
+    }
 
     return $desc;
 }
 
 my $depth = 0;
 sub __extend_namespace__ {
-    # auto generate sub-classes for any valid processing profile
     my ($self,$ext) = @_;
 
     my $meta = $self->SUPER::__extend_namespace__($ext);
@@ -608,6 +655,14 @@ sub __extend_namespace__ {
         return;
     }
 
+    # If the command class for the model sub type cannot be found, this will create it
+    if ( $ext eq 'Command' ) {
+        my $create_command_tree = $self->_create_command_tree;
+        Carp::confess('Failed to create command tree for '.$self->class.'!') if not $create_command_tree;
+    }
+
+    # make a model subclass if the processing profile exists
+    # this is deprecated: instead we go the other way and infer the profile from the model
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
     my $pp_subclass_meta = UR::Object::Type->get($pp_subclass_name);
     if ($pp_subclass_meta and $pp_subclass_name->isa('Genome::ProcessingProfile')) {
@@ -627,6 +682,29 @@ sub __extend_namespace__ {
     }
     $depth--;
     return;
+}
+
+sub _create_command_tree {
+    my $self = shift;
+
+    return 1 if $self->__meta__->is_abstract;
+    my $command_class_name = $self->class.'::Command';
+    my $command_class = eval{ $command_class_name->class; };
+    return 1 if $command_class;
+
+    $self->class =~ /^Genome::Model::(\w[\w\d]+)(::)?/;
+    my $type_name = $1;
+    UR::Object::Type->define(
+        class_name => $command_class_name,
+        is => 'Command::Tree',
+        doc => 'operate on '.Genome::Utility::Text::camel_case_to_string($type_name).' models/builds',
+    );
+
+    no strict;
+    *{$command_class_name.'::sub_command_category'} = sub { return 'type specific' };
+    $command_class = eval{ $command_class_name->class; };
+
+    return $command_class;
 }
 
 1;

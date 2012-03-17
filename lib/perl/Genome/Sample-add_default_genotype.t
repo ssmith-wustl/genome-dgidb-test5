@@ -76,18 +76,21 @@ ok($ref_align_model->build_requested, 'build requested set on ref align model');
 
 done_testing();
 
-sub create_test_taxon {
-    return Genome::Taxon->create(
-        name => 'test taxon',
-        species_name => 'human',
-    );
-}
-
+my $source;
 sub create_test_sample {
-    my $taxon = create_test_taxon();
+    if ( not $source ) {
+        my $taxon = Genome::Taxon->__define__(
+            name => 'test taxon',
+            species_name => 'human',
+        );
+        $source = Genome::Individual->__define__(
+            name => 'text source',
+            taxon => $taxon,
+        );
+    }
     return Genome::Sample->create(
         name => 'test sample',
-        taxon_id => $taxon->id,
+        source => $source,
     );
 }
 

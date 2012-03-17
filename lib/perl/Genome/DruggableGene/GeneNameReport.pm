@@ -24,29 +24,29 @@ class Genome::DruggableGene::GeneNameReport {
             is => 'Text',
             is_optional => 1,
         },
-        gene_name_report_associations => {
-            is => 'Genome::DruggableGene::GeneNameReportAssociation',
+        gene_alt_names => {
+            is => 'Genome::DruggableGene::GeneAlternateNameReport',
             reverse_as => 'gene_name_report',
             is_many => 1,
         },
         alternate_names => {
-            via => 'gene_name_report_associations',
+            via => 'gene_alt_names',
             to => 'alternate_name',
             is_many => 1,
         },
-        gene_name_report_category_associations => {
-            is => 'Genome::DruggableGene::GeneNameReportCategoryAssociation',
+        gene_categories => {
+            is => 'Genome::DruggableGene::GeneCategoryReport',
             reverse_as => 'gene_name_report',
             is_many => 1,
         },
-        drug_gene_interaction_reports => {
+        interactions => {
             is => 'Genome::DruggableGene::DrugGeneInteractionReport',
             reverse_as => 'gene_name_report',
             is_many => 1,
         },
-        drug_name_reports => {
+        drugs => {
             is => 'Genome::DruggableGene::DrugNameReport',
-            via => 'drug_gene_interaction_reports',
+            via => 'interactions',
             to => 'drug_name_report',
             is_many => 1,
         },
@@ -57,19 +57,12 @@ class Genome::DruggableGene::GeneNameReport {
                 return $citation;
             |,
         },
-        _kinase_association => {
-            via => 'gene_name_report_association',
-            to => 'alternate_name',
-            where => ['alternate_name like' => '%kinase%'],
-            is_optional => 1,
-            is_many => 1,
-        },
         is_kinase => {
-            calculate_from => ['_kinase_association'],
-            calculate => q|
-                return 1 if $_kinase_association; return 0;
-            |,
-        }
+            calculate => q{
+                return 1 if grep($_->alternate_name =~ /kinase/, $self->gene_alt_names);
+                return 0;
+            },
+        },
     ],
     doc => 'Claim regarding the name of a drug',
 };
@@ -132,16 +125,9 @@ sub original_data_source_url {
     return $url;
 }
 
-sub convert_to_entrez {
+sub convert_to_entrez  {
     my $class = shift;
     my @gene_identifiers = @_;
-    my ($entrez_gene_name_reports, $intermediate_gene_name_reports) = $class->_convert_to_entrez_gene_name_reports(@gene_identifiers);
-    return ($entrez_gene_name_reports, $intermediate_gene_name_reports);
-}
-
-sub _convert_to_entrez_gene_name_reports {
-    my $class = shift;
-    my @gene_identifiers = shift;
     my ($entrez_gene_symbol_matches, $entrez_id_matches, $ensembl_id_matches, $uniprot_id_matches);
     my $intermediate_gene_name_reports;
 
@@ -163,7 +149,7 @@ sub _convert_to_entrez_gene_name_reports {
 
     my $merged_conversion_results = $class->_merge_conversion_results($entrez_gene_symbol_matches, $entrez_id_matches, $ensembl_id_matches, $uniprot_id_matches);
 
-    return $merged_conversion_results, $intermediate_gene_name_reports;
+    return $merged_conversion_results, $intermediate_gene_name_reports, @gene_identifiers;
 }
 
 sub _match_as_entrez_gene_symbol {
@@ -172,10 +158,10 @@ sub _match_as_entrez_gene_symbol {
     my %matched_identifiers;
     my @unmatched_identifiers;
 
-    my @entrez_gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get(nomenclature => ['entrez_gene_symbol', 'entrez_gene_synonym'], alternate_name => \@gene_identifiers);
-    return {}, @gene_identifiers unless @entrez_gene_name_report_associations;
+    my @entrez_gene_alt_names = Genome::DruggableGene::GeneAlternateNameReport->get(nomenclature => ['entrez_gene_symbol', 'entrez_gene_synonym'], alternate_name => \@gene_identifiers);
+    return {}, @gene_identifiers unless @entrez_gene_alt_names;
     for my $gene_identifier(@gene_identifiers){
-        my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @entrez_gene_name_report_associations);
+        my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @entrez_gene_alt_names);
         if(@associations_for_identifier){
             my @gene_name_reports_for_identifier = map($_->gene_name_report, @associations_for_identifier);
             @gene_name_reports_for_identifier = uniq @gene_name_reports_for_identifier;
@@ -222,7 +208,7 @@ sub _match_as_ensembl_id {
             push @unmatched_identifiers, $gene_identifier;
             next;
         }
-        my @temporary_identifiers = (map($_->name, @reports_for_identifier), map($_->alternate_name, map($_->gene_name_report_associations, @reports_for_identifier)));
+        my @temporary_identifiers = (map($_->name, @reports_for_identifier), map($_->alternate_name, map($_->gene_alt_names, @reports_for_identifier)));
         my ($matched_temporary_identifiers) = $class->_match_as_entrez_gene_symbol(@temporary_identifiers);
         my @complete_reports_for_identifier = map(@{$matched_temporary_identifiers->{$_}}, keys %$matched_temporary_identifiers);
         if(@complete_reports_for_identifier){
@@ -242,7 +228,7 @@ sub _match_as_uniprot_id {
     my %intermediate_results_for_identifiers;
     my @unmatched_identifiers;
 
-    my @uniprot_associations = Genome::DruggableGene::GeneNameReportAssociation->get(nomenclature => 'uniprot_id', alternate_name => @gene_identifiers);
+    my @uniprot_associations = Genome::DruggableGene::GeneAlternateNameReport->get(nomenclature => 'uniprot_id', alternate_name => [@gene_identifiers]);
     for my $gene_identifier(@gene_identifiers){
         my @associations_for_identifier = grep($_->alternate_name => @uniprot_associations);
         unless(@associations_for_identifier){
@@ -252,7 +238,7 @@ sub _match_as_uniprot_id {
         my @uniprot_reports_for_identifier = map($_->gene_name_report, @associations_for_identifier);
         @uniprot_reports_for_identifier = uniq @uniprot_reports_for_identifier;
         $intermediate_results_for_identifiers{$gene_identifier} = \@uniprot_reports_for_identifier;
-        my @temporary_identifiers = ( map($_->name, @uniprot_reports_for_identifier), map($_->alternate_name, grep($_->nomenclature ne 'uniprot_id', map($_->gene_name_report_associations, @uniprot_reports_for_identifier))) );
+        my @temporary_identifiers = ( (map{$_->name}@uniprot_reports_for_identifier), map{$_->alternate_name} grep{$_->nomenclature ne 'uniprot_id'} map{$_->gene_alt_names} @uniprot_reports_for_identifier);
         my ($matched_temporary_identifiers) = $class->_match_as_entrez_gene_symbol(@temporary_identifiers);
         my @complete_reports_for_identifier = map(@{$matched_temporary_identifiers->{$_}}, keys %$matched_temporary_identifiers);
         @complete_reports_for_identifier = uniq @complete_reports_for_identifier;

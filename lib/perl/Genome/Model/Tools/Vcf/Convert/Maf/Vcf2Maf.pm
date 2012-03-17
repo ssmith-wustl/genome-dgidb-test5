@@ -98,7 +98,7 @@ sub execute {
     # Make the MAF header
     print MAF join("\t", @maf_columns), "\n";
 
-#	my ($Hugo_Symbol, $Entrez_Gene_Id, $GSC_Center, $NCBI_Build, $Chromosome, $Start_position, $End_position, $Strand, $Variant_Classification, $Variant_Type, $Reference_Allele, $Variant_Allele1, $Variant_Allele2, $dbSNP_RS, $dbSNP_Val_Status, $Sample_Barcode1, $Sample_Barcode2, $Match_Norm_Seq_Allele1, $Match_Norm_Seq_Allele2, $Validation_Allele1, $Validation_Allele2, $Match_Norm_Validation_Allele1, $Match_Norm_Validation_Allele2, $Verification_Status, $Validation_Status, $Mutation_Status, $Validation_Method, $Sequencing_Phase, $Sequence_Source, $Score, $BAM_file, $Sequencer, $chromosome_name, $start, $stop, $reference, $variant, $type, $gene_name, $transcript_name, $transcript_species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain, $all_domains, $deletion_substructures, $transcript_error) = split(/\t/, $line);
+#	my ($Hugo_Symbol, $Entrez_Gene_Id, $Gsc_Center, $NCBI_Build, $Chromosome, $Start_position, $End_position, $Strand, $Variant_Classification, $Variant_Type, $Reference_Allele, $Variant_Allele1, $Variant_Allele2, $dbSNP_RS, $dbSNP_Val_Status, $Sample_Barcode1, $Sample_Barcode2, $Match_Norm_Seq_Allele1, $Match_Norm_Seq_Allele2, $Validation_Allele1, $Validation_Allele2, $Match_Norm_Validation_Allele1, $Match_Norm_Validation_Allele2, $Verification_Status, $Validation_Status, $Mutation_Status, $Validation_Method, $Sequencing_Phase, $Sequence_Source, $Score, $BAM_file, $Sequencer, $chromosome_name, $start, $stop, $reference, $variant, $type, $gene_name, $transcript_name, $transcript_species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain, $all_domains, $deletion_substructures, $transcript_error) = split(/\t/, $line);
 
     # Find annotation file headers
     my $annot_line;
@@ -184,7 +184,7 @@ sub execute {
             my $maf = {};
             my (@sample_fields) = split(/:/, $sample_info);
             my $genotype = $sample_fields[$gt_location];
-            if ($genotype eq '0/0') { #MAF DOESN'T HAVE SPOTS FOR REFERENCE GENOTYPES
+            if ($genotype eq '0/0' || $genotype eq '.') { #MAF DOESN'T HAVE SPOTS FOR REFERENCE GENOTYPES OR MISSING DATA
                 next;
             }
             my $allele1 = my $allele2 = ".";
@@ -194,12 +194,18 @@ sub execute {
             my $variant_name;
             my $pos_stop;
             my $variant_type;
-            if(length($ref) == 1 and length($alt) == 1) {
+            if ($alt =~ /,/) {
+                #multi-allelic variant case
+                $variant_type = "Multi-alleleic";
+                $pos_stop = $pos;
+                $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt";
+            } elsif(length($ref) == 1 and length($alt) == 1) {
                 #SNV case
                 $variant_type = "SNP";
                 $pos_stop = $pos;
                 if ($allele1 =~ m/\D+/) {
                     $allele_count = '.';
+                    $variant_name = 'missing';
                 }
                 elsif ($allele1 == $allele2) { #homo
                     if ($allele1 == $allele_options[0]) { #homo first variant
@@ -238,6 +244,7 @@ sub execute {
                 $alt = substr($alt, 1);
                 if ($allele1 =~ m/\D+/) {
                     $allele_count = '.';
+                    $variant_name = 'missing';
                 }
                 elsif ($allele1 == $allele2) { #homo
                     if ($allele1 == $allele_options[0]) { #homo first variant
@@ -277,6 +284,7 @@ sub execute {
                 $alt = '-';
                 if ($allele1 =~ m/\D+/) {
                     $allele_count = '.';
+                    $variant_name = 'missing';
                 }
                 elsif ($allele1 == $allele2) { #homo
                     if ($allele1 == $allele_options[0]) { #homo first variant
@@ -327,11 +335,15 @@ sub execute {
 
                 my $sample_name = $sample_names[$count];
                 my ($chromosome_name, $start, $stop, $reference, $variant, $type, $gene_name, $transcript_name, $transcript_species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change,  $ucsc_cons, $domain, $all_domains, $deletion_substructures, $transcript_error);
-                if (defined $annotation_hash{$variant_name}) {
+                if ($variant_name eq 'missing') {
+                    warn "Skipping missing value for variant, does not have annotation\n";
+                    next; #Skip variants with no annotation -- MAYBE RUN ANNOTATION AGAIN???
+                }
+                elsif (defined $variant_name && $annotation_hash{$variant_name}) {
                     ($chromosome_name, $start, $stop, $reference, $variant, $type, $gene_name, $transcript_name, $transcript_species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain, $all_domains, $deletion_substructures, $transcript_error) = split(/\t/,$annotation_hash{$variant_name});
                 }
                 else { 
-                    warn "Variant $variant_name does not have annotation, skipping this variant\n";
+                    warn "Variant $variant_name in $annotation_file does not have annotation, skipping this variant\n";
                     next; #Skip variants with no annotation -- MAYBE RUN ANNOTATION AGAIN???
                     $chromosome_name = $chr;
                     $start = $pos;
@@ -353,7 +365,7 @@ sub execute {
     #taken from gmt annotate revise-maf
                 my $entrez_gene_ids;
                 my $Hugo_Symbol = $maf->{Hugo_Symbol};
-                my @gene_info = GSC::Gene->get(gene_name => $Hugo_Symbol);
+                my @gene_info = Genome::Site::WUGC::Gene->get(gene_name => $Hugo_Symbol);
                 if (@gene_info) {
 		            for my $info (@gene_info) {
 		                my $locus_link_id = $info->locus_link_id;

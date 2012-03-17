@@ -19,7 +19,7 @@ GetOptions ('common_names=s'=>\$common_names);
 my $usage=<<INFO;
   Example usage: 
   
-  listExomeDatasets.pl  --common_names='BRC18,BRC36,BRC38'
+  listRNAseqBuildsByCommonName.pl  --common_names='BRC18,BRC36,BRC38'
 
 INFO
 
@@ -43,13 +43,27 @@ for my $common_name (@common_names) {
     common_name => $common_name,
   );
 
-  #my @models = Genome::Model::RnaSeq->get("subject.patient.common_name"=>$common_name);
+  #my @samples = $individual->samples;
+  #my @models = Genome::Model::RnaSeq->get("subject"=>\@samples);
   #my @models = Genome::Model::RnaSeq->get("subject.source.common_name"=>$common_name);
+  
+  my @models = Genome::Model::RnaSeq->get("subject.patient.common_name"=>$common_name);
+  
+  foreach my $model (@models){
+    my $model_id = $model->id;
+    my $model_name = $model->name;
+    my $model_subject = $model->subject;
+    my $model_subject_name = $model_subject->name;
+    my $processing_profile = $model->processing_profile;
+    my $processing_profile_name = $processing_profile->name;
 
-  my @samples = $individual->samples;
-  my @models = Genome::Model::RnaSeq->get("subject"=>\@samples);
+    print BLUE, "\n\tModel. ID: $model_id\tSubject: $model_subject_name\tModel Name: $model_name", RESET;
+    print BLUE, "\n\t\tPP: $processing_profile_name", RESET;
 
-  print Dumper @models;
+  }
+
+
+  #print Dumper @models;
 
 }
 

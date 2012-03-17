@@ -13,7 +13,7 @@ class Genome::Model::SomaticValidation::Command::ImportVariants {
             doc => 'File listing the variants to be uploaded',
         },
         models => {
-            is => 'Genome::Model::SomaticVariation',
+            is => 'Genome::Model',
             doc => 'The somatic variation models for the variants in the list, provided as a group or comma-delimited list',
             is_many => 1,
         },
@@ -48,12 +48,12 @@ sub execute {
     my $variant_type;
     while(my $line = <$variant_file_list_fh>) {
         chomp $line;
-        if($line =~ m!.*/(\w+\d+)/[^/]*!) {
+        if($line =~ m{.*/((?:\w+\d+)|(?:\w_\w\w-[^/]+))/[^/]+$}) {
             my $patient = $1;
 
             $data{$patient}{$variant_type} ||= [];
             push @{ $data{$patient}{$variant_type} }, $line;
-        } elsif($line =~ m{.*/([^/]+)(?:\.[^./]+)+\.(?:bed|tsv|csv|anno)$}) {
+        } elsif($line =~ m{.*/([^/]+)(?:\.[^./]+)+$}) {
             my $patient = $1;
 
             $data{$patient}{$variant_type} ||= [];

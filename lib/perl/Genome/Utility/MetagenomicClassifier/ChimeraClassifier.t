@@ -3,13 +3,12 @@
 use strict;
 use warnings;
 
-use above "Genome";
+use above 'Genome';
 
-use Genome::Utility::MetagenomicClassifier::Test;
+use Test::More;
 
-Genome::Utility::MetagenomicClassifier::ChimeraClassifier::Test->runtests;
+use_ok('Genome::Utility::MetagenomicClassifier::ChimeraClassifier') or die;
 
+done_testing();
 exit;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Utility/MetagenomicClassifier/Rdp.t $
-#$Id: Rdp.t 43284 2009-02-04 22:15:30Z ebelter $

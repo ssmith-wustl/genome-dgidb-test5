@@ -15,7 +15,7 @@ require Genome::InstrumentData::Solexa;
 use Test::More tests => 138;
 use Test::MockObject;
 
-use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
+use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData') or die;
 
 my $gsc_project = Test::MockObject->new();
 ok($gsc_project, 'create mock gsc project');
@@ -32,6 +32,7 @@ $gsc_workorder->set_always(id => -1111);
 $gsc_workorder->set_always(name => 'AQID-Test-Workorder');
 $gsc_workorder->set_always(setup_name => 'AQID-Test-Workorder');
 $gsc_workorder->set_always(get_project => $gsc_project);
+$gsc_workorder->set_always(pipeline => undef); #TODO: am I ok?
 
 my $taxon = Genome::Taxon->get( species_name => 'human' );
 my $individual = Genome::Individual->create(
@@ -45,7 +46,6 @@ my $sample = Genome::Sample->create(
     id => '-1',
     name => 'AQID-test-sample',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
 );
 
@@ -336,7 +336,6 @@ my $mouse_sample = Genome::Sample->create(
     id => '-1111',
     name => 'AQID-mouse_test-sample',
     common_name => 'normal',
-    taxon_id => $mouse_taxon->id,
     source_id => $mouse_individual->id,
 );
 
@@ -396,7 +395,6 @@ my $rna_sample = Genome::Sample->create(
     id => '-1001',
     name => 'AQID-rna-test-sample',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
     extraction_type => 'rna',
 );
@@ -520,7 +518,6 @@ my $sample_pool = Genome::Sample->create(
     id => '-10001',
     name => 'AQID-test-sample-pooled',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
 );
 
@@ -666,7 +663,6 @@ my $de_novo_sample = Genome::Sample->create(
     id => '-22',
     name => 'AQID-test-sample-ze',
     common_name => 'normal',
-    taxon_id => $de_novo_taxon->id,
     source_id => $de_novo_individual->id,
 );
 
@@ -750,7 +746,6 @@ my $sample_2 = Genome::Sample->create(
     id => '-70',
     name => 'TCGA-TEST-SAMPLE-01A-01D',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
     extraction_label => 'TCGA-Test',
 );
@@ -760,7 +755,6 @@ my $sample_3 = Genome::Sample->create(
     id => '-71',
     name => 'TCGA-TEST-SAMPLE-10A-01D',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
     extraction_label => 'TCGA-Test',
 );
@@ -877,7 +871,6 @@ my $sample_4 = Genome::Sample->create(
     id => '-80',
     name => 'TCGA-TEST-SAMPLE2-01A-01D',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
     extraction_label => 'TCGA-Test',
 );
@@ -887,7 +880,6 @@ my $sample_5 = Genome::Sample->create(
     id => '-81',
     name => 'TCGA-TEST-SAMPLE2-10A-01D',
     common_name => 'normal',
-    taxon_id => $taxon->id,
     source_id => $individual->id,
     extraction_label => 'TCGA-Test',
 );

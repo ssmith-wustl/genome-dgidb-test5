@@ -69,11 +69,16 @@ sub _default_mc16s_processing_profile_id {
 }
 
 sub _default_de_novo_assembly_bacterial_processing_profile_id {
-    return 2658559;
+    return 2682126;
 }
 
 sub _default_rna_seq_processing_profile_id {
-    return 2623697;
+    my $self = shift;
+    my $instrument_data = shift;
+    if($instrument_data->sample->taxon->name eq 'human'){
+        return 2694793;
+    }
+    return 2694792; #mouse
 }
 
 #FIXME: This should be refactored so that %known_454_pipelines and
@@ -110,6 +115,7 @@ our %known_454_pipelines =
         'Illumina Sequencing',
         'Nimblegen Custom Capture Illumina',
         'Nimblegen Whole Exome Capture Illumina',
+        'PCR-based 3730',
         'PCR-based 454',
         'PCR-based Illumina',
         'Production Library Construction and Technology Development Illumina',
@@ -135,6 +141,7 @@ our %known_454_16s_pipelines =
         '16S 3730 Sequencing',
         '16S 3730 Sequencing - Unknown Reference Strain',
         'Technology Development 16S 454',
+        'Illumina Sequencing,16S 454 Sequencing,PCR-based 3730,16S 3730 Sequencing - Unknown Reference Strain,16S 3730 Sequencing',
     );
 
 sub help_brief {
@@ -149,29 +156,6 @@ EOS
 sub help_detail {
     return <<EOS
 EOS
-}
-
-sub get_organism_taxon {
-    my $sample = shift;
-    my $population = get_population($sample);
-    if ($population){
-        return $population->taxon;
-    }
-    if(!$sample->taxon_id){
-        return $sample->patient->taxon if $sample->patient;
-    }
-    return $sample->taxon;
-}
-
-sub get_population {
-    my $sample = shift;
-    my $source_type = $sample->source_type;
-    if($source_type &&
-            ($source_type eq 'organism individual' ||
-             $source_type eq 'population group')){
-        return $sample->source;
-    }
-    return;
 }
 
 sub execute {
@@ -200,32 +184,23 @@ sub execute {
     $self->status_message('Processing '.scalar(@pses).' PSEs');
     return 1 unless scalar @pses;
 
-    $self->add_processing_profiles_to_pses(@pses);
-
     my @completable_pses;
 
     PSE:
     foreach my $pse (@pses) {
         $self->status_message('Starting PSE ' . $pse->id);
 
+        my $instrument_data = $pse->{_instrument_data};
         my ($instrument_data_type) = $pse->added_param('instrument_data_type');
         my ($instrument_data_id)   = $pse->added_param('instrument_data_id');
+
+        $self->add_processing_profiles_to_pse($pse);
+
+        my @processing_profile_ids = $pse->added_param('processing_profile_id');
         my ($subject_class_name)   = $pse->added_param('subject_class_name');
         my ($subject_id)           = $pse->added_param('subject_id');
 
-        my @processing_profile_ids = $pse->added_param('processing_profile_id');
-
-        if ( $instrument_data_type =~ /sanger/i ) {
-            #for sanger data the pse param actually holds the id of an AnalyzeTraces PSE.
-            my $analyze_traces_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
-
-            my $run_name = $analyze_traces_pse->run_name();
-            $instrument_data_id = $run_name;
-        }
-
-        my $genome_instrument_data = Genome::InstrumentData->get( id => $instrument_data_id );
-
-        if($genome_instrument_data->ignored() ) {
+        if($instrument_data->ignored() ) {
             next;
         }
 
@@ -274,14 +249,14 @@ sub execute {
 
                 }
 
-                my @models = Genome::ModelDeprecated->get(
+                my @models = Genome::Model->get(
                     subject_id            => $subject_id,
                     processing_profile_id => $processing_profile->id,
                     auto_assign_inst_data => 1,
                 );
 
                 for my $reference_sequence_build ( @reference_sequence_builds ) {
-                    my @assigned = $self->assign_instrument_data_to_models($genome_instrument_data, $reference_sequence_build, @models);
+                    my @assigned = $self->assign_instrument_data_to_models($instrument_data, $reference_sequence_build, @models);
 
                     #returns an explicit undef on error
                     if(scalar(@assigned) eq 1 and not defined $assigned[0]) {
@@ -301,7 +276,7 @@ sub execute {
                     } else {
                         # no model found for this PP, make one (or more) and assign all applicable data
                         $DB::single = $DB::stopper;
-                        my @new_models = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
+                        my @new_models = $self->create_default_models_and_assign_all_applicable_instrument_data($instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
                         unless(@new_models) {
                             push @process_errors, $self->error_message;
                             next PP;
@@ -312,32 +287,31 @@ sub execute {
                 }
 
                 if ( $instrument_data_type eq '454' and $self->_is_454_16s($pse) ) {
-                    $self->_find_or_create_mc16s_454_qc_model($genome_instrument_data);
+                    $self->_find_or_create_mc16s_454_qc_model($instrument_data);
                 }
             } # looping through processing profiles for this instdata, finding or creating the default model
         } elsif ( $instrument_data_type =~ /solexa/i
-                  and $genome_instrument_data->target_region_set_name
-                  and Genome::FeatureList->get(name => $genome_instrument_data->target_region_set_name)
-                  and Genome::FeatureList->get(name => $genome_instrument_data->target_region_set_name)->content_type eq 'validation'
+                  and $instrument_data->target_region_set_name
+                  and Genome::FeatureList->get(name => $instrument_data->target_region_set_name)
+                  and Genome::FeatureList->get(name => $instrument_data->target_region_set_name)->content_type eq 'validation'
                 ) {
             my @validation = Genome::Model::SomaticValidation->get(
-                target_region_set_name => $genome_instrument_data->target_region_set_name,
-                subject => $genome_instrument_data->sample->source,
+                target_region_set_name => $instrument_data->target_region_set_name,
             );
 
-            @validation = grep(($_->tumor_sample eq $genome_instrument_data->sample or $_->normal_sample eq $genome_instrument_data->sample), @validation);
+            @validation = grep((($_->tumor_sample and $_->tumor_sample eq $instrument_data->sample) or ($_->normal_sample and $_->normal_sample eq $instrument_data->sample)), @validation);
             if(@validation) {
-                my $ok = $self->assign_instrument_data_to_models($genome_instrument_data, Genome::FeatureList->get(name => $genome_instrument_data->target_region_set_name)->reference, @validation);
+                my $ok = $self->assign_instrument_data_to_models($instrument_data, Genome::FeatureList->get(name => $instrument_data->target_region_set_name)->reference, @validation);
                 unless($ok) {
                     push @process_errors,
                         $self->error_message('Did not assign validation instrument data to any models.');
                 }
-            } elsif($genome_instrument_data->index_sequence eq 'unknown' && $genome_instrument_data->sample->name =~ /Pooled_Library/) {
+            } elsif($instrument_data->index_sequence eq 'unknown' && $instrument_data->sample->name =~ /Pooled_Library/) {
                 $self->status_message('Skipping pooled library validation data.');
                 $pse->add_param('no_model_generation_attempted',1);
             } else {
                 push @process_errors,
-                    $self->error_message('No validation models found to assign data (target ' . $genome_instrument_data->target_region_set_name . ' on instrument data ' . $genome_instrument_data->id . '.)');
+                    $self->error_message('No validation models found to assign data (target ' . $instrument_data->target_region_set_name . ' on instrument data ' . $instrument_data->id . '.)');
             }
         } else {
             #record that the above code was skipped so we could reattempt it if more information gained later
@@ -367,10 +341,10 @@ sub execute {
             my @check = qw/sample taxon/;
 
             for my $check (@check) {
-                my $subject = $genome_instrument_data->$check;
+                my $subject = $instrument_data->$check;
                 # Should we just hoise this check out of the loop and skip to next PSE?
                 if (defined($subject)) {
-                    my @some_models= Genome::ModelDeprecated->get(
+                    my @some_models= Genome::Model->get(
                         subject_id         => $subject->id,
                         auto_assign_inst_data => 1,
                     );
@@ -389,10 +363,10 @@ sub execute {
             @found_models =
                 grep {
                     $_->processing_profile->sequencing_platform() eq $sequencing_platform
-	           } @found_models;
+                } @found_models;
 
             #Don't care here what ref. seq. was used (if any)
-            my @assigned = $self->assign_instrument_data_to_models($genome_instrument_data, undef, @found_models);
+            my @assigned = $self->assign_instrument_data_to_models($instrument_data, undef, @found_models);
             if(scalar(@assigned) eq 1 and not defined $assigned[0]) {
                 push @process_errors, $self->error_message;
             }
@@ -623,7 +597,7 @@ sub load_pses {
     $self->preload_data(@pses); #The checking uses this data, so need to load it first
 
     @pses = grep($self->check_pse($_), @pses);
-    $self->status_message('Of those, '.scalar(@pses). ' PSEs passed check_pse.');
+    $self->status_message('Of those, '.scalar(@pses). ' PSEs passed check pse.');
 
     # Don't bite off more than we can process in a couple hours
     my $max_pses = $self->max_pses;
@@ -691,37 +665,25 @@ sub check_pse {
         return;
     }
 
-    if ( $instrument_data_type eq 'sanger' ) {
+    my $instrument_data = Genome::InstrumentData->get($instrument_data_id);
+    if ( not $instrument_data and $instrument_data_type eq 'sanger' ) {
         my $analyze_traces_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
-
-        unless ( defined($analyze_traces_pse) ) {
-            $self->error_message(
-                'failed to fetch pse for sanger instrument data with id ' .
-                $instrument_data_id .  ' and pse_id ' . $pse_id);
-            return;
-        }
-
         my $run_name = $analyze_traces_pse->run_name();
-
-        unless ( defined($run_name) ) {
-            $self->error_message(
-                'failed to get a run_name for sanger instrument data with'
-                . " id '$instrument_data_id' and pse_id '$pse_id'"
-            );
+        if ( not defined $run_name ) {
+            $self->error_message('Failed to get run name for Anallyze Traces PSE: '.$instrument_data_id);
             return;
         }
-
         $instrument_data_id = $run_name;
+        $instrument_data = Genome::InstrumentData->get($instrument_data_id);
     }
 
-    my $genome_instrument_data = Genome::InstrumentData->get(id => $instrument_data_id);
-
-    unless ( $genome_instrument_data ) {
+    unless ( $instrument_data ) {
         $self->error_message(
             "Failed to get a Genome::InstrumentData ($instrument_data_type) via"
             . " id '$instrument_data_id'.  PSE_ID is '$pse_id'");
         return;
     }
+    $pse->{_instrument_data} = $instrument_data;
 
     if ( $instrument_data_type eq 'solexa' ) {
         # solexa inst data nee to have the copy sequence file pse successful
@@ -737,10 +699,10 @@ sub check_pse {
             return;
         }
 
-        if($genome_instrument_data->target_region_set_name) {
-            my $fl = Genome::FeatureList->get(name => $genome_instrument_data->target_region_set_name);
+        if($instrument_data->target_region_set_name) {
+            my $fl = Genome::FeatureList->get(name => $instrument_data->target_region_set_name);
             unless($fl) {
-                $self->error_message('Failed to get a feature-list matching target region set name ' . $genome_instrument_data->target_region_set_name);
+                $self->error_message('Failed to get a feature-list matching target region set name ' . $instrument_data->target_region_set_name);
                 return;
             }
 
@@ -830,8 +792,8 @@ sub assign_instrument_data_to_models {
         } else {
             my $assign =
             Genome::Model::Command::InstrumentData::Assign->create(
-                instrument_data_id => $instrument_data_id,
-                model_id           => $model->id,
+                instrument_data => [$genome_instrument_data],
+                model           => $model,
             );
 
             unless ( $assign->execute ) {
@@ -912,7 +874,8 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         push @ref_align_models, $regular_model;
     }
 
-    if ( $capture_target ) {
+    $DB::single = $DB::stopper;
+    if ( $capture_target and not $regular_model->isa('Genome::Model::RnaSeq')){
         my $roi_list;
         #FIXME This is a lame hack for these capture sets
         my %build36_to_37_rois = get_build36_to_37_rois();
@@ -997,8 +960,8 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     for my $m (@new_models) {
         my $assign =
         Genome::Model::Command::InstrumentData::Assign->create(
-            model_id => $m->id,
-            instrument_data_id => $genome_instrument_data->id,
+            model => $m,
+            instrument_data => [$genome_instrument_data],
             include_imported => 1,
             force => 1,
         );
@@ -1014,7 +977,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         unless($m->isa('Genome::Model::RnaSeq')){
             my $assign_all =
             Genome::Model::Command::InstrumentData::Assign->create(
-                model_id => $m->id,
+                model => $m,
                 all => 1,
             );
 
@@ -1073,7 +1036,6 @@ sub create_default_qc_models {
     for my $model (@models){
         next unless $model->type_name eq 'reference alignment';
         next unless $model->processing_profile_name =~ /^\w+\ \d+\ Default\ Reference\ Alignment/; # e.g. Feb 2011 Defaulte Reference Alignment
-        next if $model->target_region_set_name; # the current lane QC does not work for custom capture/exome
 
         my @lane_qc_models = $model->get_or_create_lane_qc_models;
 
@@ -1112,9 +1074,14 @@ sub _find_or_create_mc16s_454_qc_model {
         $new_models->{$model->id} = $model;
     }
     else {
-        $model->add_instrument_data($instrument_data);
-        my $assigned_to = $self->_existing_models_assigned_to;
-        $assigned_to->{$model->id} = $model;
+        my $existing_instrument_data = $model->inputs(name => 'instrument_data', value => $instrument_data);
+        if ( not $existing_instrument_data ) {
+            $model->add_instrument_data($instrument_data);
+            $self->_existing_models_assigned_to->{$model->id} = $model;
+        }
+        else {
+            $self->_existing_models_with_existing_assignments->{$model->id} = $model;
+        }
     }
 
     return 1;
@@ -1207,13 +1174,33 @@ sub add_model_to_default_modelgroups {
         }else{
             $name = $group;
         }
+
         my $project = Genome::Project->get(name => $name);
+
+        # if $project_id gets set here it is used to create a new project
+        # or to detect probable project renames
+        my $project_id;
+        if (ref($group) && $group->setup_name eq $name) {
+            $project_id = $group->id;
+        }
+
+        if (!$project && $project_id) {
+            # If we didn't get it by name try to get it by ID in case the name has been
+            # changed since it was originally created, e.g. someone changed the name of a
+            # work order. If we get it then we should fix the name. Observers automatically
+            # trigger to update the corresponding Genome::ModelGroup.
+            $project = Genome::Project->get($project_id);
+            if ($project) {
+                $project->name($name);
+            }
+        }
+
         unless($project) {
             my %params = ( name => $name );
-            $params{id} = $group->id if ref $group and $group->setup_name eq $name;
+            $params{id} = $project_id if $project_id;
             $project = Genome::Project->create(%params);
             unless($project) {
-                die $self->error_message('Failed to create a default model-group: ' . $name);
+                die $self->error_message('Failed to create a default project: ' . $name);
             }
             if (ref $group){
                 $project->add_part(entity => $group);
@@ -1224,6 +1211,7 @@ sub add_model_to_default_modelgroups {
         unless ($model_group){
             die $self->error_message("No model group for ".$project->name);
         }
+
         $model_group->assign_models($model);
         #$project->add_part(entity => $model);
     }
@@ -1362,220 +1350,182 @@ sub request_builds {
     return 1;
 }
 
-sub add_processing_profiles_to_pses{
-    my $self = shift;
-    my @pses = @_;
+sub add_processing_profiles_to_pse {
+    my ($self, $pse) = @_;
 
-    for my $pse (@pses){
-        next if $pse->added_param('processing_profile_id'); #FIXME: THIS SHOULD ONLY BE USED DURING THE TRANSITION PERIOD WHILE OLD AQID IS IN USE
-        my ($instrument_data_id) = $pse->added_param('instrument_data_id');
-        my ($instrument_data_type) = $pse->added_param('instrument_data_type');
-        my $instrument_data = $self->_instrument_data($pse);
-        eval {
-            my @processing_profile_ids_to_add;
-            my %reference_sequence_names_for_processing_profile_ids;
+    my $instrument_data = $pse->{_instrument_data};
+    my ($instrument_data_type) = $pse->added_param('instrument_data_type');
 
-            my $sample_name        = $instrument_data->sample_name;
-            my $sample_id          = $instrument_data->sample_id;
-            my $subject_name       = $sample_name;
-            my $subject_class_name = 'Genome::Sample';
-            my $subject_id         = $sample_id;
+    return 1 if $pse->added_param('processing_profile_id'); #FIXME: THIS SHOULD ONLY BE USED DURING THE TRANSITION PERIOD WHILE OLD AQID IS IN USE
 
-            my $organism_sample = Genome::Sample->get($sample_id);
+    eval {
+        my @processing_profile_ids_to_add;
+        my %reference_sequence_names_for_processing_profile_ids;
 
-            unless (defined($organism_sample)) {
-                $self->error_message('failed to get a Genome::Sample for id ' . $instrument_data_id);
+        my $sample = $instrument_data->sample;
+        unless (defined($sample)) {
+            $self->error_message('failed to get a Genome::Sample for id ' . $instrument_data->id);
+            die $self->error_message;
+        }
+
+        my $taxon = $sample->taxon;
+        unless (defined($taxon)) {
+            $self->error_message('failed to get taxon via Genome::Taxon for id ' . $instrument_data->id);
+            die $self->error_message;
+        }
+
+        if ($instrument_data_type =~ /454/) {
+            my @unknown_work_orders = $self->_is_unknown_454_pipeline($pse);
+            if (@unknown_work_orders) {
+
+                my $pipeline_string  = $self->_pipeline_prettyprint(@unknown_work_orders);
+                my $workorder_string = $self->_workorder_prettyprint(@unknown_work_orders);
+
+                my $sender = Mail::Sender->new({
+                        smtp    => 'gscsmtp.wustl.edu',
+                        from    => 'Apipe <apipe-builder@genome.wustl.edu>'
+                    });
+                $sender->MailMsg( {
+
+                        to      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, Apipe Builder <apipe-builder@genome.wustl.edu>',
+                        cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Justin Lolofie <jlolofie@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
+                        subject => "ecountered unknown workorder pipeline '$pipeline_string' in QIDFGM PSE",
+                        msg     => 'no PP assigned to 454 data ' . $instrument_data->id . ' please check out it (see AQID)' . "\n\nWork Order Information:\n$workorder_string",
+                    });
+
+                $self->error_message("unknown 454 workorder pipeline '$pipeline_string' encountered");
                 die $self->error_message;
             }
 
-            my $taxon = get_organism_taxon($organism_sample);;
-
-            unless (defined($taxon)) {
-                $self->error_message('failed to get taxon via Genome::Taxon for id ' . $instrument_data_id);
-                die $self->error_message;
+            if($self->_is_rna($instrument_data)){
+                push @processing_profile_ids_to_add, $self->_default_rna_seq_processing_profile_id($instrument_data);
             }
 
-            if ($instrument_data_type =~ /454/) {
-                my @unknown_work_orders = $self->_is_unknown_454_pipeline($pse);
-                if (@unknown_work_orders) {
-
-                    my $pipeline_string  = $self->_pipeline_prettyprint(@unknown_work_orders);
-                    my $workorder_string = $self->_workorder_prettyprint(@unknown_work_orders);
-
-                    my $sender = Mail::Sender->new({
-                            smtp    => 'gscsmtp.wustl.edu',
-                            from    => 'Apipe <apipe-builder@genome.wustl.edu>'
-                        });
-                    $sender->MailMsg( {
-
-                            to      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, Apipe Builder <apipe-builder@genome.wustl.edu>',
-                            cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Justin Lolofie <jlolofie@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
-                            subject => "ecountered unknown workorder pipeline '$pipeline_string' in QIDFGM PSE",
-                            msg     => 'no PP assigned to 454 data ' . $instrument_data_id . ' please check out it (see AQID)' . "\n\nWork Order Information:\n$workorder_string",
-                        });
-
-                    $self->error_message("unknown 454 workorder pipeline '$pipeline_string' encountered");
-                    die $self->error_message;
-                }
-
-                if($self->_is_rna($pse)){
-                    push @processing_profile_ids_to_add, $self->_default_rna_seq_processing_profile_id;
-                }
-
-                if ($self->_is_454_16s($pse)) {
-                    push @processing_profile_ids_to_add, $self->_default_mc16s_processing_profile_id;
-                }
+            if ($self->_is_454_16s($pse)) {
+                push @processing_profile_ids_to_add, $self->_default_mc16s_processing_profile_id;
             }
-            elsif ($instrument_data_type =~ /sanger/i) {
-                # this is only meant to work with 16s sanger instrument data at present
-                push @processing_profile_ids_to_add, 2591277; # MC16s-WashU-Sanger-RDP2.2-ts6 was amplicon assembly 2067049
+        }
+        elsif ($instrument_data_type =~ /sanger/i) {
+            # this is only meant to work with 16s sanger instrument data at present
+            push @processing_profile_ids_to_add, 2591277; # MC16s-WashU-Sanger-RDP2.2-ts6 was amplicon assembly 2067049
+        }
+        elsif ($instrument_data_type eq 'genotyper results' ) {
+            # Genotype Microarry PP as of 2011jan25
+            # ID        NAME              INPUT_FORMAT   INSTRUMENT_TYPE
+            # --        ----              ------------   ---------------
+            # 2166945   illumina/wugc     wugc           illumina
+            # 2166946   affymetrix/wugc   wugc           affymetrix
+            # 2186707   unknown/wugc      wugc           unknown
+            # 2575175   infinium/wugc     wugc           infinium
+            my $sequencing_platform = $instrument_data->sequencing_platform;
+            my $pp = Genome::ProcessingProfile::GenotypeMicroarray->get(
+                instrument_type => $sequencing_platform,
+                input_format => 'wugc',
+            );
+            if ( not $pp ) {
+                my $msg = "Unknown platform ($sequencing_platform) for genotyper result (".$instrument_data->id.")";
+
+                my $sender = Mail::Sender->new({
+                        smtp    => 'gscsmtp.wustl.edu',
+                        from    => 'Apipe <apipe-builder@genome.wustl.edu>'
+                    });
+                $sender->MailMsg( {
+
+                        to      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, Apipe Builder <apipe-builder@genome.wustl.edu>',
+                        cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Eddie Belter <ebelter@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
+                        subject => "QIDFGM PSE ERROR: $msg",
+                        msg     => "Could not find a genotype microarray processing profile for genotyper results instrument data (".$instrument_data->id.") sequencing platform ($sequencing_platform) in QIDFGM PSE (see AQID)".$self->id
+                    });
+
+                die $self->error_message($msg);
             }
-            elsif ($instrument_data_type eq 'genotyper results' ) {
-                # Genotype Microarry PP as of 2011jan25
-                # ID        NAME              INPUT_FORMAT   INSTRUMENT_TYPE
-                # --        ----              ------------   ---------------
-                # 2166945   illumina/wugc     wugc           illumina
-                # 2166946   affymetrix/wugc   wugc           affymetrix
-                # 2186707   unknown/wugc      wugc           unknown
-                # 2575175   infinium/wugc     wugc           infinium
-                my $sequencing_platform = $instrument_data->sequencing_platform;
-                my $pp = Genome::ProcessingProfile::GenotypeMicroarray->get(
-                    instrument_type => $sequencing_platform,
-                    input_format => 'wugc',
-                );
-                if ( not $pp ) {
-                    my $msg = "Unknown platform ($sequencing_platform) for genotyper result ($instrument_data_id)";
-
-                    my $sender = Mail::Sender->new({
-                            smtp    => 'gscsmtp.wustl.edu',
-                            from    => 'Apipe <apipe-builder@genome.wustl.edu>'
-                        });
-                    $sender->MailMsg( {
-
-                            to      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, Apipe Builder <apipe-builder@genome.wustl.edu>',
-                            cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Eddie Belter <ebelter@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
-                            subject => "QIDFGM PSE ERROR: $msg",
-                            msg     => "Could not find a genotype microarray processing profile for genotyper results instrument data ($instrument_data_id) sequencing platform ($sequencing_platform) in QIDFGM PSE (see AQID)".$self->id
-                        });
-
-                    die $self->error_message($msg);
-                }
-                # build w/ 36 and 37
-                # push the pp id 2X, add import ref seq build for both
-                push @processing_profile_ids_to_add, $pp->id, $pp->id;
-                for my $name (qw/ NCBI-human-build36 GRCh37-lite-build37/) {
-                    my $imported_reference_sequence = Genome::Model::Build::ImportedReferenceSequence->get_by_name($name);
-                    Carp::confess("No imported reference sequence build for $name") if not $imported_reference_sequence;
-                    $pse->add_reference_sequence_build_param_for_processing_profile($pp, $imported_reference_sequence);
-                }
-            }
-            elsif ($instrument_data_type =~ /solexa/i) {
-                if($instrument_data->target_region_set_name and Genome::FeatureList->get(name => $instrument_data->target_region_set_name)->content_type eq 'validation') {
-                     #Do not create ref-align models--will try to assign to existing SomaticValidation models.
-                } elsif ($taxon->species_latin_name =~ /homo sapiens/i) {
-                    if ($self->_is_pcgp($pse)) {
-                        my $individual = $organism_sample->patient;
-                        my $pp_id = '2644306';
-                        my $common_name = $individual ? $individual->common_name : '';
-
-                        push @processing_profile_ids_to_add, $pp_id;
-                        $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
-                    }
-                    elsif ($self->_is_rna($pse)){
-                        if($instrument_data->is_paired_end){
-                            my $pp_id = $self->_default_rna_seq_processing_profile_id;
-                            push @processing_profile_ids_to_add, $pp_id;
-                            $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
-                        }
-                    }
-                    else {
-                        my $pp_id = '2635769';
-                        push @processing_profile_ids_to_add, $pp_id;
-
-                        # NOTE: this is the _fixed_ build 37 with a correct external URI
-                        $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
-                    }
-                }
-                elsif ($taxon->species_latin_name =~ /mus musculus/i){
-                    my $pp_id = 2635769;
-                    push @processing_profile_ids_to_add, $pp_id;
-                    $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
-                }
-                elsif ($taxon->domain =~ /bacteria/i) {
-                    my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
-                    push @processing_profile_ids_to_add, $pp_id;
-                }
-                elsif ( $taxon->name eq 'unknown' ) { # unknow taxon normally skipped
-                    my $index_illumina = GSC::IndexIllumina->get( $instrument_data_id );
-                    if ( $index_illumina ) {
-                        for my $project ( $index_illumina->get_research_projects ) {
-                            if ( $project->id == 2269562 ) { # HMP Centers Grant Reference Genomes WU Strain Collection
-                                my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
-                                push @processing_profile_ids_to_add, $pp_id;
-                                last;
-                            }
-                        }
-                    }
-                }
-            }
-
-            $self->_verify_parameter_lists(\@processing_profile_ids_to_add, \%reference_sequence_names_for_processing_profile_ids);
-
-            #all verification is complete--now go through and set the parameters
-            $pse->add_param('sample_name',  $sample_name);
-            $pse->add_param('subject_class_name', $subject_class_name);
-            $pse->add_param('subject_id', $subject_id);
-
-            # ask each if they work with this type of instrument data?
-            PP:         for my $pp_id (@processing_profile_ids_to_add) {
-                my $pp = Genome::ProcessingProfile->get($pp_id);
-                if ($instrument_data_type =~ /454/) {
-                    if ($pp->can('instrument_data_is_applicable')) {
-                        unless ($pp->instrument_data_is_applicable($instrument_data_type,$instrument_data_id,$subject_name)) {
-                            next PP;
-                        }
-                    }
-                }
-                $pse->add_param("processing_profile_id", $pp->id);
-            }
-
-            for my $pp_id (keys %reference_sequence_names_for_processing_profile_ids) {
-                my $imported_reference_sequence_name = $reference_sequence_names_for_processing_profile_ids{$pp_id};
-
-                my $pp = Genome::ProcessingProfile->get($pp_id);
-                my $imported_reference_sequence = Genome::Model::Build::ImportedReferenceSequence->get_by_name($imported_reference_sequence_name);
+            # build w/ 36 and 37
+            # push the pp id 2X, add import ref seq build for both
+            push @processing_profile_ids_to_add, $pp->id, $pp->id;
+            for my $name (qw/ NCBI-human-build36 GRCh37-lite-build37/) {
+                my $imported_reference_sequence = Genome::Model::Build::ImportedReferenceSequence->get_by_name($name);
+                Carp::confess("No imported reference sequence build for $name") if not $imported_reference_sequence;
                 $pse->add_reference_sequence_build_param_for_processing_profile($pp, $imported_reference_sequence);
             }
-        };
-        if($@){
-            #something went horribly wrong.  do something about it.
-            $self->warning_message("PSE " . $pse->pse_id . " failed: $@");
         }
+        elsif ($instrument_data_type =~ /solexa/i) {
+            if($instrument_data->target_region_set_name and Genome::FeatureList->get(name => $instrument_data->target_region_set_name)->content_type eq 'validation') {
+                #Do not create ref-align models--will try to assign to existing SomaticValidation models.
+            } elsif ($taxon->species_latin_name =~ /homo sapiens/i) {
+                if ($self->_is_pcgp($pse)) {
+                    my $individual = $sample->patient;
+                    my $pp_id = '2644306';
+                    my $common_name = $individual ? $individual->common_name : '';
+
+                    push @processing_profile_ids_to_add, $pp_id;
+                    $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
+                }
+                elsif ($self->_is_rna($instrument_data)){
+                    if($instrument_data->is_paired_end){
+                        my $pp_id = $self->_default_rna_seq_processing_profile_id($instrument_data);
+                        push @processing_profile_ids_to_add, $pp_id;
+                        $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
+                    }
+                }
+                else {
+                    my $pp_id = '2635769';
+                    push @processing_profile_ids_to_add, $pp_id;
+
+                    # NOTE: this is the _fixed_ build 37 with a correct external URI
+                    $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
+                }
+            }
+            elsif ($taxon->species_latin_name =~ /mus musculus/i){
+                my $pp_id = 2635769;
+                push @processing_profile_ids_to_add, $pp_id;
+                $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
+            }
+            elsif ($taxon->domain =~ /bacteria/i) {
+                my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
+                push @processing_profile_ids_to_add, $pp_id;
+            }
+            elsif ( my $index_illumina = GSC::IndexIllumina->get( $instrument_data->id ) ) {
+                for my $research_project ( $index_illumina->get_research_projects ) { #research project
+                    my $genome_project = Genome::Project->get( id => $research_project->setup_id );
+                    if ( not $genome_project ) {
+                        Carp::confess('No genome project found for research project setup_id: '.$research_project->setup_id );
+                    }
+                    my @pp_parts = $genome_project->parts( label => 'default_processing_profiles' );
+                    for my $part ( @pp_parts ) {
+                        push @processing_profile_ids_to_add, $part->entity_id;
+                    }
+                    #if ( $project->id == 2269562 ) { # HMP Centers Grant Reference Genomes WU Strain Collection
+                    #    my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
+                    #    push @processing_profile_ids_to_add, $pp_id;
+                    #    last;
+                    #}
+                }
+            }
+        }
+
+        $self->_verify_parameter_lists(\@processing_profile_ids_to_add, \%reference_sequence_names_for_processing_profile_ids);
+
+        #all verification is complete--now go through and set the parameters
+        $pse->add_param('sample_name',  $sample->name);
+        $pse->add_param('subject_class_name', $sample->class);
+        $pse->add_param('subject_id', $sample->id);
+
+        PP: for my $pp_id (@processing_profile_ids_to_add) {
+            $pse->add_param("processing_profile_id", $pp_id);
+        }
+
+        for my $pp_id (keys %reference_sequence_names_for_processing_profile_ids) {
+            my $imported_reference_sequence_name = $reference_sequence_names_for_processing_profile_ids{$pp_id};
+
+            my $pp = Genome::ProcessingProfile->get($pp_id);
+            my $imported_reference_sequence = Genome::Model::Build::ImportedReferenceSequence->get_by_name($imported_reference_sequence_name);
+            $pse->add_reference_sequence_build_param_for_processing_profile($pp, $imported_reference_sequence);
+        }
+    };
+    if($@){
+        #something went horribly wrong.  do something about it.
+        $self->warning_message("PSE " . $pse->pse_id . " failed: $@");
     }
-}
-
-sub _instrument_data {
-    my $self = shift;
-    my $pse = shift;
-
-    my ($instrument_data_type) = $pse->added_param('instrument_data_type');
-    my ($instrument_data_id)   = $pse->added_param('instrument_data_id');
-
-    my $instrument_data;
-    if($instrument_data_type =~ /sanger/i) {
-        #sanger data doesn't store the instrument_data_id directly
-        my $at_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
-        $instrument_data_id = $at_pse->run_name();
-    }
-
-    $instrument_data = Genome::InstrumentData->get($instrument_data_id);
-
-    unless ($instrument_data) {
-        $self->error_message('failed to get Genome::InstrumentData for instrument_data_id ' . $instrument_data_id . ' and instrument_data_type ' . $instrument_data_type);
-        die $self->error_message;
-    }
-
-    return $instrument_data;
 }
 
 sub _verify_parameter_lists {
@@ -1721,10 +1671,8 @@ sub _is_pcgp {
 }
 
 sub _is_rna {
-    my $self = shift;
-    my $pse = shift;
+    my ($self, $instrument_data) = @_;
 
-    my $instrument_data = $self->_instrument_data($pse);
     my $sample = $instrument_data->sample;
     if(grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
         return 1;

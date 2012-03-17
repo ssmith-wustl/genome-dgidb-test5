@@ -16,17 +16,23 @@ class Genome::DruggableGene::Command::Citation::Create {
 };
 
 sub help_brief {
-
+    return <<EOS
+Create a druggable gene citation
+EOS
 }
 
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
+genome druggable-gene citation create --source-db-name DrugBank --source-db-version 3 --citation-file citation.txt
 EOS
 }
 
 sub help_detail {
     return <<EOS 
+This takes a source database name and version along with a formated text file containing the citation for that data source.
+
+This tool will add the citation (and its formatting) to the database and associate it with the database name and version.
 EOS
 }
 

@@ -342,12 +342,16 @@ sub _link_vcf_output_directory_to_result {
         my $target = $output_directory . "/" . basename($vcf);
         $self->status_message("Attempting to link : " .$vcf."  to  ". $target);
         if(-l $target) {
-            $self->status_message("Found an existing vcf symlink");
-            return 1;
+            $self->status_message("Already found a vcf linked in here, unlinking that for you.");
+            unless(unlink($target)){
+                die $self->error_message("Failed to unlink a link to a vcf at: ".$target);
+            }
         } elsif(-e $target){
             die $self->error_message("Found something that is not a symlink to a vcf!");
         }
         Genome::Sys->create_symlink($vcf, $target);
+        #added a symlink to our own directory - reallocate the size
+        $self->_result->_reallocate_disk_allocation
     }
 
     return 1;
@@ -380,6 +384,8 @@ sub _link_filter_output_directory_to_result {
         die $self->error_message("Found something in the place of the output directory, but not a symlink...");
     } else {
         Genome::Sys->create_symlink($result->output_dir, $self->output_directory);
+        #we've added a symlink to our previous result's directory - reallocate its size
+        $self->previous_result->_reallocate_disk_allocation
     }
 
     return 1;

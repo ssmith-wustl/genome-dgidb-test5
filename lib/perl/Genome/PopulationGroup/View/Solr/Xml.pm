@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::PopulationGroup::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has => [
+    has_field => [
         type => {
             is => 'Text',
             default => 'population_group'
@@ -54,7 +54,7 @@ class Genome::PopulationGroup::View::Solr::Xml {
                     name => 'members',
                     position => 'content',
                     perspective => 'default',
-                    toolkit => 'text',
+                    toolkit => 'xml',
                     aspects => [ 'name' ]
                 },
                 {

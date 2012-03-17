@@ -6,17 +6,18 @@
   <xsl:variable name="reads_processed" select="//aspect[@name='reads_processed']/value"/>
   <xsl:variable name="reads_processed_length_q20" select="//aspect[@name='reads_processed_length_q20']/value"/>
   <xsl:variable name='reads_assembled' select="//aspect[@name='reads_assembled']/value"/>
+  <xsl:variable name='reads_assembled_unique' select="//aspect[@name='reads_assembled_unique']/value"/>
   <xsl:variable name='reads_assembled_duplicate' select="//aspect[@name='reads_assembled_duplicate']/value"/>
-  <xsl:variable name='reads_not_assembled' select="$reads_processed - $reads_assembled"/>
+  <xsl:variable name='reads_not_assembled' select="$reads_processed - $reads_assembled_unique"/>
   <xsl:template match="/">*** SIMPLE READ STATS ***
 Total input reads: <xsl:value-of select="$reads_processed"/>
 Total input bases: <xsl:value-of select="//aspect[@name='reads_processed_length']/value"/> bp
 Total Q20 bases: <xsl:value-of select="//aspect[@name='reads_processed_length_q20']/value"/> bp
 Average Q20 bases per read: <xsl:value-of select="format-number(($reads_processed_length_q20 div $reads_processed), '#')"/> bp
 Average read length: <xsl:value-of select="//aspect[@name='reads_processed_average_length']/value"/> bp
-Placed reads: <xsl:value-of select="$reads_assembled + $reads_assembled_duplicate"/>     % of total input reads: <xsl:value-of select="//aspect[@name='reads_assembled_success_percent']/value"/>
-  (reads in scaffolds: <xsl:value-of select="$reads_assembled + $reads_assembled_duplicate"/>)
-  (unique reads: <xsl:value-of select="$reads_assembled"/>)
+Placed reads: <xsl:value-of select="$reads_assembled_unique"/>     % of total input reads: <xsl:value-of select="//aspect[@name='reads_assembled_success_percent']/value"/>
+  (reads in scaffolds: <xsl:value-of select="$reads_assembled"/>)
+  (unique reads: <xsl:value-of select="$reads_assembled_unique"/>)
   (duplicate reads: <xsl:value-of select="$reads_assembled_duplicate"/>)
 Unplaced reads: <xsl:value-of select="$reads_not_assembled"/>     % of total input reads: <xsl:value-of select="//aspect[@name='reads_not_assembled_percent']/value"/>
 Chaff rate: <xsl:value-of select="format-number(($reads_not_assembled div $reads_processed), '#.##%')"/>
@@ -146,6 +147,12 @@ Total: <xsl:value-of select="$contigs_length"/>
   <xsl:variable name="coverage_4x" select="//aspect[@name='coverage_4x']/value"/>
   <xsl:variable name="coverage_5x" select="//aspect[@name='coverage_5x']/value"/>
   <xsl:variable name="coverage_0x" select="//aspect[@name='coverage_0x']/value"/>
+*** Core Gene Survey Result ***
+Percentage of core genes present in this assembly: <xsl:value-of select="//aspect[@name='core_gene_present_percent']/value"/> %
+Number of Core Groups present in this assembly: <xsl:value-of select="//aspect[@name='core_gene_group_present_count']/value"/>
+Coregene test: <xsl:value-of select="//aspect[@name='core_gene_survey_result']/value"/>
+
+
 *** Read Depth Info ***
 Total consensus bases: <xsl:value-of select="$contigs_length"/>
 Depth >= 5: <xsl:value-of select="$coverage_5x"/><xsl:text>&#9;</xsl:text><xsl:value-of select="format-number(($coverage_5x div $contigs_length), '#.###############')"/>

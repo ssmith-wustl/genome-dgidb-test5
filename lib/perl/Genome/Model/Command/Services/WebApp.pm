@@ -15,6 +15,7 @@ use Sys::Hostname;
 use AnyEvent;
 use AnyEvent::Util;
 use IO::Socket;
+use Workflow;
 
 # "Unassigned" ports from iana.org
 my @AVAILABLE_PORTS = (8089, 8090, 8092, 8093, 8094, 8095, 

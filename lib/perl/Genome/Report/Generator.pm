@@ -112,7 +112,8 @@ sub _add_report_meta_data {
 sub name {
     my ($subclass) = $_[0]->class =~ m#:?([\w\d]+)$#;
     confess "Can't get subclass from class: ".$_[0]->class unless $subclass;
-    return Genome::Utility::Text::camel_case_to_capitalized_words($subclass);
+    my $string =  Genome::Utility::Text::camel_case_to_string($subclass);
+    return Genome::Utility::Text::capitalize_words($string);
 }
 
 sub description {

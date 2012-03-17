@@ -14,7 +14,7 @@ class Genome::Model::Build::Command::HeartbeatCheck {
         },
         verbose => {
             is => 'Boolean',
-            default => 0,
+            default => 1,
             doc => 'Shows reason for heartbeat failure.',
         },
     ],

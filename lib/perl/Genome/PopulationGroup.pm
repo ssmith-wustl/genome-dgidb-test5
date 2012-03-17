@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::PopulationGroup {
-    is => ['Genome::Subject','Genome::Searchable'],
+    is => ['Genome::SampleSource','Genome::Searchable'],
     has => [
         subject_type => { 
             is_constant => 1, 
@@ -63,10 +63,16 @@ class Genome::PopulationGroup {
     doc => 'A possibly arbitrary grouping of individuals',
 };
 
+sub get_source {
+    my $self = shift;
+    return $self->taxon;
+}
+
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
-    my $member_hash = $self->generate_hash_for_individuals($self->members);
+    my @members = $self->members;
+    my $member_hash = $self->generate_hash_for_individuals(@members);
     $self->member_hash($member_hash);
     return $self;
 }

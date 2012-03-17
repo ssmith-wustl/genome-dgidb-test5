@@ -187,7 +187,7 @@ sub _create_individual {
     Carp::confess('No taxon set to create individual') if not $self->_taxon;
 
     $params{name} = $params{upn} if not $params{name};
-    $params{taxon_id} = $self->_taxon->id;
+    $params{taxon} = $self->_taxon;
     $params{gender} = 'unspecified' if not $params{gender};
 
     $self->status_message('Create individual: '.Dumper(\%params));
@@ -217,9 +217,6 @@ sub _create_sample {
 
     Carp::confess('No name given to create sample') if not $params{name};
     Carp::confess('No nomenclature set to create sample') if not $params{nomenclature};
-
-    Carp::confess('No taxon set to create sample') if not $self->_taxon;
-    $params{taxon_id} = $self->_taxon->id;
 
     if ( $self->_individual ) {
         $params{source_id} = $self->_individual->id;

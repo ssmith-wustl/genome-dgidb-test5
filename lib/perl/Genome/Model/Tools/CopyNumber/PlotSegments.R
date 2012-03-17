@@ -33,7 +33,7 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
                          gainThresh=2.5, lossThresh=1.5, annotationsTop=NULL,
                          annotationsBottom = NULL, plotTitle="",
                          gainColor="red", lossColor="blue", ylabel="",
-                         xmin=NULL, xmax=NULL){
+                         xmin=NULL, xmax=NULL, label_size=0.6){
 
   ## add options for plotting just a smaller region - TODO
   xlim = NULL
@@ -180,13 +180,18 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
 
     ## outline the plot
     plot(0, 0, xlim=xlim, ylim=c(ymin,ymax), pch=".",
-         ylab=ylabel, xlab="", xaxt="n", cex.lab=1, cex.axis=0.7)
+         ylab=ylabel, xlab="", xaxt="n", cex.lab=1, cex.axis=label_size)
 
-    title(ylab=ylabel,line=2,cex.lab=0.6)
+    title(ylab=ylabel,line=2,cex.lab=label_size)
 
     ## add the title
     if(!(is.null(plotTitle))){
-      title(main=plotTitle)
+      if (label_size < 0.8) {
+        mtext(plotTitle,padj=-.5,cex=0.8,side=3);
+      }
+      else {
+        mtext(plotTitle,padj=-.5,cex=label_size,side=3);
+      }
     }
 
     ## draw baselines
@@ -271,7 +276,7 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
     abline(v=0,col="gray75")
     for(i in 1:(length(offsets)-1)){
       abline(v=offsets[i+1],col="gray75")
-      text((offsets[i]+offsets[i+1])/2, ymax*0.9, labels= gsub("chr","",entrypoints[i,1]), cex=0.6)
+      text((offsets[i]+offsets[i+1])/2, ymax*0.9, labels= gsub("chr","",entrypoints[i,1]), cex=label_size)
     }
 
 

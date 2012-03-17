@@ -36,6 +36,12 @@ class Genome::Model::Tools::Velvet::Metrics {
             is_optional => 1,
             doc => 'Stats output file',
         },
+        min_contig_length => {
+            is => 'Number',
+            is_optional => 1,
+            default_value => 200,
+            doc => 'Minimum contig length to consider for stats',
+        }
     ],
     has_optional => [
         _metrics => { is_transient => 1, },
@@ -127,6 +133,11 @@ sub execute {
     $self->status_message('Add velvet afg file: '.$self->velvet_afg_file);
     my $add_read_depth = $self->_add_metrics_from_agp_file($metrics);
     return if not $add_read_depth;
+
+    # core gene survey
+    $self->status_message('Check core gene survey result');
+    my $add_core_gene_survey = $self->_add_core_gene_survey_metrics($metrics);
+    return if not $add_core_gene_survey;
     
     # transform metrics
     my $text = $metrics->transform_xml_to('txt');
@@ -155,6 +166,13 @@ sub execute {
 sub _add_metrics_from_agp_file { #for velvet assemblies
     my ($self, $metrics) = @_;
 
+    # get contig/supercontig lengths to filter out those of min length
+    my $scaf_info = $self->get_scaffold_info_from_afg_file;
+    if ( not $scaf_info ) {
+        $self->error_message('Failed to get scaffold info from afg file');
+        return;
+    }
+
     my $afg_fh = eval{ Genome::Sys->open_file_for_reading($self->resolve_afg_file); };
     return if not $afg_fh;
 
@@ -178,17 +196,24 @@ sub _add_metrics_from_agp_file { #for velvet assemblies
             my $seq = $fields->{seq};
             $seq =~ s/\n//g; #contig seq is written in multiple lines
 
-            my $contig_length = length $seq;
-            $total_contigs_length += $contig_length;
-
             #contigs/supercontig lengths;
             my $contig_name = $fields->{eid};
             my ($supercontig_name) = $fields->{eid} =~ /^(\d+)-/; 
+
+            # to look up contig/supercontig length in 
+            my $contig_look_up_id = $contig_name;
+            $contig_look_up_id =~ s/\-/\./;
+            next unless $scaf_info->{$contig_look_up_id}->{filtered_supercontig_length} >= $self->min_contig_length;
+            next unless length $seq >= $self->min_contig_length;
 
             my %contig;
             $contig{'id'} = $supercontig_name.'.'.$contig_name;
             $contig{'seq'} = $seq;
             $metrics->add_contig( \%contig );
+
+            # add up contig lengths
+            my $contig_length = length $seq;
+            $total_contigs_length += $contig_length;
 
             #separate major/minor contigs metrics
             if ( $contig_length >= $self->major_contig_length ) {
@@ -308,6 +333,35 @@ sub _add_metrics_from_agp_file { #for velvet assemblies
     $metrics->set_metric('coverage_2x', $two_x);
     $metrics->set_metric('coverage_1x', $one_x);
     $metrics->set_metric('coverage_0x', $zero_x);
+
+    return 1;
+}
+
+sub _add_core_gene_survey_metrics {
+    my ( $self, $metrics ) = @_;
+
+    if ( not -s $self->core_gene_survey_file) {
+        $self->status_message("Core gene survey result file not found, so core gene survey metrics will be set");
+        return 1;
+    }
+    
+    my $fh = Genome::Sys->open_file_for_reading( $self->core_gene_survey_file );
+    while ( my $line = $fh->getline ) {
+        if ( $line =~ /^Perc of Core/ ) {
+            my ( $value ) = $line =~ /assembly:\s+(\S+)\s+%/;
+            $metrics->set_metric('core_gene_present_percent', $value);
+        }
+        elsif ( $line =~ /^Number\s+of\s+/ ) {
+            my ( $value ) = $line =~ /assembly:\s+(\d+)$/;
+            $metrics->set_metric('core_gene_group_present_count', $value);
+        }
+        elsif ( $line =~ /^Core\s+gene/) {
+            my ( $value ) = $line =~ /gene\s+test\s+(\S+)$/;
+            $metrics->set_metric('core_gene_survey_result', $value );
+        }
+    }
+
+    $fh->close;
 
     return 1;
 }

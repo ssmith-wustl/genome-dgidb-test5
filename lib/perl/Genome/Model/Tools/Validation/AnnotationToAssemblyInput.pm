@@ -8,22 +8,30 @@ use Genome::Sys;
 
 class Genome::Model::Tools::Validation::AnnotationToAssemblyInput {
     is => 'Command',
-
+    
     has => [
-    annotation_file    => { 
-        is => 'String', 
-        doc => 'annotation output or annotator input file (needs first 6 columns from annotation output)',
-    },
-    output_file => { 
-        is => 'String', 
-        doc => 'output in BreakDancer-esque format for input into gmt assembly tool',
-    },
-    minimum_size => {
-        is => 'Integer',
-        default => 3,
-        is_optional => 1,
-        doc => 'the minimum size of the indel to output to the file',
-    },
+        annotation_file    => { 
+            is => 'String', 
+            doc => 'annotation output or annotator input file (needs first 6 columns from annotation output)',
+        },
+        output_file => { 
+            is => 'String', 
+            doc => 'output in BreakDancer-esque format for input into gmt assembly tool',
+        },
+        minimum_size => {
+            is => 'Integer',
+            default => 3,
+            is_optional => 1,
+            doc => 'the minimum size of the indel to output to the file',
+        },
+        add_indel_alleles => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'when doing indel validation, tack on two extra columns with the indel ref/var alleles',
+            is_optional => 1,
+        }
+        
+
     ],
 };
 
@@ -54,7 +62,11 @@ sub execute {
 
 
     #print out header
-    print $ofh "#Chr1\tPos1\tOri1\tChr2\tPos2\tOri2\tType\tSize\n";
+    print $ofh "#Chr1\tPos1\tOri1\tChr2\tPos2\tOri2\tType\tSize";
+    if($self->add_indel_alleles){
+        print $ofh "\tRef\tVar";
+    }
+    print $ofh "\n";
 
     while(my $line = $fh->getline) {
         chomp $line;
@@ -65,7 +77,11 @@ sub execute {
         my $size = $ref =~ /[0-]/ ? length $var : length $ref;
         next if($size < $self->minimum_size);
 
-        print $ofh join("\t",$chr,$start,"+",$chr,$end,'+',$type,$size),"\n";
+        print $ofh join("\t",$chr,$start,"+",$chr,$end,'+',$type,$size);
+        if($self->add_indel_alleles){
+            print $ofh "\t" . $ref . "\t" . $var;
+        }
+        print $ofh "\n";
     }
 
     return 1;

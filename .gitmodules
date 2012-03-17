@@ -72,7 +72,7 @@
 	url = ssh://git//srv/git/alignment_summary.git
 [submodule "vendor/tophat"]
 	path = vendor/tophat
-	url = git@github.com:genome/tophat.git
+	url = git@github.com:genome-vendor/tophat.git
 [submodule "vendor/libbio-samtools-perl"]
 	path = vendor/libbio-samtools-perl
 	url = ssh://git/srv/git/vendor/libbio-samtools-perl
@@ -81,4 +81,34 @@
 	url = ssh://git/srv/git/vendor/samtools
 [submodule "vendor/bwa"]
 	path = vendor/bwa
-	url = ssh://git/srv/git/vendor/bwa
+	url = git://github.com/genome-vendor/bwa.git
+[submodule "vendor/apollo"]
+	path = vendor/apollo
+	url = git@github.com:genome-vendor/apollo.git
+[submodule "vendor/mutalin"]
+	path = vendor/mutalin
+	url = git@github.com:genome-vendor/mutalin.git
+[submodule "vendor/cufflinks"]
+	path = vendor/cufflinks
+	url = git@github.com:genome-vendor/cufflinks.git
+[submodule "vendor/velvet"]
+	path = vendor/velvet
+	url = git@github.com:genome-vendor/velvet.git
+[submodule "vendor/samtools-hybrid"]
+	path = vendor/samtools-hybrid
+	url = git@github.com:genome-vendor/samtools-0.1.7a-hybrid.git
+[submodule "vendor/bsmap"]
+	path = vendor/bsmap
+	url = git@github.com:genome-vendor/bsmap.git
+[submodule "vendor/allpathslg"]
+	path = vendor/allpathslg
+	url = git@github.com:genome-vendor/allpathslg.git
+[submodule "vendor/ensembl"]
+	path = vendor/ensembl
+	url = git@github.com:genome-vendor/ensembl.git
+[submodule "vendor/CummeRbund"]
+	path = vendor/CummeRbund
+	url = git@github.com:genome-vendor/CummeRbund.git
+[submodule "tgi-etc"]
+	path = tgi-etc
+	url = ssh://git/srv/git/genome-tgi-etc.git

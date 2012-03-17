@@ -22,8 +22,9 @@ my $data_dir = File::Temp::tempdir('SetDerivedFrom-XXXXX', DIR => '/gsc/var/cach
 
 my %samples;
 for my $sn (@species_names) {
-    my $p = Genome::Individual->create(name => "test-$sn-patient", common_name => 'testpatient');
-    my $s = Genome::Sample->create(name => "test-$sn-patient", species_name => $sn, common_name => 'tumor', source => $p);
+    my $taxon = Genome::Taxon->get(name => $sn);
+    my $p = Genome::Individual->create(name => "test-$sn-patient", common_name => 'testpatient', taxon => $taxon);
+    my $s = Genome::Sample->create(name => "test-$sn-patient", common_name => 'tumor', source => $p);
     ok($s, 'created sample');
     $samples{$sn} = $s;
 }

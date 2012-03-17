@@ -27,25 +27,40 @@ use warnings;
 
 my $gsc_project = Test::MockObject->new();
 $gsc_project->set_isa('Genome::Site::WUGC::SetupProjectResearch');
-$gsc_project->set_always(id => 2269562);
-$gsc_project->set_always(name => 'HMP Centers Grant Reference Genomes WU Strain Collection');
-$gsc_project->set_always(setup_name => 'HMP Centers Grant Reference Genomes WU Strain Collection');
+$gsc_project->set_always(id => -444);
+$gsc_project->set_always(setup_id => -444);
+$gsc_project->set_always(name => '__TEST_PROJECT__');
+$gsc_project->set_always(setup_name => '__TEST_PROJECT__');
 my $gsc_workorder = Test::MockObject->new();
 $gsc_workorder->set_isa('Genome::Site::WUGC::SetupWorkOrder');
 $gsc_workorder->set_always(id => -222);
-$gsc_workorder->set_always(name => '-222-HMP_Centers_grant_Reference_Genomes_WU_Strain_Collection');
-$gsc_workorder->set_always(setup_name => '-222-HMP_Centers_grant_Reference_Genomes_WU_Strain_Collection');
+$gsc_workorder->set_always(name => '__TEST_WORKORDER__');
+$gsc_workorder->set_always(setup_name => '__TEST_WORKORDER__');
 $gsc_workorder->set_always(get_project => $gsc_project);
 
-my $bac_taxon = Genome::Taxon->__define__(name => 'bacteria', domain => 'Bacteria', species_latin_name => 'T. bacteria');
-ok($bac_taxon, 'define bacteria taxon');
-my $unknown_taxon = Genome::Taxon->__define__(name => 'unknown', domain=> 'unknown', species_latin_name => 'unknown');
-ok($unknown_taxon, 'got unknown taxon');
+my $genome_project = Genome::Project->create( id => $gsc_project->setup_id, name => $gsc_project->setup_name );
+ok( $genome_project, 'Define genome project' );
+my $pp_id = 2682126;
+$genome_project->add_part( label => 'default_processing_profiles', entity_id => $pp_id, entity_class_name => 'Genome::ProcessingProfile');
+my $part = $genome_project->parts( label => 'default_processing_profiles' );
+is ($part->entity_id, $pp_id, 'set pp id on project');
+
+my $bac_source = Genome::Individual->__define__(
+    name => '__TEST_BAC_SOURCE__', 
+    taxon => Genome::Taxon->__define__(name => 'bacteria', domain => 'Bacteria', species_latin_name => 'T. bacteria'),
+);
+ok($bac_source, 'define bacteria source');
+ok($bac_source->taxon, 'define bacteria taxon');
+my $unknown_source = Genome::Individual->__define__(
+    name => '__TEST_UNKNOWN__SOURCE_',
+    taxon => Genome::Taxon->__define__(name => 'unknown', domain=> 'unknown', species_latin_name => 'unknown'),
+);
+ok($unknown_source, 'define unknown source');
+ok($unknown_source->taxon, 'define unknown taxon');
 my $pp = Genome::ProcessingProfile->get(2658559);
 ok($pp, 'got de novo pp');
-ok(_qidfgm($bac_taxon), 'create qidfgm for bacteria taxon');
-ok(_qidfgm($unknown_taxon), 'create qidfgm for unknown');
-#ok(_qidfgm($unknown_taxon), 'create qidfgm for unknown');
+ok(_qidfgm($bac_source), 'create qidfgm for bacteria taxon');
+ok(_qidfgm($unknown_source), 'create qidfgm for unknown');
 is(@instrument_data, $qidfgm_cnt, "create $qidfgm_cnt inst data");
 is(@pses, $qidfgm_cnt, "create $qidfgm_cnt pses");
 
@@ -92,12 +107,12 @@ done_testing();
 exit;
 
 sub _qidfgm {
-    my $taxon = shift;
+    my $source = shift;
     $qidfgm_cnt++;
     $sample_cnt++;
     my $sample = Genome::Sample->__define__(
-        name => 'AQID-testsample'.$sample_cnt.'.'.lc($taxon->name),
-        taxon_id => $taxon->id,
+        name => 'AQID-testsample'.$sample_cnt.'.'.lc($source->taxon->name),
+        source => $source,
         extraction_type => 'genomic',
     );
     ok($sample, 'sample '.$sample_cnt);

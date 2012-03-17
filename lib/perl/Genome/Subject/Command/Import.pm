@@ -30,7 +30,6 @@ sub help_brief {
 }
 
 sub create {
-
     my ($class, %p) = @_;
 
     if (my $f = $p{'filename'}) {
@@ -54,12 +53,10 @@ sub create {
 }
 
 sub execute {
-
     my ($self) = @_;
 
     # one project per upload
-    my $project = Genome::Project->create(name => $self->project_name);
-
+    my $project = Genome::Project->get_or_create(name => $self->project_name);
 
     # Assumes first row contains column names
     # Assumes first col is the name of the object or
@@ -76,31 +73,34 @@ sub execute {
     my $field = {};
 
     my $i = 0;
-    my $added;
+    my $changed;
+    my $seen = {};
+    my $value_count_doesnt_match;
+
     ROW:
     while (my $row = $csv->getline($fh)) {
-        
+
         if ( $i++ == 0 ) { 
             @header = @$row; 
             $field = $self->check_types(@header);
             next ROW; 
         }
 
+        my $name = $row->[0];
+        if ($seen->{$name}) {
+            die "Error: Found non-unique row ($name) in the spreadsheet- should be one sample or individual per row";
+        }
+        $seen->{$name}++;
         my @values = @$row;  
 
         if (@header != @values) {
-            warn "Skipping row - number of columns, values, and types dont match: $subclass_name with name "
-                . $row->[0];
-            next ROW;
+            $value_count_doesnt_match++;
         }
 
+        my (@obj) = $subclass_name->get(name => $name);
 
-        my $obj = $subclass_name->get_or_create(name => $row->[0]);
-
-        
-        if ( !$obj ) {
-            warn "Skipping row- couldnt get or create object: $subclass_name with name: "
-                . $header[0];
+        if ( !@obj ) {
+            warn "Skipping row- couldnt get a $subclass_name object with name: " . $row->[0];
             next ROW;
         }
 
@@ -111,41 +111,102 @@ sub execute {
 
             if (++$j == 0) { next VALUE; } # first value should be the obj's "name"
 
+            next VALUE if !$v;
+
             my $col_name = $header[$j];
             my $f = $field->{$col_name};
-            if ($f->type() eq 'enumerated') {
-                my @acceptable_values = map {$_->value} $f->enumerated_values();
-                if (! grep /^$v$/, @acceptable_values) {
-                    my $nom = $self->nomenclature();
-                    warn "Skipping value '$v' because its not a valid option for $col_name with nomenclature: "
-                            . $nom->name;
-                    next VALUE;
+
+            if (! $self->validate($f, $v)) {
+                warn "Skipping value '$v' because its not a valid " . $f->type();
+                next VALUE;
+            }
+
+            if (@obj > 1) {
+                warn "** Found multiple things with name $name so applying attributes to all of them";
+            }
+
+            OBJECT:
+            for my $o (@obj) {
+
+                my $sa = Genome::SubjectAttribute->get(
+                    subject_id      => $o->id,
+                    attribute_label => $col_name,
+                    nomenclature    => $f->id
+                );
+
+                if ($sa) { 
+                    $sa->delete;
                 }
+                $sa = Genome::SubjectAttribute->create(
+                    subject_id      => $o->id,
+                    attribute_label => $col_name,
+                    attribute_value => $v,
+                    nomenclature    => $f->id
+                );
+                $changed++; 
             }
-
-            my $sa = Genome::SubjectAttribute->get(
-                subject_id      => $obj->id,
-                attribute_label => $col_name,
-                nomenclature    => $f->id
-            );
-
-            if ($sa) { 
-                $sa->delete;
-            }
-            $sa = Genome::SubjectAttribute->create(
-                subject_id      => $obj->id,
-                attribute_label => $col_name,
-                attribute_value => $v,
-                nomenclature    => $f->id
-            );
-            $added++; 
         }
 
+        # TODO: check for unique: subclass_name, id
         # add each subject obj to the project
-        $project->add_part( entity => $obj, role => 'automatic');
+        for my $o (@obj) {
+            if (! $project->get_part($o)) {
+                $project->add_part( entity => $o, role => 'automatic');
+            }
+        }
     }
 
-    return $added;
+    if ($value_count_doesnt_match) {
+        warn "** Used $value_count_doesnt_match rows that have different number of values than the header (first row) indicates there should be.";
+    }
+
+    return $changed;
+}
+
+
+sub validate {
+    my ($self, $field, $value) = @_;
+
+    my $nom = $self->nomenclature();
+    my $expected_type = $field->type();
+
+    if ($nom->empty_equivalent &&
+        ($value eq $nom->empty_equivalent) ) {
+        return 1; 
+    }
+
+    if ($expected_type eq 'string') {
+        return 1;
+    } 
+
+    if ($expected_type eq 'integer'
+        or $expected_type eq 'numeric') {
+        if ($value =~ /^[+-]?\d+$/) {
+            return 1;
+        }
+    }  
+
+    if ($expected_type eq 'real'
+        or $expected_type eq 'numeric') {
+        if ($value =~ /^[+-]?\d*\.?\d*$/) {
+            return 1;
+        }
+    }
+
+    if ($expected_type eq 'date') {
+        if ($value =~ /^\d{4}-\d{2}-\d{2}$/) {
+            return 1;
+        }
+    }
+
+    if ($expected_type eq 'enumerated') {
+        my @acceptable_values = map {$_->value} $field->enumerated_values();
+        if (grep /^$value$/, @acceptable_values) {
+            return 1;
+        }
+    }
+
+    return;
 }
 
 sub check_types {
@@ -153,6 +214,7 @@ sub check_types {
     my ($self, @header) = @_;
 
     my $nom = $self->nomenclature();
+
     my @fields = $nom->fields();
     my %field = map {$_->name => $_} @fields;
 
@@ -161,16 +223,28 @@ sub check_types {
     for my $h (@header) {
 
         if ($i++ == 0) { next COLUMN_NAME; } # first is the subject name
+
+        if (!$h) { die 'Error: the spreadsheet contains a column with no heading!'; }
+
         if (!defined($field{$h})) {
-            die "Error: column '$h' is not a field in nomenclature '"
-                . $nom->name . "'";
+
+            if ($nom->accepts_any_field) {
+                my $new_field = Genome::Nomenclature::Field->create(
+                    name => $h,
+                    type => 'string',
+                    nomenclature_id => $nom->id,
+                );
+
+                $field{$h} = $new_field;
+            } else {
+                die "Error: column '$h' is not a field in nomenclature '"
+                    . $nom->name . "'";
+            }
         }
     }
 
     return \%field;
 }
-
-
 
 
 1;
