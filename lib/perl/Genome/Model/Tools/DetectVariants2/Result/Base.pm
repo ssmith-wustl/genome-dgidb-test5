@@ -20,7 +20,10 @@ sub path {
 
 sub get_vcf_result {
     my $self = shift;
-    my @result = Genome::Model::Tools::DetectVariants2::Result::Vcf->get(input_id => $self->id);
+    my @result = Genome::Model::Tools::DetectVariants2::Result::Vcf->get(
+        input_id => $self->id,
+        test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
+    );
     my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
     @result = grep{ $_->vcf_version eq $vcf_version } @result;
     unless(@result < 2){

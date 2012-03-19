@@ -56,5 +56,19 @@ my $output_indel_file = $sniper->output_directory . "/indels.hq.bed";
 ok(-s $output_snv_file,'Testing success: Expecting a snv output file exists');
 ok(-s $output_indel_file,'Testing success: Expecting a indel output file exists');
 
+#I don't know what this output should like like, but we will check to see if this runs...
+my $v1_test_working_dir = "$test_base_dir/output_v1";
+my $sniper_v1 = Genome::Model::Tools::DetectVariants2::Sniper->create(aligned_reads_input=>$tumor, 
+                                                                      control_aligned_reads_input=>$normal,
+                                                                      reference_build_id => $refbuild_id,
+                                                                      output_directory => $v1_test_working_dir,
+                                                                      version => '1.0.0',
+                                                                      params => '-q 1 -Q 15',
+                                                                      aligned_reads_sample => 'TEST',);
+ok($sniper_v1, 'sniper 1.0.0 command created');
+$sniper_v1->dump_status_messages(1);
+my $rv1= $sniper_v1->execute;
+is($rv1, 1, 'Testing for successful execution.  Expecting 1.  Got: '.$rv1);
+
 done_testing();
 exit;

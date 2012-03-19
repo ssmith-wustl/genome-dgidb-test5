@@ -1478,18 +1478,13 @@ sub get_or_create_sequence_dictionary {
     my $self = shift;
 
     my $species = "unknown";
-    if ($self->instrument_data->id > 0) {
-        $self->status_message("Sample id: ".$self->instrument_data->sample_id);
-        my $sample = Genome::Sample->get($self->instrument_data->sample_id);
-        if ( defined($sample) ) {
-            $species =  $sample->species_name;
-            if (!$species || $species eq ""  ) {
-                $species = "unknown";
-            }
+    $self->status_message("Sample id: ".$self->instrument_data->sample_id);
+    my $sample = Genome::Sample->get($self->instrument_data->sample_id);
+    if ( defined($sample) ) {
+        $species =  $sample->species_name;
+        if (!$species || $species eq ""  ) {
+            $species = "unknown";
         }
-    }
-    else {
-        $species = 'Homo sapiens'; #to deal with solexa.t
     }
 
     $self->status_message("Species from alignment: ".$species);
