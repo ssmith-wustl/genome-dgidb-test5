@@ -81,7 +81,7 @@ $DB::single=1;
     $self->status_message('Create composite workflow...OK');
     $generator->{inputs} = $inputs;
 
-    $self->status_message('Execute composite workflow...OK');
+    $self->status_message('Execute composite workflow...');
     $generator->dump_status_messages(1);
     unless($generator->execute) {
         die $self->error_message('Failed to execute workflow.');
