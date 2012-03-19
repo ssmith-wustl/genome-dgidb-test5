@@ -30,7 +30,7 @@ class Genome::SoftwareResult {
         params_bx           => { is => 'UR::BoolExpr', id_by => 'params_id', is_optional => 1 },
         params_id           => { is => 'Text', len => 4000, column_name => 'PARAMS_ID', implied_by => 'params_bx', is_optional => 1 },
         output_dir          => { is => 'Text', len => 1000, column_name => 'OUTPUTS_PATH', is_optional => 1 },
-        test_name           => { is_param => 1, is_delegated => 1, is_mutable => 1, via => 'params', to => 'param_value', where => ['param_name' => 'test_name'], is => 'Text', doc => 'Assigns a testing tag to the result.  These will not be used in default processing', is_optional => 1 },
+        test_name           => { is_param => 1, is_delegated => 1, is_mutable => 1, via => 'params', to => 'value_id', where => ['name' => 'test_name'], is => 'Text', doc => 'Assigns a testing tag to the result.  These will not be used in default processing', is_optional => 1 },
     ],
     has_many_optional => [
         params              => { is => 'Genome::SoftwareResult::Param', reverse_as => 'software_result'},
@@ -209,6 +209,40 @@ sub create {
     return $self;
 }
 
+sub _gather_params_for_get_or_create {
+    my $class = shift;
+    my $bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
+
+    my %params = $bx->params_list;
+    my %is_input;
+    my %is_param;
+    my $class_object = $class->__meta__;
+    for my $key ($class->property_names) {
+        my $meta = $class_object->property_meta_for_name($key);
+        if ($meta->{is_input} && exists $params{$key}) {
+            $is_input{$key} = $params{$key};
+        } elsif ($meta->{is_param} && exists $params{$key}) {
+            $is_param{$key} = $params{$key};
+        }
+
+    }
+
+    my $inputs_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, %is_input);
+    my $params_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, %is_param);
+
+    my %software_result_params = (#software_version=>$params_bx->value_for('aligner_version'),
+        params_id=>$params_bx->id,
+        inputs_id=>$inputs_bx->id,
+        subclass_name=>$class
+    );
+
+    return {
+        software_result_params => \%software_result_params,
+        subclass => $class,
+        inputs=>\%is_input,
+        params=>\%is_param,
+    };
+}
 sub _preprocess_params_for_get_or_create {
     my $class = shift;
     if(scalar @_ eq 1) {
@@ -228,7 +262,9 @@ sub _preprocess_params_for_get_or_create {
                     my @values = sort @$value_list;
                     my $t_params = $params{$t . 's'} || [];
                     for my $i (0..$#values) {
-                        push @$t_params, {$t . '_name' => $key . '-' . $i, $t . '_value' => $values[$i]};
+                        my $value = $values[$i];
+                        my $value_id = (Scalar::Util::blessed($value) ? $value->id : $value);
+                        push @$t_params, {'name' => $key . '-' . $i, 'value_id' => $value_id};
                     }
                     $params{$t . 's'} = $t_params;
 
@@ -245,31 +281,16 @@ sub _preprocess_params_for_get_or_create {
 }
 
 sub resolve_module_version {
-    #TODO, this tries to get svn revision info, then snapshot info, then date commited to trunk.  This actually isn't used anywhere to verify versions, so as long as it doesn't die here we are ok for the time being
-    my $self = shift;
-    my $base_dir = $self->base_dir;
-    my $path = $base_dir .'.pm';
-    unless (-f $path) {
-        die('Failed to find expected perl module '. $path);
+    my $class = shift;
+    my $revision = Genome::Sys->snapshot_revision;
+    # the revision may be a series of long paths
+    # truncate the revision if it is too long to store, but put a * at the end so we can tell this is the case
+    my $pmeta = $class->__meta__->property("module_version");
+    my $len = $pmeta->data_length - 1;
+    if (length($revision) > $len) {
+        $revision = substr($revision,0,$len) . '*';
     }
-
-    if ($path =~ /\/gsc\/scripts\/opt\/genome-(\d+)\//) {
-        return $1;
-    }
-    if ($path =~ /\/gsc\/scripts\/lib\/perl\//) {
-        my $date = (stat($path))[9]; #mtime
-        return 'app-'. $date;
-    }
-    #TODO: make condition for directory in svn tree that has not been added to svn
-
-    #TODO: make condition for uncommited changes in svn tree, currently return zero
-    #die('Failed to resolve_software_version for perl module path '. $path);
-    return 0;
-}
-
-sub svn_info {
-    my $self = shift;
-    my $path = shift;
+    return $revision;
 }
 
 sub _expand_param_and_input_properties {
@@ -278,18 +299,43 @@ sub _expand_param_and_input_properties {
         while (my ($prop_name, $prop_desc) = each(%{ $desc->{has} })) {
             if (exists $prop_desc->{'is_'.$t} and $prop_desc->{'is_'.$t}) {
                 my $is_many = ($t ne 'metric' and exists $prop_desc->{'is_many'} and $prop_desc->{'is_many'});
-                $prop_desc->{'to'} = $t.'_value';
+
+                my $name_name;
+                if ($t eq 'metric') {
+                    $prop_desc->{'to'} = 'metric_value';
+                    $name_name = 'metric_name';
+                }
+                else {
+                    if (exists $prop_desc->{'data_type'} and $prop_desc->{'data_type'}) {
+                        my $prop_class = UR::Object::Property->_convert_data_type_for_source_class_to_final_class(
+                            $prop_desc->{'data_type'},
+                            $class
+                        );
+                        if ($prop_class->isa("UR::Value")) {
+                            $prop_desc->{'to'} = 'value_id';
+                        } else {
+                            $prop_desc->{'to'} = 'value_obj';
+                        }
+                    } 
+                    else {
+                        $prop_desc->{'to'} = 'value_id';
+                    }
+                    $name_name = 'name';    
+                }
+
                 $prop_desc->{'is_delegated'} = 1;
 
                 if($is_many) {
                     $prop_desc->{'where'} = [
-                        $t.'_name like' => $prop_name . '-%',
+                        $name_name . ' like' => $prop_name . '-%',
                     ];
-                } else {
+                } 
+                else {
                     $prop_desc->{'where'} = [
-                        $t.'_name' => $prop_name
+                        $name_name => $prop_name
                     ];
                 }
+                
 
                 $prop_desc->{'is_mutable'} = 1;
                 $prop_desc->{'via'} = $t.'s';
@@ -302,10 +348,8 @@ sub _expand_param_and_input_properties {
                         $md5_prop->{'is_param'} = 1;
                         $md5_prop->{'is_delegated'} = 1;
                         $md5_prop->{'via'} = 'params';
-                        $md5_prop->{'to'} = 'param_value';
-                        $md5_prop->{'where'} = [
-                            'param_name' => $md5_name
-                        ];
+                        $md5_prop->{'to'} = 'value_id';
+                        $md5_prop->{'where'} = [ 'name' => $md5_name ];
                         $md5_prop->{'doc'} = 'MD5 sum of the sorted list of values for ' . $prop_name;
                         $md5_prop->{'is_mutable'} = 1;
                         $md5_prop->{'is_optional'} = 1;
@@ -322,10 +366,8 @@ sub _expand_param_and_input_properties {
                         $count_prop->{'is_param'} = 1;
                         $count_prop->{'is_delegated'} = 1;
                         $count_prop->{'via'} = 'params';
-                        $count_prop->{'to'} = 'param_value';
-                        $count_prop->{'where'} = [
-                            'param_name' => $count_name
-                        ];
+                        $count_prop->{'to'} = 'value_id';
+                        $count_prop->{'where'} = [ 'name' => $count_name ];
                         $count_prop->{'doc'} = 'number of values for ' . $prop_name;
                         $count_prop->{'is_mutable'} = 1;
                         $count_prop->{'is_optional'} = 1;
@@ -338,6 +380,7 @@ sub _expand_param_and_input_properties {
             }
         }
     }
+    #print Data::Dumper::Dumper($desc);
     return $desc;
 }
 

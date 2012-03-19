@@ -64,7 +64,7 @@ my $detector_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::De
     input                => $detector_result,
     output_dir           => $detector_vcf_directory,
     aligned_reads_sample => "TEST",
-    vcf_version          => "1",
+    vcf_version          => $vcf_version,
 );
 
 $detector_result->add_user(user => $detector_vcf_result, label => 'uses');

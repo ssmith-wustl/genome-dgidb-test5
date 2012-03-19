@@ -273,10 +273,7 @@ sub _try_vcf {
     my $self = shift;
     my @types;
 
-    #TODO We do not currently support indel vcfs
-    # Once we do, simply add "indels" to the list below
-
-    for ("snvs"){
+    for ("snvs", "indels"){
         if($self->_variant_type eq $_){
             push @types,$_;
         }

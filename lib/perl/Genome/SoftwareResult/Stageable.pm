@@ -36,8 +36,6 @@ sub _prepare_staging_directory {
 
     return $self->temp_staging_directory if ($self->temp_staging_directory);
 
-    my $base_temp_dir = Genome::Sys->base_temp_directory();
-
     my $hostname = hostname;
     my $user = $ENV{'USER'};
     my $basedir = sprintf("%s-%s-%s-%s-%s", $self->_working_dir_prefix, $hostname, $user, $$, $self->id);
