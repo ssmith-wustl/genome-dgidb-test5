@@ -241,6 +241,7 @@ sub tar {
     my $tar_path = delete $params{tar_path};
     my $input_directory = delete $params{input_directory};
     my $input_pattern = delete $params{input_pattern};
+    $input_pattern = '*' unless defined $input_pattern;
 
     if (%params) {
         Carp::confess "Extra parameters given to tar method: " . join(', ', sort keys %params);
@@ -260,9 +261,7 @@ sub tar {
         Carp::confess "Could not change directory to $input_directory";
     }
 
-    my $cmd = "tar -cf $tar_path";
-    $cmd .= " $input_pattern" if $input_pattern;
-
+    my $cmd = "tar -cf $tar_path $input_pattern";
     my $rv = Genome::Sys->shellcmd(
         cmd => $cmd,
     );
