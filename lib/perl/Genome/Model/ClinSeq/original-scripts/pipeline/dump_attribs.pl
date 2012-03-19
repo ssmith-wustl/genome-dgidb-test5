@@ -12,21 +12,22 @@ unless($sample_name) {
 }
 my @samples;
 if(my $temp = Genome::Sample->get(name=>"$sample_name")) {
-        $samples[0]=$temp;
-    }
+  $samples[0]=$temp;
+}
 
 unless(scalar(@samples)==1) {
-my $mg =  Genome::ModelGroup->get($ARGV[0]);
-unless($mg) {
- $mg= Genome::ModelGroup->get(name=>$ARGV[0]);
-}
-unless($mg) {
+  my $mg = Genome::ModelGroup->get($ARGV[0]);
+  unless($mg) {
+    $mg = Genome::ModelGroup->get(name=>$ARGV[0]);
+  }
+  unless($mg) {
     print STDERR "Can't find $sample_name as a sample name, model group id, or model group name";
     exit(0);
+  }
+  my @models= $mg->models;
+  @samples = sort {$a->name cmp $b->name } map {$_->subject} @models;
 }
-    my @models= $mg->models;
-@samples = sort {$a->name cmp $b->name } map {$_->subject} @models;
-}
+
 unless(@samples) {
     print STDERR "Sample or modelgroup not found!";
     exit(0);
