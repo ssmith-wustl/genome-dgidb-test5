@@ -509,12 +509,19 @@ sub _move {
         ($new_volume, $new_volume_lock) = $self->_lock_volume_from_list($kilobytes_requested, @candidate_volumes);
     }
     my $old_allocation_dir = $self->absolute_path;
-    my $new_allocation_dir = join('/', $new_volume->mount_path, $self->group_subdirectory, $self->allocation_path);
+    my $base_volume_path = join('/', $new_volume->mount_path, $new_volume->groups->subdirectory);
+    my $new_allocation_dir = join('/', $base_volume_path, $self->allocation_path);
 
-    unless (-w $new_allocation_dir) {
+    unless (Genome::Sys->validate_directory_for_read_write_access($base_volume_path)) {
         Genome::Sys->unlock_resource(resource_lock => $new_volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess "Cannot write to target volume, cannot move data!";
+    }
+
+    unless (-d $new_allocation_dir) {
+        unless (Genome::Sys->create_directory($new_allocation_dir)) {
+            confess "Could not create new allocation directory $new_allocation_dir!";
+        }
     }
 
     $self->status_message("Moving allocation " . $self->id . " from volume " . $old_volume->mount_path . " to a new volume");
@@ -556,6 +563,7 @@ sub _move {
         confess 'Could not get lock for volume ' . $new_volume->mount_path;
     }
     $self->mount_path($new_volume->mount_path);
+    $self->group_subdirectory($new_volume->groups->subdirectory);
     $self->kilobytes_requested($kilobytes_requested);
     $self->reallocation_time(UR::Time->now);
     $self->_update_owner_for_move;
