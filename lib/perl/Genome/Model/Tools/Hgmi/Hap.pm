@@ -544,6 +544,7 @@ sub acedb_version_lookup
     my %acedb_version_lookup = (
         'DEV'  => 'Development',
         'DEV1'  => 'Development_1',
+        'DEV2'  => 'Development_2',
         'V1'  => 'Version_1.0',
         'V2'  => 'Version_2.0',
         'V3'  => 'Version_3.0',

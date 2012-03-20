@@ -1,11 +1,11 @@
-package Genome::Sample::View::Detail::Xml;
+package Genome::Individual::View::Detail::Xml;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Sample::View::Detail::Xml {
+class Genome::Individual::View::Detail::Xml {
     is => 'UR::Object::View::Default::Xml',
     has_constant => [
         default_aspects => {
