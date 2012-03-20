@@ -137,8 +137,8 @@ sub execute {
         next if ($line =~ /^#/);
 
         my @fields = split("\t",$line);
-        if($self->bed_input) {
-            unless($fields[3] =~ /\*/ or $fields[3] =~ /0/ or $fields[3] =~ /-/) { #in bed, this would be an insertion or deletion and we should not naively ++ the start
+        if ($self->bed_input) {
+            unless ($fields[3] =~ /\*|0|\-/) { #in bed, this would be an insertion or deletion and we should not naively ++ the start
                 $fields[1]+=1;
             }
         }
@@ -248,6 +248,8 @@ sub execute {
                     }
 
                     if ($filter_keep){
+                        #Note this logic does not apply to some vcf lines
+                        #with multiple indels in ALT column
                         if (exists($filter{$key})){
                             $filter_value = "PASS";
                         } else {
