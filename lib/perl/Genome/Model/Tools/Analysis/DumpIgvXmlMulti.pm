@@ -93,7 +93,7 @@ XML
      <Resource path="$path" relativePath="false"/>
 XML
 }
-    $header .= "    </Resources>";
+    $header .= "    </Resources>\n";
 
 
 #---- panels -----
@@ -102,10 +102,11 @@ XML
     for($i=0;$i<@bams;$i++){
         my $path = abs_path($bams[$i]);
         my $label = $labels[$i];
+        my $cov = $path . "_coverage";
 
 $panels .= <<"XML";        
    <Panel height="1000" name="Panel$i" width="1901">
-        <Track color="200,200,200" expand="false" fontSize="9" height="40" id="${label}_coverage" name="$label Coverage" showDataRange="true" visible="true">
+        <Track color="200,200,200" expand="false" fontSize="9" height="40" id="$cov" name="$label Coverage" showDataRange="true" visible="true">
             <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="10.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track expand="true" fontSize="9" height="1000" id="$path" name="$label" showDataRange="true" visible="true">

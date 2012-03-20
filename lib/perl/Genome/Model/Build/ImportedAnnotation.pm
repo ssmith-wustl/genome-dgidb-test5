@@ -627,10 +627,14 @@ sub generate_rRNA_MT_pseudogene_file {
     }
 
     my $rRNA_file = $self->rRNA_file($suffix,$reference_sequence_id,$squashed);
-    my $MT_file = $self->MT_file($suffix,$reference_sequence_id,$squashed);
     my $pseudo_file = $self->pseudogene_file($suffix,$reference_sequence_id,$squashed);
-
-    my @input_files = ($rRNA_file,$MT_file,$pseudo_file);
+    my @input_files = ($rRNA_file,$pseudo_file);
+    
+    my $MT_file = $self->MT_file($suffix,$reference_sequence_id,$squashed);
+    if ($MT_file) {
+        push @input_files, $MT_file;
+    }
+    
     if ($suffix eq 'gtf') {
         if ($squashed) {
             die('Support for squashed representations of GTF files is not supported!');
@@ -704,9 +708,12 @@ sub generate_rRNA_MT_file {
     }
 
     my $rRNA_file = $self->rRNA_file($suffix,$reference_sequence_id,$squashed);
+    my @input_files = ($rRNA_file);
+    
     my $MT_file = $self->MT_file($suffix,$reference_sequence_id,$squashed);
-
-    my @input_files = ($rRNA_file,$MT_file);
+    if ($MT_file) {
+        push @input_files, $MT_file;
+    }
     if ($suffix eq 'gtf') {
         if ($squashed) {
             die('Support for squashed representations of GTF files is not supported!');
@@ -1001,31 +1008,41 @@ sub generate_MT_file {
         if ($squashed) {
             # Get the un-squashed BED file path
             my $bed_path = $self->MT_file('bed',$reference_sequence_id,0);
-            my $tmp_file = Genome::Sys->create_temp_file_path;
-            unless (Genome::Model::Tools::BedTools::MergeBy->execute(
-                input_file => $bed_path,
-                output_file => $tmp_file,
-            )) {
-                $self->error_message('Failed to squash the annotation by gene: '. $bed_path);
+            if ($bed_path && -s $bed_path) {
+                my $tmp_file = Genome::Sys->create_temp_file_path;
+                unless (Genome::Model::Tools::BedTools::MergeBy->execute(
+                    input_file => $bed_path,
+                    output_file => $tmp_file,
+                )) {
+                    $self->error_message('Failed to squash the annotation by gene: '. $bed_path);
+                }
+                # Remove the long names created by MergeBy and replace with gene and 'squashed' as the transcript name 
+                $self->remove_long_squashed_bed_names($tmp_file,$file_name);
+            } else {
+                `touch $file_name`;
             }
-            # Remove the long names created by MergeBy and replace with gene and 'squashed' as the transcript name 
-            $self->remove_long_squashed_bed_names($tmp_file,$file_name);
         } else {
             #This is not just a gtf file converted to bed, but rather limited to only exon feature types to remove CDS redundancy
             my $gtf_path = $self->MT_file('gtf',$reference_sequence_id,0);
-            $self->_convert_gtf_to_bed($gtf_path,$file_name);
+            if (-s $gtf_path) {
+                $self->_convert_gtf_to_bed($gtf_path,$file_name);
+            } else {
+                `touch $file_name`;
+            }
         }
     }
 
-    unless (Genome::Model::Tools::BedTools::Sort->execute(
-        input_file => $file_name,
-    )) {
-        die('Failed to sort file: '. $file_name);
+    if (-s $file_name){
+        unless (Genome::Model::Tools::BedTools::Sort->execute(
+            input_file => $file_name,
+        )) {
+            die('Failed to sort file: '. $file_name);
+        }
+        return $file_name;
+    } else {
+        $self->warning_message('MT file exists but has no size: ' . $file_name);
+        return undef;
     }
-    unless (-s $file_name){
-        die('MT file exists but has no size: ' . $file_name);
-    }
-    return $file_name;
 }
 
 sub MT_file {

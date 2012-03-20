@@ -6,28 +6,119 @@ Genome::Command::Crud
 
 =head1 Synopsis
 
-Automatic generation of CRUD (create, list (read), update and delete) commands for a UR objects.
+Automatic generation of CRUD (create, list (read), update and delete) subcommands for a UR objects.
 
-=head1 Usage
+=head1 Setup Classes and Perl Script To Run Commands
 
-To generate these commands, they need to be initialized from a command. They can be intialized from a higher up command, too. It is not necessary to have the main tree class defined, that will be done automatically. Each command has a separate config that can be passed in. If no config is passed in the all sub commands will be created and default naming will be used. 
+=head2 Relationship.pm
 
- package Genome::Library::Command
+package Person::Relationship;
 
- use Genome::Command::Crud;
- Genome::Command::Crud->init_sub_commands(
+use UR;
+
+class Person::Relationship {
+    is  => 'UR::Object',
+    id_by => [
+        person_id => { is => 'Number', implied_by => 'person', },
+        related_id => { is => 'Number', implied_by => 'related' },
+        name => { is => 'Text', },
+    ],
+    has => [
+        person => { is => 'Person', id_by => 'person_id', },
+        related => { is => 'Person', id_by => 'related_id' },
+    ],
+};
+
+1;
+
+__END__
+
+=head2 Person.pm
+
+package Person;
+
+use UR;
+
+class Person {
+    is => 'UR::Object',
+    has => [
+        name => {
+            is => 'Text',
+            doc => 'The name of the person',
+        },
+        relationships => { 
+            is => 'Person::Relationship',
+            is_many => 1,
+            is_optional => 1,
+            reverse_as => 'person',
+            doc => 'This person\'s relationships', 
+        },
+        friends => { 
+            is => 'Person',
+            is_many => 1,
+            is_optional => 1,
+            is_mutable => 1,
+            via => 'relationships', 
+            to => 'related',
+            where => [ name => 'friend' ],
+            doc => 'Friends of this person', 
+        },
+    ],
+};
+
+1;
+
+__END__
+
+=head2 person.pl
+
+#! /gsc/bin/perl
+
+use strict;
+use warnings;
+
+use UR;
+use Genome::Command::Crud;
+use Person;
+
+class Person::Command {
+    is => 'Command::Tree',
+};
+
+Genome::Command::Crud->init_sub_commands(
+    # These options are explained below in 'Crud Config'
     target_class => 'Person',
     target_name => 'person',
     target_name_pl => 'people',
-    update => { only_if_null => 1, include_only => [qw/ name age /], },
-    delete => { do_not_init => 1, },
- );
+);
 
- 1;
+Person::Command->execute_with_shell_params_and_exit();
 
-=head1 Config
+__END__
 
-=head2 
+=head1 Command Structure
+
+Each function will get a command. Under update, each property will get a command. If the relationship of the property is 'has many', there will be an add and remove command for the property.
+
+$ person.pl --help
+Sub-commands for person.pl:
+ create       a thing             
+ list         things               
+ update  ...  properties on things 
+
+$ person.pl update ---help
+Sub-commands for person.pl update:
+ friends  ...  add/remove friends     
+ name          The name of the person 
+
+$ person.pl update friends --help
+Sub-commands for person.pl update friends:
+ add       friend to people   
+ remove    friend from people 
+
+=head1 Crud Config
+
+=head2 Main
 
 =over 2
 
@@ -42,7 +133,7 @@ B<target_name_pl> (optional): The plural name of the objects. Default is to plur
 
 =back
 
-=head2 Sub Command Universal
+=head2 Command Universal
 
 =over 2
 
@@ -56,10 +147,11 @@ B<do_not_init>: Do not initialize the command.
 =over 2
 
 =item *
-B<only_if_null> (optional): Only allow updating of a property if it is null.
-
-=item *
 B<include_only> (optional): Only include these properties.
 
+=item *
+B<only_if_null> (optional): Only allow updating of a property if it is null.
+
 =back
+
 

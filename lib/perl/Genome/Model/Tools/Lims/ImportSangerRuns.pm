@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Lims::ImportSangerRun;
+package Genome::Model::Tools::Lims::ImportSangerRuns;
 
 use strict;
 use warnings;
@@ -7,20 +7,20 @@ use Genome;
 
 use Regexp::Common;
 
-class Genome::Model::Tools::Lims::ImportSangerRun {
+class Genome::Model::Tools::Lims::ImportSangerRuns {
     is => 'Command::V2',
     has => [
         run_names => {
             is => 'Text',
             is_many => 1,
             shell_args_position => 1,
-            doc => 'The run name',
+            doc => 'Run names to import.',
         },
     ],
 };
 
 sub help_brief {
-    return 'Import a sanger run into genome';
+    return 'Import sanger runs into genome';
 }
 
 sub execute {
@@ -55,7 +55,6 @@ sub _import_run {
         }
         $created = 1;
     }
-    $self->status_message('Run name: '.$sanger->id);
 
     my $library_ids = $self->_dump_to_file_system($sanger);
     if ( not $library_ids ) {
