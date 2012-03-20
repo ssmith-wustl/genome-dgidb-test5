@@ -220,4 +220,32 @@ sub _validate_required_for_start_properties {
     return (\&$model_method)->(@_);
 }
 
+sub reference_being_replaced_for_input {
+    my ($self, $input) = @_;
+
+    if($input->name eq "target_region_set"){
+        return 1;
+    }
+
+    if($input->name eq "region_of_interest_set"){
+        my $rsb = $self->reference_sequence_build;
+        my $roi_reference = $input->value->reference;
+        unless ($roi_reference) {
+            return;
+        }
+
+        if ($roi_reference and !$rsb->is_compatible_with($roi_reference)) {
+            my $converter =  Genome::Model::Build::ReferenceSequence::Converter->get(
+                source_reference_build => $roi_reference, 
+                destination_reference_build => $rsb,
+            );
+
+            if ($converter) {
+                return 1;
+            }
+        }
+    }
+    return;
+}
+
 1;

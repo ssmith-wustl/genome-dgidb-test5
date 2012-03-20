@@ -32,6 +32,7 @@ class Genome::Model::Tools::Varscan::CopyNumberSegments {
 		min_depth 	=> { is => 'Text', doc => "Minimum depth for a region (in one sample) to include it", is_optional => 0, default => 8 },
 		min_points_to_plot 	=> { is => 'Text', doc => "Minimum number of points for a chromosome to plot it", is_optional => 0, default => 100 },
 		undo_sd 	=> { is => 'Text', doc => "Remove change-points of less than this number of standard deviations", is_optional => 0, default => 4 },
+		lsf_command 	=> { is => 'Text', doc => "If set to something like bsub -q long, will run bsub", is_optional => 1 },
 	],
 };
 
@@ -319,14 +320,34 @@ p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)
 
 
 
+## Original using their plotting mechanism ##
+
+#		print SCRIPT qq{
+#plot(segment.smoothed.CNA.object, type="w", cex=0.5, cex.axis=1.5, cex.lab=1.5, ylim=c(-4,4))
+#write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_value")
+#};
+
 		print SCRIPT qq{
-plot(segment.smoothed.CNA.object, type="w", cex=0.5, cex.axis=1.5, cex.lab=1.5)
+detach(package:DNAcopy)
+par(mar=c(4,4,2,2))
+plot(segment.smoothed.CNA.object\$data\$maploc, segment.smoothed.CNA.object\$data\$Chromosome.$chrom, pch=19, cex=0.25, cex.axis=1.25, cex.lab=1.5, col="cornflowerblue", ylim=c(-5,5), main="Chromosome $chrom", xlab="Position", ylab="Copy Number Change (log2)")
+segments(segment.smoothed.CNA.object\$output\$loc.start, segment.smoothed.CNA.object\$output\$seg.mean, segment.smoothed.CNA.object\$output\$loc.end, segment.smoothed.CNA.object\$output\$seg.mean, col="red", lwd=2)
 write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_value")
 };
 		print SCRIPT "dev.off()\n";
 		close(SCRIPT);
-		print "Running $script_filename\n";
-		system("R --no-save < $script_filename");
+		
+		if($self->lsf_command)
+		{
+#			print "Running $script_filename\n";
+			system($self->lsf_command . " \"R --no-save < $script_filename\"");			
+		}
+		else
+		{
+			print "Running $script_filename\n";
+			system("R --no-save < $script_filename");			
+		}
+
 		
 
 	}

@@ -241,7 +241,7 @@ if(length(p.segment.smoothed.CNA.object\$pval[p.segment.smoothed.CNA.object\$num
 {
 x <- c($this_undo_sd, length(p.segment.smoothed.CNA.object\$pval[p.segment.smoothed.CNA.object\$num.mark>=20]))
 write.table(x, file="$chrom_filename.segments.sd", append=TRUE)
-segment.smoothed.CNA.object <- segment(smoothed.CNA.object, undo.splits="sdundo", undo.SD=$this_undo_sd, verbose=1)
+segment.smoothed.CNA.object <- segment(smoothed.CNA.object, undo.splits="sdundo", undo.SD=$this_undo_sd, alpha=0.001, verbose=1)
 p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)	
 }
 |;	
@@ -249,11 +249,21 @@ p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)
 
 
 
+## Original using their plotting mechanism ##
+
+#		print SCRIPT qq{
+#plot(segment.smoothed.CNA.object, type="w", cex=0.5, cex.axis=1.5, cex.lab=1.5, ylim=c(-4,4))
+#write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_value")
+#};
 
 		print SCRIPT qq{
-plot(segment.smoothed.CNA.object, type="w", cex=0.5, cex.axis=1.5, cex.lab=1.5, ylim=c(-4,4))
+detach(package:DNAcopy)
+par(mar=c(4,4,2,2))
+plot(segment.smoothed.CNA.object\$data\$maploc, segment.smoothed.CNA.object\$data\$Chromosome.$chrom, pch=19, cex=0.25, cex.axis=1.25, cex.lab=1.5, col="cornflowerblue", ylim=c(-5,5), main="Chromosome $chrom", xlab="Position", ylab="Copy Number Change (log2)")
+segments(segment.smoothed.CNA.object\$output\$loc.start, segment.smoothed.CNA.object\$output\$seg.mean, segment.smoothed.CNA.object\$output\$loc.end, segment.smoothed.CNA.object\$output\$seg.mean, col="red", lwd=2)
 write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_value")
 };
+
 		print SCRIPT "dev.off()\n";
 		close(SCRIPT);
 		print "Running $script_filename\n";

@@ -262,8 +262,20 @@ sub parse_flagstat_file
 		$lineCounter++;
 
 		(my $num_reads) = split(/\s+/, $line);
+
 		my $category = $line;
 		$category =~ s/$num_reads\s//;
+
+		if($category =~ '\+')
+		{
+			$category = "in total" if($category =~ 'in total');
+			$category = "duplicates" if($category =~ 'duplicates');
+			$category = "mapped" if($category =~ 'mapped' && !($category =~ 'mapped to'));
+			$category = "paired in sequencing" if($category =~ 'paired in');
+			$category = "read1" if($category =~ 'read1');
+			$category = "read2" if($category =~ 'read2');
+			$category = "properly paired" if($category =~ 'properly');			
+		}
 		
 		## Remove stuff with parentheses ##
 		my $split_char = " \\(";
