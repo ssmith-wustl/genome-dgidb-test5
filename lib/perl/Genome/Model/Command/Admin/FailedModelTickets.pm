@@ -16,11 +16,23 @@ require RT::Client::REST::Ticket;
 class Genome::Model::Command::Admin::FailedModelTickets {
     is => 'Command::V2',
     doc => 'find failed cron models, check that they are in a ticket',
+    has_input => [
+        include_failed => {
+            is => 'Boolean',
+            default_value => 1,
+            doc => 'Include builds with status Failed',
+        },
+        include_unstartable => {
+            is => 'Boolean',
+            default_value => 1,
+            doc => 'Include builds with status Unstartable',
+        },
+    ],
 };
 
 sub help_detail {
     return <<HELP;
-This command collects cron models by failed build events and scours tickets for them. If they are not found, the models are summaraized first by the error entry log and then by grepping the error log files. The summary is the printed to STDOUT.
+This command collects cron models by failed or unstartable build events and scours tickets for them. If they are not found, the models are summaraized first by the error entry log and then by grepping the error log files. The summary is the printed to STDOUT.
 HELP
 }
 
@@ -47,19 +59,34 @@ sub execute {
     $rt->_cookie->save($cookie_file);
 
     # Find cron models by failed build events
-    $self->status_message('Looking for failed models...');
-    my @events = Genome::Model::Event->get(
-        event_status => 'Failed',
-        event_type => 'genome model build',
-        user_name => 'apipe-builder',
-        -hint => [qw/ build /],
-    );
-    if ( not @events ) {
-        $self->status_message('No failed build events found!');
+    my @events;
+    if ($self->include_failed) {
+        $self->status_message('Looking for failed models...');
+        @events = Genome::Model::Event->get(
+            event_status => 'Failed',
+            event_type => 'genome model build',
+            user_name => 'apipe-builder',
+            -hint => [qw/ build /],
+        );
+    }
+    # Find cron models by unstartable build events
+    my @unstartable_events;
+    if ($self->include_unstartable) {
+        $self->status_message('Looking for unstartable models...');
+        @unstartable_events = Genome::Model::Event->get(
+            event_status => 'Unstartable',
+            event_type => 'genome model build',
+            user_name => 'apipe-builder',
+            -hint => [qw/ build /],
+        );
+    }
+    if ( (not $self->include_unstartable or not @unstartable_events) and 
+         (not $self->include_failed or not @events) ) {
+        $self->status_message('No failed or unstartable build events found!');
         return 1;
     }
     my %models_and_builds;
-    for my $event ( @events ) {
+    for my $event ( @events, @unstartable_events ) {
         next if not $event->build_id;
         my $build = Genome::Model::Build->get(id => $event->build_id, -hint => [qw/ model events /]);
         my $model = $build->model;
@@ -146,6 +173,11 @@ sub execute {
         my %failed_events = map { $_->event_type => 1 } grep { $_->event_type ne 'genome model build' } $build->events('event_status in' => [qw/ Crashed Failed /]);
         my $failed_event = (keys(%failed_events))[0] || '';
         $failed_event =~ s/genome model build $type_name //;
+        if ($failed_event eq '') {
+            if ($build->status eq 'Unstartable') {
+                $failed_event = 'Unstartable';
+            }
+        }
         $build_errors{$key} .= join("\t", $build->model_id, $build->id, $type_name.' '.$failed_event)."\n";
     }
 
@@ -165,6 +197,54 @@ sub execute {
 }
 
 sub _guess_build_error {
+    my ($self, $build) = @_;
+
+    if ($build->status eq 'Unstartable') {
+        return $self->_guess_build_error_from_notes($build);
+    }
+    else {
+        return $self->_guess_build_error_from_logs($build);
+    }
+}
+
+sub _guess_build_error_from_notes {
+    my ($self, $build) = @_;
+
+    my $error = "Unstartable unknown error";
+    my @notes = $build->notes;
+    if (not @notes) {
+        return $error;
+    }
+    my @unstartable_notes = grep {$_->header_text eq 'Unstartable'} @notes;
+    if (not @unstartable_notes) {
+        return $error;
+    }
+    my $note = $unstartable_notes[0];
+
+    my $text = $note->body_text;
+    if (not $text) {
+        return $error;
+    }
+
+    my @lines = split(/\n/, $text);
+
+    @lines = grep (/ERROR:\s+/, @lines);
+
+    my $line_count = scalar @lines;
+    if ($line_count == 0) {
+        return $error;
+    }
+
+    my %errors;
+    foreach my $line (@lines) {
+        my ($err) = (split(/ERROR:\s+/, $line))[1];
+        chomp $err;
+        $errors{$err} = 1; 
+    }
+    return join("\n", sort keys %errors);
+}
+
+sub _guess_build_error_from_logs {
     my ($self, $build) = @_;
 
     my $data_directory = $build->data_directory;
