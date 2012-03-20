@@ -34,7 +34,7 @@ class Genome::Model::Tools::Varscan::CopyNumberParallel {
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		mapping_quality	=> { is => 'Text', doc => "Default minimum mapping quality" , is_optional => 1, is_input => 1, default => 10},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
-		varscan_params	=> { is => 'Text', doc => "Parameters to pass to Varscan" , is_optional => 1, is_input => 1, default => "--min-coverage 20 --min-segment-size 10 --max-segment-size 100"},
+		varscan_params	=> { is => 'Text', doc => "Parameters to pass to Varscan" , is_optional => 1, is_input => 1, default => "--min-coverage 20 --min-segment-size 25 --max-segment-size 100"},
 	],	
 
 	has_param => [

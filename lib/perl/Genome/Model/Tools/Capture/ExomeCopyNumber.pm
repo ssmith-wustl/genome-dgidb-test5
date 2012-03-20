@@ -2,12 +2,12 @@
 package Genome::Model::Tools::Capture::ExomeCopyNumber;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# ModelGroup - Build Genome Models for Capture Datasets
+# ExomeCopyNumber - Run exome-based copy number analysis in parallel on somatic-variation group models
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@genome.wustl.edu)
 #
-#	CREATED:	12/09/2009 by D.K.
-#	MODIFIED:	12/09/2009 by D.K.
+#	CREATED:	02/09/2012 by D.K.
+#	MODIFIED:	03/15/2012 by D.K.
 #
 #	NOTES:	
 #			
@@ -109,15 +109,31 @@ sub execute {                               # replace with real execution logic.
 		my $normal_sample = $normal_model->subject_name;
 		my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
 		my $normal_model_dir = $normal_model->last_succeeded_build_directory;
-		my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam`; chomp($tumor_bam);
-		my $normal_bam = `ls $normal_model_dir/alignments/*.bam`; chomp($normal_bam);
+		my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam | head -1`; chomp($tumor_bam);
+		my $normal_bam = `ls $normal_model_dir/alignments/*.bam | head -1`; chomp($normal_bam);
 	
-		my $output_dir = $self->varscan_copynumber . "/" . $tumor_sample . "-" . $normal_sample;
-		mkdir($output_dir) if(!(-d $output_dir));
-		my $cmd = "gmt varscan copy-number-parallel --output $output_dir/varScan.output --normal-bam $normal_bam --tumor-bam $tumor_bam";
-		$cmd .= " --reference " . $self->reference if($self->reference);
+		my $output_dir = $self->output_dir . "/" . $tumor_sample . "-" . $normal_sample;
+	
+		if(!(-d $output_dir))
+		{
+			mkdir($output_dir) if(!(-d $output_dir));			
+		}
+		
+		my $file_count = `ls $output_dir/varScan.output*copynumber | wc -l`;
+		chomp($file_count);
 
-		print "$cmd\n";
+		if($file_count < 20)
+		{
+			my $cmd = "gmt varscan copy-number-parallel --output $output_dir/varScan.output --normal-bam $normal_bam --tumor-bam $tumor_bam";
+			$cmd .= " --reference " . $self->reference if($self->reference);
+			system($cmd);			
+		}
+		else
+		{
+			warn "Skipping $tumor_sample because it has $file_count files...\n";
+		}
+
+#		exit(0);
 
 	}	
 	
