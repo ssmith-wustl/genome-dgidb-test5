@@ -10,6 +10,7 @@ BEGIN {
 };
 
 
+#Instructions for creating a new test result:
 #0.) Merge the master branch into your clinseq branch
 #1.) Then check this script to make sure that the test is being run on the data that you want: individual common name, wgs model, exome model, rnaseq model
 #2.) Log into a blade server and check the /tmp directory to make sure it does not already contain a set of clinseq results ('/tmp/last-clinseq-test-result/')
