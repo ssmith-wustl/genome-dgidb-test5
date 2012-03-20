@@ -112,3 +112,12 @@
 [submodule "tgi-etc"]
 	path = tgi-etc
 	url = ssh://git/srv/git/genome-tgi-etc.git
+[submodule "vendor/pindel"]
+	path = vendor/pindel
+	url = git@github.com:genome-vendor/pindel.git
+[submodule "vendor/dendrix"]
+	path = vendor/dendrix
+	url = git@github.com:genome-vendor/Dendrix.git
+[submodule "vendor/hotnet"]
+	path = vendor/hotnet
+	url = git@github.com:genome-vendor/HotNet.git

@@ -114,10 +114,10 @@
                     </th>
                     <th>
                       <xsl:call-template name='object_link_button'>
-                        <xsl:with-param name='type' select="'Genome::DruggableGene::GeneNameReport::Set'"/>
+                        <xsl:with-param name='type' select="'Genome::DruggableGene::GeneNameGroup'"/>
                         <xsl:with-param name="key" select="'name'"/>
-                        <xsl:with-param name="id" select="gene"/>
-                        <xsl:with-param name="linktext" select="gene"/>
+                        <xsl:with-param name="id" select="group"/>
+                        <xsl:with-param name="linktext" select="group"/>
                       </xsl:call-template>
                     </th>
                     <th><xsl:value-of select='identifier' /></th>

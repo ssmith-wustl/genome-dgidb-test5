@@ -532,7 +532,7 @@ sub default_model_name {
 
     my $name = sprintf($name_template, '', '');
     my $cnt = 0;
-    while ( $auto_increment && Genome::Model->get(name => $name) ) {
+    while ( $auto_increment && scalar @{[Genome::Model->get(name => $name)]} ) {
         $name = sprintf($name_template, '-', ++$cnt);
     }
 

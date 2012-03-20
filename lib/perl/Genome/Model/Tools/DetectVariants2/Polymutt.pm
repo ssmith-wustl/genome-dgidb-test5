@@ -11,9 +11,6 @@ use Workflow::Simple;
 use File::Basename;
 class Genome::Model::Tools::DetectVariants2::Polymutt {
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
-    #has => [
-    #    params => {},
-    #],
     has_param => [
         lsf_resource => {
             default => "-q workflow ", #hope that works
@@ -72,12 +69,9 @@ sub _detect_variants {
         die $self->error_message("A version of Polymutt must be specified");
     }
     my @alignments = $self->alignment_results;
-    #my @glfs = $self->generate_glfs(@alignments);
-      my @glfs = glob("/gscmnt/gc2146/info/medseq/test_polymutt_pipeline/partial*");
+    my @glfs = $self->generate_glfs(@alignments);
     my $dat_file = $self->generate_dat();
-    #FIXME ensure glfindex matches index number in ped.  the current code expects both alphabetical by sample name, but does not check or enforce it.  
     my $glf_index = $self->generate_glfindex(@glfs);
-    #FIXME
     $self->run_polymutt($dat_file, $glf_index);
     return 1;
 }
@@ -87,6 +81,7 @@ sub run_polymutt {
     my($self, $dat_file, $glf_index) = @_;
     my $ped_file = $self->pedigree_file_path;
     my %inputs;
+    $inputs{version}=$self->version;
     $inputs{dat_file}=$dat_file;
     $inputs{ped_file}=$ped_file;
     $inputs{denovo}=1;
@@ -106,6 +101,7 @@ sub run_polymutt {
         'output_denovo',
         'output_standard',
         'denovo',
+        'version',
         ],
         output_properties => [
         'output',
@@ -137,6 +133,12 @@ sub run_polymutt {
             left_property=>"ped_file",
             right_operation=>$op,
             right_property=>"ped_file",
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"version",
+            right_operation=>$op,
+            right_property=>"version",
         );
         $workflow->add_link(
             left_operation=>$op,
@@ -178,9 +180,6 @@ sub run_polymutt {
     }
 
 }
-
-
-
 
 sub generate_dat {
     my $self = shift;
@@ -335,13 +334,14 @@ sub has_version {
     unless(defined($version)){
         $version = $self->version;
     }
-    my @versions = Genome::Model::Tools::Polymutt->available_varscan_versions;
+
+    my @versions = Genome::Model::Tools::Relationship::RunPolymutt->available_versions;
     for my $v (@versions){
         if($v eq $version){
             return 1;
         }
     }
-    return 0;  
+    return 0; 
 }
 
 sub parse_line_for_bed_intersection {

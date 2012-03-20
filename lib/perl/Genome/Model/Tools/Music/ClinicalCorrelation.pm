@@ -74,6 +74,8 @@ class Genome::Model::Tools::Music::ClinicalCorrelation {
         is_optional => 1,
         default => 0,
     },
+    skip_non_coding => { is => 'Boolean', doc => "Skip non-coding mutations from the provided MAF file", is_optional => 1, default => 1 },
+    skip_silent => { is => 'Boolean', doc => "Skip silent mutations from the provided MAF file", is_optional => 1, default => 1 },
   ],
   doc => "Correlate phenotypic traits against mutated genes, or against individual variants.",
 };
@@ -203,6 +205,8 @@ sub execute {
     my $output_file = $self->output_file;
     my $output_matrix = $self->clinical_correlation_matrix_file;
     my $genetic_data_type = $self->genetic_data_type;
+    my $skip_non_coding = $self->skip_non_coding;
+    my $skip_silent = $self->skip_silent;
 
     # check genetic data type
     unless ($genetic_data_type =~ /^gene|variant$/i) {
@@ -276,10 +280,10 @@ sub execute {
         unless (($datatype =~ /glm/i && !$self->use_maf_in_glm) || $self->input_clinical_correlation_matrix_file) {
 
             if ($genetic_data_type =~ /^gene$/i) {
-                $matrix_file = create_sample_gene_matrix_gene($samples,$clinical_data{$datatype},$maf_file,$output_matrix,@all_sample_names);
+                $matrix_file = create_sample_gene_matrix_gene($samples,$clinical_data{$datatype},$maf_file,$output_matrix,$skip_non_coding,$skip_silent,@all_sample_names);
             }
             elsif ($genetic_data_type =~ /^variant$/i) {
-                $matrix_file = create_sample_gene_matrix_variant($samples,$clinical_data{$datatype},$maf_file,$output_matrix,@all_sample_names);
+                $matrix_file = create_sample_gene_matrix_variant($samples,$clinical_data{$datatype},$maf_file,$output_matrix,$skip_non_coding,$skip_silent,@all_sample_names);
             }
             else {
                 $self->error_message("Please enter either \"gene\" or \"variant\" for the --genetic-data-type parameter.");
@@ -313,7 +317,7 @@ sub execute {
 
 sub create_sample_gene_matrix_gene {
 
-    my ($samples,$clinical_data_file,$maf_file,$output_matrix,@all_sample_names) = @_;
+    my ($samples,$clinical_data_file,$maf_file,$output_matrix,$skip_non_coding,$skip_silent,@all_sample_names) = @_;
 
     #create hash of mutations from the MAF file
     my %mutations;
@@ -363,10 +367,11 @@ sub create_sample_gene_matrix_gene {
             return undef;
         }
 
-        # Skip Silent mutations and those in Introns, UTRs, Flanks, IGRs, or the ubiquitous Targeted_Region
-        if( $mutation_class =~ m/^(Silent|Intron|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ )
+        # If user wants, skip Silent mutations, or those in Introns, RNA, UTRs, Flanks, IGRs, or the ubiquitous Targeted_Region
+        if(( $skip_non_coding && $mutation_class =~ m/^(Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ ) ||
+            ( $skip_silent && $mutation_class =~ m/^Silent$/ ))
         {
-            print "Skipping $mutation_class mutation in gene $gene\n";
+            print "Skipping $mutation_class mutation in gene $gene.\n";
             next;
         }
 
@@ -410,7 +415,7 @@ sub create_sample_gene_matrix_gene {
 
 sub create_sample_gene_matrix_variant {
 
-    my ($samples,$clinical_data_file,$maf_file,$output_matrix,@all_sample_names) = @_;
+    my ($samples,$clinical_data_file,$maf_file,$output_matrix,$skip_non_coding,$skip_silent,@all_sample_names) = @_;
 
     #create hash of mutations from the MAF file
     my %variants_hash;
@@ -441,13 +446,35 @@ sub create_sample_gene_matrix_variant {
     while (my $line = $maf_fh->getline) {
         my @fields = split /\t/,$line;
         chomp @fields;
+
         my $sample = $fields[$maf_columns{'Tumor_Sample_Barcode'}];
+        my $mutation_class = $fields[$maf_columns{'Variant_Classification'}];
+
         unless (exists $samples->{$sample}) {
             warn "Sample Name: $sample from MAF file does not exist in Clinical Data File";
             next;
         }
         my $gene = $fields[$maf_columns{'Hugo_Symbol'}];
         my $chr = $fields[$maf_columns{'Chromosome'}];
+
+
+        #check that the mutation class is acceptable
+        if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|In_Frame_Ins|Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ )
+        {
+            print STDERR "Unrecognized Variant_Classification \"$mutation_class\" in MAF file for gene $gene\n";
+            print STDERR "Please use TCGA MAF Specification v2.2.\n";
+            return undef;
+        }
+
+        # If user wants, skip Silent mutations, or those in Introns, RNA, UTRs, Flanks, IGRs, or the ubiquitous Targeted_Region
+        if(( $skip_non_coding && $mutation_class =~ m/^(Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ ) ||
+            ( $skip_silent && $mutation_class =~ m/^Silent$/ ))
+        {
+            print "Skipping $mutation_class mutation in gene $gene.\n";
+            next;
+        }
+
+
         my $start;
         if (defined $maf_columns{'Start_position'}) {
             $start = $fields[$maf_columns{'Start_position'}];

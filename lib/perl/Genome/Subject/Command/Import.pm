@@ -116,6 +116,10 @@ sub execute {
             my $col_name = $header[$j];
             my $f = $field->{$col_name};
 
+            if (!$f) {
+                next VALUE; # skipping because the column wasnt named
+            }
+
             if (! $self->validate($f, $v)) {
                 warn "Skipping value '$v' because its not a valid " . $f->type();
                 next VALUE;
@@ -224,7 +228,10 @@ sub check_types {
 
         if ($i++ == 0) { next COLUMN_NAME; } # first is the subject name
 
-        if (!$h) { die 'Error: the spreadsheet contains a column with no heading!'; }
+        if (!$h) {
+            warn "! NO COLUMN NAME for field number $i- going to skip all values for that column";
+            next COLUMN_NAME;
+        }
 
         if (!defined($field{$h})) {
 

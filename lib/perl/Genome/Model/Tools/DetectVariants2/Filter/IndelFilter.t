@@ -28,7 +28,7 @@ use_ok( 'Genome::Model::Tools::DetectVariants2::Filter::IndelFilter');
 
 
 my $refbuild_id = 101947881;
-my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-SnpFilter";
+my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-IndelFilter";
 
 # Updated to .v2 for adding 1 to insertion start and stop values
 my $expected_directory = $test_data_directory . "/expected.v2";

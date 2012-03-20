@@ -9,11 +9,12 @@ class Genome::Model::MetagenomicComposition16s::Command::CreateFromInstrumentDat
     is => 'Command::V2',
     has => [
         instrument_data => {
-            is => 'Genome::InstrumentData::454',
+            is => 'Genome::InstrumentData',
             is_input => 1,
             is_many => 1,
             require_user_verify => 1,
-            doc => 'Instrument data to use to create models. Resolved via text string on the command line. Include the sequencing platform.',
+            where => [ sequencing_platform => [qw/ sanger 454 /] ],
+            doc => 'Instrument data to use to create models. Resolved via text string on the command line.',
         },
         processing_profile => {
             is => 'Genome::ProcessingProfile',

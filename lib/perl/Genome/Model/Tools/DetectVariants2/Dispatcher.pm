@@ -1002,13 +1002,18 @@ sub _promote_staged_data {
             my $output_file = basename($file);
             my $output = "$output_dir/$output_file";
             Genome::Sys->create_symlink($file,$output);
-            if($variant_type =~ m/snv/){
-                my $vcf_link = dirname($file)."/snvs.vcf.gz";
-                my $link_target = $output_dir."/snvs.vcf.gz";
+
+            # This may or may not exist, depending on the variant type
+            my $vcf_link = dirname($file)."/$variant_type" . "s.vcf.gz";
+            if(-e $vcf_link){
+                my $source;
                 if(-l $vcf_link){
-                    my $source = readlink($vcf_link);
-                    Genome::Sys->create_symlink($source, $link_target);
+                    $source = readlink($vcf_link);
+                } else {
+                    $source = $vcf_link;
                 }
+                my $link_target = $output_dir."/$variant_type" . "s.vcf.gz";
+                Genome::Sys->create_symlink($source, $link_target);
             }
 
             # FIXME refactor this when we refactor versioning. This is pretty awful.

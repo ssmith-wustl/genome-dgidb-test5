@@ -368,7 +368,7 @@ sub _build_update_property_sub_command {
         is => 'Genome::Command::UpdateProperty',
         has => [ 
             $config{target_name_pl_ub} => {
-                is => $config{target_clasreverse_ass},
+                is => $config{target_class},
                 is_many => 1,
                 shell_args_position => 1,
                 doc => ucfirst($config{target_name_pl}).' to update, resolved via string.',
