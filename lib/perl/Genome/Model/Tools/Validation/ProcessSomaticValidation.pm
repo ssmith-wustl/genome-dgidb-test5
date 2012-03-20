@@ -76,7 +76,6 @@ class Genome::Model::Tools::Validation::ProcessSomaticValidation {
           doc => "if tier1-only is specified, this needs to be a path to the appropriate tiering files",
       },
 
-
       ##restrict to targeted region - grab from build
 
       # read_review => {
@@ -137,15 +136,7 @@ sub intersects{
 
 sub fixIUB{
     my ($ref,$var) = @_;
-    #unless($var =~/[ACTGNactgn]/){
-        my @vars = Genome::Info::IUB->variant_alleles_for_iub($ref,$var);
-        # if(@vars == 1){
-        #     $var = $vars[0];
-        # } else {
-        #     print STDERR "WARNING: site has multiple var alleles, not translating from IUB: " . join(":",($ref, $var)) . "\n";
-        # }
-        
-    #}
+    my @vars = Genome::Info::IUB->variant_alleles_for_iub($ref,$var);
     return @vars;
 }
 
@@ -189,18 +180,23 @@ sub execute {
 
   # Check if the necessary files exist in this build
   my $snv_file = "$build_dir/variants/snvs.hq.bed";
-  print STDERR "ERROR: SNV results annotations for $sample_name not found at $snv_file\n" unless( -e $snv_file );
+  unless( -e $snv_file ){
+      die "ERROR: SNV results annotations for $sample_name not found at $snv_file\n";
+  }
   my $indel_file = "$build_dir/variants/indels.hq.bed";
-  print STDERR "ERROR: INDEL results annotations for $sample_name not found at $indel_file\n" unless( -e $indel_file );
+  unless( -e $indel_file ){
+      die "ERROR: INDEL results annotations for $sample_name not found at $indel_file\n";
+  }
 
-  # create subdirectories
+
+  # create subdirectories, get files in place
   mkdir "$output_dir/$sample_name" unless( -e "$output_dir/$sample_name" );
   mkdir "$output_dir/$sample_name/snvs" unless( -e "$output_dir/$sample_name/snvs" );
   mkdir "$output_dir/$sample_name/indels" unless( -e "$output_dir/$sample_name/indels" );
   mkdir "$output_dir/review" unless( -e "$output_dir/review" );
-
-  `cp $snv_file $output_dir/$sample_name/snvs/`;
-  `cp $indel_file $output_dir/$sample_name/indels/`;
+  `ln -s $build_dir $output_dir/$sample_name/build_directory`;
+  `ln -s $snv_file $output_dir/$sample_name/snvs/` unless( -e "$output_dir/$sample_name/snvs/$snv_file");
+  `ln -s $indel_file $output_dir/$sample_name/indels/` unless( -e "$output_dir/$sample_name/indels/$indel_file");
   $snv_file = "$output_dir/$sample_name/snvs/snvs.hq.bed";
   $indel_file = "$output_dir/$sample_name/indels/indels.hq.bed";
   
@@ -229,7 +225,7 @@ sub execute {
       close($inFh);
 
   } else {
-      print STDERR "ERROR: bed file of targeted variants not found for $sample_name.\nAssuming that there were no calls for this model (and it was an extension experiment)\n";
+      print STDERR "WARNING: bed file of targeted variants not found for $sample_name.\nAssuming that there were no calls for this model (and it was an extension experiment)\n";
   }
 
   #-------------------------------------------------
@@ -482,6 +478,40 @@ sub execute {
   close(VALFILE);
   close(NEWFILE);
   close(MISFILE);
+
+
+  #add readcounts
+  print STDERR "Getting readcounts...\n";
+  mkdir "$output_dir/$sample_name/snvs/readcounts";
+  foreach my $file ("snvs.validated","snvs.newcalls","snvs.notvalidated"){
+
+      my $dir = "$output_dir/$sample_name/snvs/";
+      if( -s "$dir/$file" ){
+          unless($tumor_only){
+              #get readcounts from the normal bam
+              my $normal_rc_cmd = Genome::Model::Tools::Analysis::Coverage::BamReadcount->create(
+                  bam_file => $normal_bam,
+                  output_file => "$dir/readcounts/$file.nrm.cnt",
+                  snv_file => "$dir/$file",
+                  genome_build => $ref_seq_fasta,
+                  );
+              unless ($normal_rc_cmd->execute) {
+                  die "Failed to obtain normal readcounts for file $file.\n";
+              }
+          }
+
+          #get readcounts from the tumor bam
+          my $tumor_rc_cmd = Genome::Model::Tools::Analysis::Coverage::BamReadcount->create(
+              bam_file => $tumor_bam,
+              output_file => "$dir/readcounts/$file.tum.cnt",
+              snv_file => "$dir/$file",
+              genome_build => $ref_seq_fasta,
+              );
+          unless ($tumor_rc_cmd->execute) {
+              die "Failed to obtain tumor readcounts for file $file.\n";
+          }
+      }
+  }
 
 
 
