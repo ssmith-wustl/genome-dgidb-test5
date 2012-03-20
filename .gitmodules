@@ -115,3 +115,6 @@
 [submodule "vendor/pindel"]
 	path = vendor/pindel
 	url = git@github.com:genome-vendor/pindel.git
+[submodule "vendor/hotnet"]
+	path = vendor/hotnet
+	url = git@github.com:genome-vendor/HotNet.git
