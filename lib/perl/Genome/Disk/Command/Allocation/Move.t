@@ -79,12 +79,14 @@ my $assignment = Genome::Disk::Assignment->create(
     group => $group,
 );
 ok($assignment, 'assigned first test volume to group');
+Genome::Sys->create_directory(join('/', $volume->mount_path, $group->subdirectory));
 
 my $other_assignment = Genome::Disk::Assignment->create(
     volume => $other_volume,
     group => $group,
 );
 ok($other_assignment, 'add second test volume to group');
+Genome::Sys->create_directory(join('/', $other_volume->mount_path, $group->subdirectory));
 
 # Make test allocation
 my $allocation_path = tempdir(

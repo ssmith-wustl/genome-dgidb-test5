@@ -66,6 +66,7 @@ for (1..2) {
         dg_id => $group->id,
     );
     ok($assignment, 'made disk assignment') or die;
+    Genome::Sys->create_directory(join('/', $volume->mount_path, $group->subdirectory));
 }
 
 # Make sure dummy objects can be committed
