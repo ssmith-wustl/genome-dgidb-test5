@@ -544,7 +544,7 @@ sub _move {
     $self->status_message("Copying data from $old_allocation_dir to $new_allocation_dir");
     push @PATHS_TO_REMOVE, $new_allocation_dir; # If the process dies while copying, need to clean up the new directory
     my $copy_rv = eval { 
-        Genome::Sys->copy_directory_tree(
+        Genome::Sys->rsync_directory(
             source_directory => $old_allocation_dir,
             target_directory => $new_allocation_dir,
             file_pattern => $pattern,
@@ -801,7 +801,6 @@ sub _create_directory_closure {
         my $dir = eval{ Genome::Sys->create_directory($path) };
         if (defined $dir and -d $dir) {
             chmod(02775, $dir);
-            print STDERR "Created allocation directory at $path\n";
         }
         else {
             print STDERR "Could not create allocation directcory at $path!\n";

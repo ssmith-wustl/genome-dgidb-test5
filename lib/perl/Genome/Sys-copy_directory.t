@@ -32,7 +32,7 @@ for my $file (@files) {
 }
 system("mkdir $test_dir/test");
 
-my $rv = Genome::Sys->copy_directory_tree(
+my $rv = Genome::Sys->rsync_directory(
     source_directory => $test_dir,
     target_directory => $other_test_dir,
     file_pattern => "*.out",
@@ -47,7 +47,7 @@ for my $file (grep { $_ =~ /\.out$/ } @files) {
 my $yet_another_test_dir = Genome::Sys->create_temp_directory;
 ok(-d $yet_another_test_dir, "created another test directory at $yet_another_test_dir");
 
-$rv = Genome::Sys->copy_directory_tree(
+$rv = Genome::Sys->rsync_directory(
     source_directory => $test_dir,
     target_directory => $yet_another_test_dir,
 );
