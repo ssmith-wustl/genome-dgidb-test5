@@ -79,6 +79,7 @@ sub execute {
         Carp::confess "Could not create allocation!";
     }
 
+    $self->status_message("Created allocation " . $allocation->id . " at " . $allocation->absolute_path);
     return 1;
 }
 

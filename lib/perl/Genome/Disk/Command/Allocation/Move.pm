@@ -55,6 +55,7 @@ sub execute {
         $allocation->move(%params);
     }
 
+    $self->status_message("Successfully moved allocations!");
     return 1;
 }
 
