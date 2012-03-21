@@ -76,6 +76,7 @@ sub execute {
         cmd => $cmd,
     );
     $params{output_files} = [$output] if $output ne "-";
+    $params{skip_if_output_is_present} = 0;
     Genome::Sys->shellcmd(%params);
 
     return 1;
