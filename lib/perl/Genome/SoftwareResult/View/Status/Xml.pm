@@ -20,8 +20,8 @@ class Genome::SoftwareResult::View::Status::Xml {
                     perspective => 'default',
                     toolkit => 'xml',
                     aspects => [
-                        'param_name',
-                        'param_value',
+                        'name',
+                        'value_id',
                     ],
                 },
                 {
@@ -29,8 +29,8 @@ class Genome::SoftwareResult::View::Status::Xml {
                     perspective => 'default',
                     toolkit => 'xml',
                     aspects => [
-                        'input_name',
-                        'input_value',
+                        'name',
+                        'value_id',
                     ],
                 },
                 {

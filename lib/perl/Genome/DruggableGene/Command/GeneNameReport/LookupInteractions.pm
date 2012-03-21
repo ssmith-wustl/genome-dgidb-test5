@@ -278,7 +278,7 @@ sub _build_interaction_line {
     my $drug = $interaction->drug;
     my $gene = $interaction->gene;
     my $gene_alternate_names = join(':', map($_->alternate_name, $gene->gene_alt_names));
-    my $gene_identifiers = join(':', @{$self->gene_to_identifiers->{$gene->id}});
+    my $gene_identifiers = join(':', sort @{$self->gene_to_identifiers->{$gene->id}});
     my ($entrez_gene_name, $entrez_gene_synonyms) = $self->_create_entrez_gene_outputs($gene_identifiers);
     my ($drug_primary_name) = map($_->alternate_name, grep($_->nomenclature =~ /primary/i, $drug->drug_alt_names));
     my $drug_alternate_names = join(':', map($_->alternate_name, grep($_->nomenclature !~ /primary/i && $_->nomenclature ne 'drug_brand', $drug->drug_alt_names)));
@@ -305,9 +305,9 @@ sub _create_entrez_gene_outputs{
         my @genes = @{$self->identifier_to_genes->{$gene_identifier}};
         my @entrez_genes = grep($_->nomenclature eq 'entrez_id', @genes);
         if(@entrez_genes){
-            for my $entrez_gene (@entrez_genes){
-                my ($entrez_gene_symbol) = map($_->alternate_name, grep($_->nomenclature eq 'entrez_gene_symbol', $entrez_gene->gene_alt_names));
-                my @entrez_gene_synonyms = map($_->alternate_name, grep($_->nomenclature eq 'entrez_gene_synonym', $entrez_gene->gene_alt_names));
+            for my $entrez_gene (sort {$a->name cmp $b->name} @entrez_genes){
+                my ($entrez_gene_symbol) = sort map($_->alternate_name, grep($_->nomenclature eq 'entrez_gene_symbol', $entrez_gene->gene_alt_names));
+                my @entrez_gene_synonyms = sort map($_->alternate_name, grep($_->nomenclature eq 'entrez_gene_synonym', $entrez_gene->gene_alt_names));
                 $entrez_gene_name_output = $entrez_gene_name_output . ($entrez_gene_name_output ? $entrez_delimiter : '') . $entrez_gene_symbol;
                 $entrez_gene_synonyms_output = $entrez_gene_synonyms_output . ($entrez_gene_synonyms_output ? $entrez_delimiter : '') . join($sub_delimiter, @entrez_gene_synonyms);
             }

@@ -161,26 +161,26 @@ sub construct_merge_result {
     );
     for my $i (0..$#id) {
         $merge_result->add_input(
-            input_name => 'instrument_data_id-' . $i,
-            input_value => $id[$i]->id,
+            name => 'instrument_data_id-' . $i,
+            value_id => $id[$i]->id,
         );
     }
     $merge_result->add_param(
-        param_name => 'instrument_data_id_count',
-        param_value => scalar(@id),
+        name => 'instrument_data_id_count',
+        value_id=> scalar(@id),
     );
     $merge_result->add_param(
-        param_name => 'instrument_data_id_md5',
-        param_value => Genome::Sys->md5sum_data(join(':', sort(map($_->id, @id))))
+        name => 'instrument_data_id_md5',
+        value_id => Genome::Sys->md5sum_data(join(':', sort(map($_->id, @id))))
     );
 
     $merge_result->add_param(
-        param_name => 'filter_name_count',
-        param_value => 0,
+        name => 'filter_name_count',
+        value_id => 0,
     );
     $merge_result->add_param(
-        param_name => 'instrument_data_segment_count',
-        param_value => 0,
+        name => 'instrument_data_segment_count',
+        value_id => 0,
     );
 
     return $merge_result;

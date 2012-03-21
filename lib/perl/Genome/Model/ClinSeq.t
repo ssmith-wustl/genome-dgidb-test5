@@ -10,6 +10,7 @@ BEGIN {
 };
 
 
+#Instructions for creating a new test result:
 #0.) Merge the master branch into your clinseq branch
 #1.) Then check this script to make sure that the test is being run on the data that you want: individual common name, wgs model, exome model, rnaseq model
 #2.) Log into a blade server and check the /tmp directory to make sure it does not already contain a set of clinseq results ('/tmp/last-clinseq-test-result/')
@@ -19,7 +20,7 @@ BEGIN {
 #    $ ./ClinSeq.t RUN
 # - It will fail because the diff fails, but it will leave the results in a directory in /tmp.
 #5.) Move the test results to the main test results dir
-# - You will see the path of the comparision data, and you want to copy your fail results from /tmp to a directory next-to the comparison one, but with a new date.
+# - You will see the path of the comparision data, and you want to copy your new results from /tmp to a directory next-to the comparison one, but with a new date.
 # - Test results go here
 # - /gsc/var/cache/testsuite/data/Genome-Model-ClinSeq/DATE
 #6.) Then you'll change the line in the test script to point to your new directory:
@@ -141,7 +142,7 @@ is($retval, 1, 'execution of the build returned true');
 is($@, '', 'no exceptions thrown during build process') or diag $@;
 
 unless ($dry_run) {
-    my $expected_data_directory = $ENV{"GENOME_TESTSUITE_INPUTS_PATH"} . '/Genome-Model-ClinSeq/2012-02-13';
+    my $expected_data_directory = $ENV{"GENOME_TESTSUITE_INPUTS_PATH"} . '/Genome-Model-ClinSeq/2012-03-20';
     my @diff = `diff -r --brief -x '*.R' -x '*.pdf' $expected_data_directory $temp_dir`;
     ok(@diff == 0, "no differences from expected results and actual")
         or do { 

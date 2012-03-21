@@ -17,8 +17,8 @@ class Genome::Model::Tools::CopyNumber::PlotCoverage{
 
 	somatic_id => {
 	    is => 'String',
-	    is_optional => 0,
-	    doc => 'somatic variation model ID',
+	    is_optional => 1,
+	    doc => 'somatic variation model ID.  If not specified, must specify normal and tumor bam',
 	},
 
         window_size => {
@@ -45,18 +45,47 @@ class Genome::Model::Tools::CopyNumber::PlotCoverage{
             is_optional => 1,
 	    doc => '',
         },
+        normal_bam => {
+            is => 'String',
+            is_optional => 1,
+	    doc => 'full path to the BAM file designated as normal. Must specify if omit somatic_id',
+        },
+        tumor_bam => {
+            is => 'String',
+            is_optional => 1,
+	    doc => 'full path to the BAM file designated as tumor Must specify if omit somatic_id',
+        },
 
         ]
 };
 
 sub help_brief {
     "Plots the normalized coverage of tumor, normal and tumor-normal for a somatic model."
+    
 }
 
 sub help_detail {
     "Plots the normalized coverage of tumor, normal and tumor-normal for a somatic model."
 }
+sub help_synopsis {
 
+return <<EOS
+Sample Usage:
+specify normal and tumor BAM
+EXAMPLE:  gmt copy-number plot-coverage --ROI=9:8114245-10692509 --plot-title "Gene X Coverage" --output-file=test.pdf --transcript-file --normal-bam=/gscmnt/gc7001/info/build_merged_alignments/merged-alignment-blade14-4-16.gsc.wustl.edu-apipe-builder-16602-114128395/114128395.bam --tumor-bam=/gscmnt/gc2002/info/build_merged_alignments/merged-alignment-blade13-3-1.gsc.wustl.edu-apipe-builder-13617-112064449/112064449.bam
+
+specify somatic variation model
+EXAMPLE: gmt copy-number plot-coverage --somatic-id=1234567 --ROI=9:8114245-10692509 --plot-title "Gene X Coverage" --output-file=test.pdf
+
+EOS
+}
+
+sub help_detail {                           # this is what the user will see with the longer version of help. <---
+return <<EOS
+This tool can be used to plot the CN-separated SNV density plots that are known at GI as 'clonality plots'. Can be used for WGS or Capture data, but was mostly intended for Capture data, and hence the SNV file format is currently Varscan output. If no copy-number file is specified, it will draw a condensed plot with. 
+EOS
+
+}
 
 
 sub execute {
@@ -70,6 +99,9 @@ sub execute {
     my $plot_title = $self->plot_title || $ROI;
     my $transcript_file = abs_path($self->transcript_file);
 
+    my $user_normalBAM = $self->normal_bam;
+    my $user_tumorBAM = $self->tumor_bam;
+
     #9:100-1001
     my ($chr,$positions) = split(/:/,$ROI);
     my ($start,$stop) = split(/\-/,$positions);
@@ -77,26 +109,43 @@ sub execute {
 
     #########################################
    
-
-    my $somatic_model = Genome::Model->get($somatic_ID);
-    die "Can't find valid somatic model for $somatic_ID\n" if(!$somatic_model);
-
-    my $tumor_build = $somatic_model->tumor_model->last_succeeded_build;
-    die "Can't find valid tumor build for $somatic_ID\n" if(!$tumor_build);
-
-    my $normal_build = $somatic_model->normal_model->last_succeeded_build;
-    die "Can't find valid normal build for $somatic_ID\n" if(!$normal_build);
-    my $common_name = $tumor_build->model->subject->source_common_name;
-
-    #grab tumor and normal BAM file location as well as stats for normalization
-    my $ref_seq = $tumor_build->reference_sequence_build->full_consensus_path('fa'); #grab ref sequence path
-    my $T_bam_stat = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($tumor_build->whole_rmdup_bam_flagstat_file);
-    my $T_map_undup_reads = $T_bam_stat->{'reads_mapped'} - $T_bam_stat->{'reads_marked_duplicates'};
-    my $tumorBAM = $tumor_build->whole_rmdup_bam_file;
+    my($normalBAM,$tumorBAM);
+    my($T_map_undup_reads,$N_map_undup_reads,$common_name,$ref_seq);
+    if($somatic_ID) {
+	my $somatic_model = Genome::Model->get($somatic_ID);
+	die "Can't find valid somatic model for $somatic_ID\n" if(!$somatic_model);
+	my $tumor_build = $somatic_model->tumor_model->last_succeeded_build;
+	die "Can't find valid tumor build for $somatic_ID\n" if(!$tumor_build);
+	my $normal_build = $somatic_model->normal_model->last_succeeded_build;
+	die "Can't find valid normal build for $somatic_ID\n" if(!$normal_build);
+	$common_name = $tumor_build->model->subject->source_common_name;
     
-    my $N_bam_stat = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($normal_build->whole_rmdup_bam_flagstat_file);
-    my $N_map_undup_reads = $N_bam_stat->{'reads_mapped'} - $N_bam_stat->{'reads_marked_duplicates'};
-    my $normalBAM = $normal_build->whole_rmdup_bam_file;
+	#grab tumor and normal BAM file location as well as stats for normalization
+	$ref_seq = $tumor_build->reference_sequence_build->full_consensus_path('fa'); #grab ref sequence path
+	my $T_bam_stat = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($tumor_build->whole_rmdup_bam_flagstat_file);
+	if(! $T_bam_stat) { die "Can't find the bam stat for tumor BAM\n"; }
+	$T_map_undup_reads = $T_bam_stat->{'reads_mapped'} - $T_bam_stat->{'reads_marked_duplicates'};
+	$tumorBAM = $tumor_build->whole_rmdup_bam_file;
+    
+	my $N_bam_stat = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($normal_build->whole_rmdup_bam_flagstat_file);
+	if(! $N_bam_stat) { die "Can't find the bam stat for normal BAM\n"; }
+	$N_map_undup_reads = $N_bam_stat->{'reads_mapped'} - $N_bam_stat->{'reads_marked_duplicates'};
+	$normalBAM = $normal_build->whole_rmdup_bam_file;
+    }elsif($user_normalBAM && $user_tumorBAM ) {
+	$ref_seq = "/gscmnt/ams1102/info/model_data/2869585698/build106942997/all_sequences.fa";
+	$common_name = "sample";
+	my $T_bam_stat = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref("$user_tumorBAM.flagstat");
+	if(! $T_bam_stat) { die "Can't find the bam stat for tumor BAM\n"; }
+	$T_map_undup_reads = $T_bam_stat->{'reads_mapped'} - $T_bam_stat->{'reads_marked_duplicates'};
+	$tumorBAM = $self->tumor_bam;
+
+	my $N_bam_stat = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref("$user_normalBAM.flagstat");
+	if(! $N_bam_stat) { die "Can't find the bam stat for normal BAM\n"; }
+	$N_map_undup_reads = $N_bam_stat->{'reads_mapped'} - $N_bam_stat->{'reads_marked_duplicates'};
+	$normalBAM = $self->normal_bam;
+    }else {
+	die "Must specify a somatic model or path to 2 BAM files\n";
+    }
 
     my $n_t_ratio = $N_map_undup_reads/$T_map_undup_reads;
   

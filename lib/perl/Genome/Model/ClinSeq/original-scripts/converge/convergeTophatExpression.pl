@@ -71,7 +71,7 @@ my $usage=<<INFO;
   Exon-junction level (use data_column_name: 'JPM' or 'Read_Count')
   convergeTophatExpression.pl  --model_group_id='25134'  --target_file_name='observed.junctions.anno.Ensembl.tsv'  --expression_subdir='tophat_junctions_absolute'  --join_column_name='JID'  --data_column_name='JPM'  --annotation_column_names='Intron_Size,Splice_Site,Anchored,Exons_Skipped,Gene_Name'  --outfile=Tophat_JunctionLevel_JPM_Malat1Mutants.tsv  --verbose=1
 
-  Specify *one* of the following as input (each model/build should be a ClinSeq model)
+  Specify *one* of the following as input (each model/build should be a ClinSeq model/build)
   --build_ids                Comma separated list of specific build IDs
   --model_ids                Comma separated list of specific model IDs
   --model_group_id           A singe genome model group ID
@@ -136,7 +136,7 @@ my @data_list_sort = sort keys %data_list;
 my $data_list_string = join("\t", @data_list_sort);
 
 #Parse each file and build a hash keyed on the join id and output column name.  Store target data as a value.  Store annotation values
-if ($verbose){print BLUE, "\n\nParse all files found for data '$data_column_name' joining on '$join_column_name", RESET;}
+if ($verbose){print BLUE, "\n\nParse all files found for data '$data_column_name' joining on '$join_column_name'", RESET;}
 my $exp = &parseTophatFiles('-files'=>\%files, '-data_column_name'=>$data_column_name, '-join_column_name'=>$join_column_name, '-annotation_columns'=>\@annotation_columns);
 
 #Print the output file

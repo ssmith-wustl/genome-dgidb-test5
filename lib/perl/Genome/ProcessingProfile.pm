@@ -25,7 +25,7 @@ class Genome::ProcessingProfile {
                            doc => 'Human readable name' },
         type_name     => { is => 'VARCHAR2', len => 255, is_optional => 1, 
                            doc => 'The type of processing profile' },
-        supersedes    => { via => 'params', to => 'value', is_mutable => 1, where => [ name => 'supersedes' ], is_optional => 1, 
+        supersedes    => { via => 'params', to => 'value_obj', is_mutable => 1, where => [ name => 'supersedes' ], is_optional => 1, 
                            doc => 'The processing profile replaces the one named here.' },
         subclass_name => {
             is => 'VARCHAR2',
