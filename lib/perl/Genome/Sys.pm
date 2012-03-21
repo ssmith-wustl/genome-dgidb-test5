@@ -246,9 +246,14 @@ sub tar {
     if (%params) {
         Carp::confess "Extra parameters given to tar method: " . join(', ', sort keys %params);
     }
+
     unless ($tar_path) {
         Carp::confess "Not given path at which tar should be created!";
     }
+    if (-e $tar_path) {
+        Carp::confess "File exists at $tar_path, refusing to overwrite with new tarball!";
+    }
+
     unless ($input_directory) {
         Carp::confess "Not given directory containing input files!";
     }
@@ -259,6 +264,10 @@ sub tar {
     my $current_directory = getcwd;
     unless (chdir $input_directory) {
         Carp::confess "Could not change directory to $input_directory";
+    }
+
+    if (Genome::Sys->directory_is_empty($input_directory)) {
+        Carp::confess "Cannot create tarball for empty directory $input_directory!";
     }
 
     my $cmd = "tar -cf $tar_path $input_pattern";
@@ -317,7 +326,16 @@ sub untar {
     return 1;
 }
 
-sub copy_directory_tree {
+sub directory_is_empty {
+    my ($class, $directory) = @_;
+    my @files = glob("$directory/*");
+    if (@files) {
+        return 0;
+    }
+    return 1;
+}
+
+sub rsync_directory {
     my ($class, %params) = @_;
     my $source_dir = delete $params{source_directory};
     my $target_dir = delete $params{target_directory};
