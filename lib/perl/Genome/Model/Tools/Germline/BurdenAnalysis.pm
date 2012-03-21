@@ -5,8 +5,12 @@ use strict;
 use Carp;
 use Genome;
 use IO::File;
-use POSIX qw( WIFEXITED );
-use Data::Dumper;
+use FileHandle;
+use File::Basename;
+use FileHandle;
+
+my $dir_name = dirname(__FILE__);
+my $R_script_file = $dir_name . "/burdenanalysis.R";
 
 class Genome::Model::Tools::Germline::BurdenAnalysis {
   is => 'Genome::Model::Tools::Music::Base',
@@ -15,7 +19,7 @@ class Genome::Model::Tools::Germline::BurdenAnalysis {
     glm_clinical_data_file => { is => 'Text', doc => "Phenotype File" },
     VEP_annotation_file => { is => 'Text', doc => "List of mutations --VEP annotate then VEP parse" },
     project_name => { is => 'Text', doc => "The name of the project" },
-    base_R_commands => { is => 'Text', doc => "The base R command library", default => '/gscuser/qzhang/gstat/burdentest/burdentest.R' },
+    base_R_commands => { is => 'Text', doc => "The base R command library", default => "$R_script_file" },
     output_directory => { is => 'Text', doc => "Results of the Burden Analysis" },
     maf_cutoff => { is => 'Text', doc => "The cutoff to use to define which mutations are rare, 1 means no cutoff", default => '0.01' },
     permutations => { is => 'Text', doc => "The number of permutations to perform, typically from 100 to 10000, larger number gives more accurate p-value, but needs more time", default => '10000' },
