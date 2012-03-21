@@ -49,30 +49,25 @@ class Genome::Model::Tools::DetectVariants2::Base {
             is_output => 1,
         },        
     ],
-    has_optional => [
+    has_optional_input => [
         alignment_results => {
             is => 'Genome::InstrumentData::AlignmentResult::Merged',
-            is_optional => 1,
             is_many => 1,
         },
         control_alignment_results => {
             is => 'Genome::InstrumentData::AlignmentResult::Merged',            
-            is_optional => 1,
             is_many => 1,
         },
         roi_list => {
             is => 'Genome::FeatureList',
-            is_optional => 1,
             doc => 'only variants in these regions will be included in the final VCF',
         },
         roi_wingspan => {
             is => 'Number',
-            is_optional => 1,
             doc => 'include variants within N nucleotides of a region of interest'
         },
         pedigree_file_path => {
             is => 'FilePath',
-            is_optional => 1,
             doc => 'when supplied overrides the automatic lookup of familial relationships'
         },
         #old
@@ -80,24 +75,20 @@ class Genome::Model::Tools::DetectVariants2::Base {
             is => 'Text',
             doc => 'Location of the aligned reads input file',
             shell_args_position => '1',
-            is_input => 1,
         },
         control_aligned_reads_input => {
             is => 'Text',
             doc => 'Location of the control aligned reads file to which the input aligned reads file should be compared (for detectors which can utilize a control)',
             shell_args_position => '2',
-            is_input => 1,
             is_output => 1,
         },
         aligned_reads_sample => {
             is => 'Text',
             doc => 'Sample name for the source of the aligned_reads_input',
-            is_input => 1,
         },
         control_aligned_reads_sample => {
             is => 'Text',
             doc => 'Sample name for the source of the control_aligned_reads_input',
-            is_input => 1,
         },
     ],
     has_transient_optional => [

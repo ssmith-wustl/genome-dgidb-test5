@@ -298,6 +298,9 @@ sub _detect_variants {
     $input->{control_aligned_reads_input} = $self->control_aligned_reads_input;
     $input->{aligned_reads_sample} = $self->aligned_reads_sample;
     $input->{control_aligned_reads_sample} = $self->control_aligned_reads_sample;
+    $input->{alignment_results} = \@alignment_results;
+    $input->{control_alignment_results} = \@control_alignment_results;
+    $input->{pedigree_file_path} = $self->pedigree_file_path;
 
     $self->_dump_workflow($workflow);
     $self->_dump_dv_cmd;
@@ -341,6 +344,7 @@ sub _dump_dv_cmd {
     $cmd .=     " --control-aligned-reads-input ".$self->control_aligned_reads_input if $self->control_aligned_reads_input;
     $cmd .=     " --aligned-reads-sample ".$self->aligned_reads_sample if $self->aligned_reads_sample;
     $cmd .=     " --control-aligned-reads-sample ".$self->control_aligned_reads_sample if $self->control_aligned_reads_sample;
+    $cmd .=     " --pedigree_file_path ".$self->pedigree_file_path if $self->pedigree_file_path;
     
     for my $var ('snv','sv','indel'){
         my $strat = $var."_detection_strategy";
@@ -512,9 +516,12 @@ sub generate_workflow {
             'reference_build_id',
             'aligned_reads_input',
             'control_aligned_reads_input',
+            'alignment_results',
+            'control_alignment_results',
             'aligned_reads_sample',
             'control_aligned_reads_sample',
             'output_directory',
+            'pedigree_file_path',
         ],
         output_properties => [
             @output_properties
@@ -827,6 +834,9 @@ sub add_detectors_and_filters {
                     'control_aligned_reads_input',
                     'aligned_reads_sample',
                     'control_aligned_reads_sample',
+                    'alignment_results',
+                    'control_alignment_results',
+                    'pedigree_file_path',
                 );
                 for my $property ( @properties_to_each_operation) {
                     $workflow_model->add_link(
