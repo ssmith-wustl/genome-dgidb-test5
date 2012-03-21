@@ -15,9 +15,9 @@ class Genome::Model::Tools::Music::Bmr::CalcCovg {
     output_dir => { is => 'Text', doc => "Directory where output files and subdirectories will be written", is_output => 1},
     cmd_list_file => { is => 'Text', doc => "A file to write calcRoiCovg commands to (See Description)", is_optional => 1 },
     cmd_prefix => { is => 'Text', doc => "A command that submits a job to your cluster (See Description)", is_optional => 1 },
-    normal_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Normal BAM base as covered", is_optional => 1, default => 6 },
-    tumor_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Tumor BAM base as covered", is_optional => 1, default => 8 },
-    min_mapq => { is => 'Integer', doc => "The minimum mapping quality of reads to consider towards read depth counts", is_optional => 1, default => 20 },
+    normal_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Normal BAM base as covered", is_optional => 1},
+    tumor_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Tumor BAM base as covered", is_optional => 1},
+    min_mapq => { is => 'Integer', doc => "The minimum mapping quality of reads to consider towards read depth counts", is_optional => 1},
   ],
   doc => "Uses calcRoiCovg.c to count covered bases per-gene for each given tumor-normal pair of BAMs."
 };
@@ -187,6 +187,18 @@ sub execute {
   my $tumor_min_depth = $self->tumor_min_depth;
   my $min_mapq = $self->min_mapq;
 
+  my $optional_params;
+
+  if ($normal_min_depth) {
+    $optional_params .= ", normal_min_depth => \"$normal_min_depth\"";
+  }
+  if ($tumor_min_depth) {
+    $optional_params .= ", tumor_min_depth => \"$tumor_min_depth\"";
+  }
+  if ($min_mapq) {
+    $optional_params .= ", min_mapq => \"$min_mapq\"";
+  }
+
   # Check on all the input data before starting work
   print STDERR "ROI file not found or is empty: $roi_file\n" unless( -s $roi_file );
   print STDERR "Reference sequence file not found: $ref_seq\n" unless( -e $ref_seq );
@@ -253,7 +265,7 @@ sub execute {
     next unless( -e $normal_bam && -e $tumor_bam );
 
     # Construct the command that calculates coverage per ROI
-    my $calcRoiCovg_cmd = "calcRoiCovg $normal_bam $tumor_bam $roi_file $ref_seq $roi_covg_dir/$sample.covg $normal_min_depth $tumor_min_depth $min_mapq";
+    my $calcRoiCovg_cmd = "perl -e \'use above 'Genome'; my \$cmd = Genome::Model::Tools::Music::Bmr::CalcCovgHelper->create( normal_bam =>  \"$normal_bam\", tumor_bam =>  \"$tumor_bam\", roi_file =>  \"$roi_file\", reference_sequence =>  \"$ref_seq\", output_file =>  \"$roi_covg_dir/$sample.covg\" $optional_params); \$cmd->execute\'";
 
     # If user only wants the calcRoiCovg commands, write them to file and skip running calcRoiCovg
     if( defined $cmd_list_file )
@@ -269,14 +281,34 @@ sub execute {
       print "$sample.covg found in $roi_covg_dir. Skipping re-calculation.\n";
     }
     # Run the calcRoiCovg command on this tumor-normal pair. This could take a while
-    elsif( system( "$calcRoiCovg_cmd" ) != 0 )
-    {
-      print STDERR "Failed to execute: $calcRoiCovg_cmd\n";
-      next;
-    }
-    else
-    {
-      print "$sample.covg generated and stored to $roi_covg_dir.\n";
+    else {
+      my %params = (
+        normal_bam => $normal_bam,
+        tumor_bam => $tumor_bam,
+        roi_file => $roi_file,
+        reference_sequence => $ref_seq, 
+        output_file => "$roi_covg_dir/$sample.covg",
+      );
+      if ($normal_min_depth) {
+        $params{"normal_min_depth"} = $normal_min_depth;
+      }
+      if ($tumor_min_depth) {
+        $params{"tumor_min_depth"} = $tumor_min_depth;
+      }
+      if ($min_mapq) {
+        $params{"min_mapq"} = $min_mapq;
+      }
+      my $cmd = Genome::Model::Tools::Music::Bmr::CalcBmrHelper->create(%params);
+      my $rv = $cmd->execute;
+      if(!$rv)
+      {
+        print STDERR "Failed to execute: $calcRoiCovg_cmd\n";
+        next;
+      }
+      else
+      {
+        print "$sample.covg generated and stored to $roi_covg_dir.\n";
+      }
     }
 
     # Read the calcRoiCovg output and count covered bases per gene
