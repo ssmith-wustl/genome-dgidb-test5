@@ -12,7 +12,7 @@ class Genome::Model::Tools::Allpaths::Base {
 	    version => {
             is => 'Text',
             doc => 'Version of ALLPATHS to use',
-            valid_values => [ '41008','41055' ],
+            valid_values => [ '41055' ],
             default_value => "41055",
         },
     ],
