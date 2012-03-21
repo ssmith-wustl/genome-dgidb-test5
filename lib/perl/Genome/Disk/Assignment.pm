@@ -41,31 +41,4 @@ class Genome::Disk::Assignment {
     data_source => 'Genome::DataSource::Oltp',
 };
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_) or die "Could not create group assignment!";
-
-    my $volume = $self->volume;
-    unless ($volume) {
-        $self->delete;
-        die "Could not get volume for group assignment!";
-    }
-
-    my $group = $self->group;
-    unless ($group) {
-        $self->delete;
-        die "Could not get group from group assignment!";
-    }
-
-    my $path = join('/', $volume->mount_path, $group->subdirectory);
-    unless (-d $path) {
-        unless (Genome::Sys->create_directory($path)) {
-            die "Could not create $path!";
-        }
-    }
-
-    return $self;
-}
-
-
 1;
