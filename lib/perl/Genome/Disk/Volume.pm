@@ -3,6 +3,9 @@ package Genome::Disk::Volume;
 use strict;
 use warnings;
 
+use Genome;
+use Carp;
+
 class Genome::Disk::Volume {
     table_name => 'DISK_VOLUME',
     id_by => [

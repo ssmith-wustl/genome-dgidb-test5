@@ -335,7 +335,7 @@ sub copy_directory_tree {
     unless (-d $target_dir) {
         Genome::Sys->create_directory($target_dir);
     }
-    $pattern = '*' unless $pattern;
+    $pattern = '' unless $pattern;
 
     my $source = join('/', $source_dir, $pattern);
     my $rv = Genome::Sys->shellcmd(

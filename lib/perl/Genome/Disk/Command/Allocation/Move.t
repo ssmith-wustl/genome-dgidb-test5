@@ -15,6 +15,19 @@ use File::Temp 'tempdir';
 use_ok('Genome::Disk::Command::Allocation::Move') or die;
 use_ok('Genome::Disk::Allocation') or die;
 
+$Genome::Disk::Allocation::CREATE_DUMMY_VOLUMES_FOR_TESTING = 1;
+
+my $group = Genome::Disk::Group->create(
+    disk_group_name => 'testing',
+    subdirectory => 'testing',
+    permissions => '755',
+    sticky => 1,
+    unix_uid => 0,
+    unix_gid => 0,
+);
+ok($group, 'created test group');
+push @Genome::Disk::Allocation::APIPE_DISK_GROUPS, $group->disk_group_name;
+
 # Temp testing directory, used as mount path for test volumes and allocations
 my $test_dir_base = '/gsc/var/cache/testsuite/running_testsuites/';
 my $test_dir = tempdir(
@@ -60,6 +73,19 @@ my $other_volume = Genome::Disk::Volume->create(
 );
 ok($other_volume, 'created another test volume');
 
+# Add volumes to test group
+my $assignment = Genome::Disk::Assignment->create(
+    volume => $volume,
+    group => $group,
+);
+ok($assignment, 'assigned first test volume to group');
+
+my $other_assignment = Genome::Disk::Assignment->create(
+    volume => $other_volume,
+    group => $group,
+);
+ok($other_assignment, 'add second test volume to group');
+
 # Make test allocation
 my $allocation_path = tempdir(
     TEMPLATE => "allocation_test_1_XXXXXX",
@@ -67,7 +93,8 @@ my $allocation_path = tempdir(
     UNLINK => 1,
 );
 my $allocation = Genome::Disk::Allocation->create(
-    disk_group_name => 'info_apipe',
+    mount_path => $volume->mount_path,
+    disk_group_name => $group->disk_group_name,
     allocation_path => $allocation_path,
     kilobytes_requested => 100,
     owner_class_name => 'UR::Value',

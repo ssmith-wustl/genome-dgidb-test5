@@ -71,13 +71,6 @@ for (1..2) {
 # Make sure dummy objects can be committed
 ok(UR::Context->commit, 'commit of dummy objects to db successful') or die;
 
-# Create a test allocation path in tmp
-my $allocation_path = tempdir(
-    TEMPLATE => "allocation_test_1_XXXXXX",
-    CLEANUP => 1,
-    UNLINK => 1,
-);
-
 # Create a fake owner of the allocation
 my $user = Genome::Sys::User->create(email => 'fakeguy@genome.wustl.edu', name => 'Fake McFakerton', username => 'fakeguy');
 ok($user, 'created user');
@@ -86,7 +79,7 @@ ok($user, 'created user');
 my %params = ( 
     disk_group_name => 'testing_group',
     mount_path => $volumes[0]->mount_path,
-    allocation_path => $allocation_path,
+    allocation_path => 'testing/1/2/3',
     kilobytes_requested => 100,
     owner_class_name => 'Genome::Sys::User',
     owner_id => $user->id,

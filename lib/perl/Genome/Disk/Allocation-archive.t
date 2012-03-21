@@ -123,7 +123,7 @@ sub create_test_volumes {
         disk_group_name => 'archive',
         permissions => '755',
         sticky => '1',
-        subdirectory => 'archive',
+        subdirectory => 'testing',
         unix_uid => 0,
         unix_gid => 0,
     );
