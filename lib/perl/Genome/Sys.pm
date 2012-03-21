@@ -236,6 +236,135 @@ sub create_temp_directory {
 # Basic filesystem operations
 #####
 
+sub tar {
+    my ($class, %params) = @_;
+    my $tar_path = delete $params{tar_path};
+    my $input_directory = delete $params{input_directory};
+    my $input_pattern = delete $params{input_pattern};
+    $input_pattern = '*' unless defined $input_pattern;
+
+    if (%params) {
+        Carp::confess "Extra parameters given to tar method: " . join(', ', sort keys %params);
+    }
+
+    unless ($tar_path) {
+        Carp::confess "Not given path at which tar should be created!";
+    }
+    if (-e $tar_path) {
+        Carp::confess "File exists at $tar_path, refusing to overwrite with new tarball!";
+    }
+
+    unless ($input_directory) {
+        Carp::confess "Not given directory containing input files!";
+    }
+    unless (-d $input_directory) {
+        Carp::confess "No input directory found at $input_directory";
+    }
+
+    my $current_directory = getcwd;
+    unless (chdir $input_directory) {
+        Carp::confess "Could not change directory to $input_directory";
+    }
+
+    if (Genome::Sys->directory_is_empty($input_directory)) {
+        Carp::confess "Cannot create tarball for empty directory $input_directory!";
+    }
+
+    my $cmd = "tar -cf $tar_path $input_pattern";
+    my $rv = Genome::Sys->shellcmd(
+        cmd => $cmd,
+    );
+    unless ($rv) {
+        Carp::confess "Could not create tar file at $tar_path containing files in " .
+            "$input_directory matching pattern $input_pattern";
+    }
+
+    unless (chdir $current_directory) {
+        Carp::confess "Could not change directory back to $current_directory";
+    }
+    return 1;
+}
+
+sub untar {
+    my ($class, %params) = @_;
+    my $tar_path = delete $params{tar_path};
+    my $target_directory = delete $params{target_directory};
+    my $delete_tar = delete $params{delete_tar};
+
+    if (%params) {
+        Carp::confess "Extra parameters given to untar method: " . join(', ', sort keys %params);
+    }
+    unless ($tar_path) {
+        Carp::confess "Not given path to tar file to be untarred!";
+    }
+    unless (-e $tar_path) {
+        Carp::confess "No file found at $tar_path!";
+    }
+    $target_directory = getcwd unless $target_directory;
+    $delete_tar = 0 unless defined $delete_tar;
+
+    my $current_directory = getcwd;
+    unless (chdir $target_directory) {
+        Carp::confess "Could not change directory to $target_directory";
+    }
+
+    my $rv = Genome::Sys->shellcmd(
+        cmd => "tar -xf $tar_path",
+    );
+    unless ($rv) {
+        Carp::confess "Could not untar $tar_path into $target_directory";
+    }
+
+    unless (chdir $current_directory) {
+        Carp::confess "Could not change directory back to $current_directory";
+    }
+
+    if ($delete_tar) {
+        unlink $tar_path;
+    }
+
+    return 1;
+}
+
+sub directory_is_empty {
+    my ($class, $directory) = @_;
+    my @files = glob("$directory/*");
+    if (@files) {
+        return 0;
+    }
+    return 1;
+}
+
+sub rsync_directory {
+    my ($class, %params) = @_;
+    my $source_dir = delete $params{source_directory};
+    my $target_dir = delete $params{target_directory};
+    my $pattern = delete $params{file_pattern};
+
+    unless ($source_dir) {
+        Carp::confess "Not given directory to copy from!";
+    }
+    unless (-d $source_dir) {
+        Carp::confess "No directory found at $source_dir";
+    }
+    unless ($target_dir) {
+        Carp::confess "Not given directory to copy to!";
+    }
+    unless (-d $target_dir) {
+        Genome::Sys->create_directory($target_dir);
+    }
+    $pattern = '' unless $pattern;
+
+    my $source = join('/', $source_dir, $pattern);
+    my $rv = Genome::Sys->shellcmd(
+        cmd => "rsync -rlHpgt $source $target_dir",
+    );
+    unless ($rv) {
+        confess "Could not copy data matching pattern $source to $target_dir";
+    }
+    return 1;
+}
+
 sub line_count {
     my ($self, $path) = @_;
     my ($line_count) = qx(wc -l $path) =~ /^(\d+)/;

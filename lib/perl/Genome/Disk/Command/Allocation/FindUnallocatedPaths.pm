@@ -27,7 +27,7 @@ class Genome::Disk::Command::Allocation::FindUnallocatedPaths{
             is_transient => 1,
         },
     ],
-    doc => 'Finds unallocated paths on the provided volume',
+    doc => 'finds unallocated paths on the provided volume',
 };
 
 sub help_detail {
