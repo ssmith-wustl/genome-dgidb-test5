@@ -10,7 +10,7 @@ use File::Basename;
 use FileHandle;
 
 my $dir_name = dirname(__FILE__);
-my $R_script_file = $dir_name . "/burdenanalysis.R";
+my $R_script_file = $dir_name . "/burdentest.R";
 
 class Genome::Model::Tools::Germline::BurdenAnalysis {
   is => 'Genome::Model::Tools::Music::Base',
