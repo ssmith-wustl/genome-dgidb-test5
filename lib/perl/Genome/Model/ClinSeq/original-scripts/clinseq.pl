@@ -261,7 +261,7 @@ if ($wgs){
     }else{
       $master_clonality_cmd .= " 1>$clonality_stdout 2>$clonality_stderr";
     }
-    system($master_clonality_cmd);
+    Genome::Sys->shellcmd(cmd=>$master_clonality_cmd, output_files=>["$clonality_dir$common_name.clonality.pdf"]);
   }
 }
 
