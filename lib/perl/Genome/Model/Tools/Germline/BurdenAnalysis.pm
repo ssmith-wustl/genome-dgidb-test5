@@ -28,8 +28,7 @@ class Genome::Model::Tools::Germline::BurdenAnalysis {
     testing_mode => { is => 'Text', doc => "If specified, assumes you're just testing the code and will not bsub out the actual tests", default => '0'},
     sample_list_file => { is => 'Text', doc => "Limit Samples in the Variant Matrix to Samples Within this File - Sample_Id should be the first column of a tab-delimited file, all other columns are ignored", is_optional => 1,},
     missing_value_markers => { is => 'Text', doc => "Comma-delimited list of symbols that represent missing values such as \"NA\", \".\", or \"-\"", is_optional => 1, default => 'NA,.,-999'},
-    glm_model_file => { is => 'Text', doc => 'File outlining the type of model, response variable, covariants, etc. for the GLM analysis. (See DESCRIPTION).', is_optional => 1,
-    },
+    glm_model_file => { is => 'Text', doc => 'File outlining the type of model, response variable, covariants, etc. for the GLM analysis. (See DESCRIPTION).',},
   ],
 };
 
@@ -118,7 +117,7 @@ sub execute {                               # replace with real execution logic.
     }
 
     my $glm_model_file = $self->glm_model_file;
-    my $glm_model_fh = IO::File->new( $glm_model_file ) or die "Couldn't open $glm_model_file. $!\n";
+    my $glm_model_fh = IO::File->new( $glm_model_file ) or die "Couldn't open glm model file: $glm_model_file. $!\n";
     my $glm_header = $glm_model_fh->getline;
     chomp($glm_header);
     my %pheno_covar_type_hash;
