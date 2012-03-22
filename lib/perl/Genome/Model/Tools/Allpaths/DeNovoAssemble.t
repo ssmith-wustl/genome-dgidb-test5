@@ -19,7 +19,7 @@ ok(-d $temp_dir, "Temp test dir created");
 
 my $data_dir = "fake";
 my $create = Genome::Model::Tools::Allpaths::DeNovoAssemble->create(
-    version => 39099,
+    version => 41055,
     pre => $temp_dir,
     ploidy => 1,
     in_group_file => $data_dir."/in_group.csv",

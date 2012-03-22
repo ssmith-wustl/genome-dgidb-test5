@@ -7,8 +7,8 @@ use Genome;
 use Carp;
 
 class Genome::Sys::User::RoleMember {
-    table_name => 'subject.role_member',
-    data_source => 'Genome::DataSource::Main',
+    table_name => 'GENOME_SYS_USER_ROLE_MEMBER',
+    data_source => 'Genome::DataSource::GMSchema',
     id_by => [
         user_email => { is => 'Text' },
         role_id => { is => 'Text' },

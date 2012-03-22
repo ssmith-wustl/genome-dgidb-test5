@@ -18,6 +18,7 @@ is(Genome::Utility::Text::string_to_camel_case($string), $camel_case, 'string_to
 ok(!Genome::Utility::Text::string_to_camel_case(undef), 'string_to_camel_case failed w/o string');
 is(Genome::Utility::Text::camel_case_to_string($camel_case), $string, 'camel_case_to_string');
 ok(!Genome::Utility::Text::camel_case_to_string(undef), 'camel_case_to_string failed w/o camel case');
+is(Genome::Utility::Text::string_to_camel_case("delicious-cake",'-'), 'DeliciousCake', "string_to_camel_case with non default split character");
 
 # params
 my $param_string = '-aa fasta -b1b -1 qual --c22 phred phrap  -ddd -11 -eee -f -g22g text -1111 --h_h 44 --i-i -5 -j-----j -5 -6 hello     -k    -l_l-l g  a   p   -m';

@@ -200,6 +200,33 @@ sub execute {
   $snv_file = "$output_dir/$sample_name/snvs/snvs.hq.bed";
   $indel_file = "$output_dir/$sample_name/indels/indels.hq.bed";
   
+  
+  my %dups;
+  #munge through SNV file to remove duplicates and fix IUB codes
+  #--------------------------------------------------------------
+  my $filenm = $snv_file;
+  $filenm =~ s/.bed/.clean.bed/g;
+
+  open(SNVFILE,">$filenm") || die ("couldn't open filter file");
+  my $inFh = IO::File->new( $snv_file ) || die "can't open file\n";
+  while( my $line = $inFh->getline )
+  {
+      chomp($line);
+      my ( $chr, $start, $stop, $ref, $var ) = split( /\t/, $line );
+      if($ref =~ /\//){
+          ( $ref, $var ) = split(/\//, $ref);
+      }
+      my @vars = fixIUB($ref, $var);
+      foreach my $v (@vars){
+          unless (exists($dups{join("\t",($chr, $start, $stop, $ref, $v ))})){
+              print SNVFILE join("\t",($chr, $start, $stop, $ref, $v )) . "\n";
+          }
+          $dups{join("\t",($chr, $start, $stop, $ref, $v ))} = 1;
+      }
+  }
+  close(SNVFILE);
+  $snv_file = $filenm;
+
 
   #-------------------------------------------------
   #store the previously called variants into a hash
@@ -356,11 +383,8 @@ sub execute {
               if($ref =~ /\//){
                   ( $ref, $var ) = split(/\//, $ref);
               }
-              my @vars = fixIUB($ref, $var);
-              foreach my $v (@vars){
-                  unless (exists($filterSites{join("\t",($chr, $start, $stop, $ref, $v ))})){
-                      print FILFILE $line . "\n";
-                  }
+              unless (exists($filterSites{join("\t",($chr, $start, $stop, $ref, $var ))})){
+                  print FILFILE $line . "\n";
               }
           }
           close(FILFILE);
@@ -400,7 +424,7 @@ sub execute {
   open(NEWFILE,">$output_dir/$sample_name/snvs/snvs.newcalls");
   open(MISFILE,">$output_dir/$sample_name/snvs/snvs.notvalidated");
 
-  my $inFh = IO::File->new( $snv_file ) || die "can't open file\n";
+  $inFh = IO::File->new( $snv_file ) || die "can't open file\n";
   while( my $line = $inFh->getline )
   {
       chomp($line);
@@ -409,23 +433,14 @@ sub execute {
           ( $ref, $var ) = split(/\//, $ref);
       }
 
-      my $found = 0;
-      my @vars = fixIUB($ref, $var);
-      foreach my $v (@vars){
-      #case 1 - previously found variant, now validated
-          if (exists($prevCalls{join("\t",($chr, $start, $stop, $ref, $v ))})){
-              $found = 1;
-          }
-      }
-      if($found){
+      if (exists($prevCalls{join("\t",($chr, $start, $stop, $ref, $var ))})){
           print VALFILE bedToAnno(join("\t",($chr, $start, $stop, $ref, $var ))) . "\n";
-          #mark as found
           $prevCalls{join("\t",($chr, $start, $stop, $ref, $var ))} = 1;
-      } else { #case 2: new snv not found in original targets
+      } else {
           print NEWFILE bedToAnno(join("\t",($chr, $start, $stop, $ref, $var ))) . "\n";
       }
   }
-
+  
   close($inFh);
   #case 3: called in original, not in validation
   foreach my $k (keys(%prevCalls)){

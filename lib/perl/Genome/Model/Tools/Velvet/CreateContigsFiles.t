@@ -10,7 +10,8 @@ require File::Compare;
 
 use_ok( 'Genome::Model::Tools::Velvet::CreateContigsFiles' ) or die;
 
-my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/CreateContigsFiles";
+my $version = 'v2';
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/CreateContigsFiles-'.$version;
 
 ok(-d $data_dir, "Found data directory: $data_dir");
 

@@ -47,6 +47,11 @@ class Genome::Model::Tools::Allpaths::DeNovoAssemble {
             doc => 'name of the reference',
             default_value => 'sample',
         },
+        haploidify => {
+            is => 'Boolean',
+            doc => 'Run Allpaths with haploidify option',
+            default_value => 0,
+        },
     ],
 };
 
@@ -83,7 +88,7 @@ sub execute {
         make_path($output_dir."/data");
     }
 
-    my $prepare_cmd = 'ulimit -s 100000 && PATH='.$self->allpaths_version_directory($self->version).':'.$ENV{PATH}.' PrepareAllPathsInputs.pl PICARD_TOOLS_DIR='.$PICARD_TOOLS_DIR.' DATA_DIR='.$output_dir.'/data PLOIDY='.$self->ploidy.' IN_GROUPS_CSV='.$self->in_group_file.' IN_LIBS_CSV='.$self->in_libs_file;
+    my $prepare_cmd = 'ulimit -s 100000 && '. $self->executable_for_version("PrepareAllPathsInputs.pl").' PICARD_TOOLS_DIR='.$PICARD_TOOLS_DIR.' DATA_DIR='.$output_dir.'/data PLOIDY='.$self->ploidy.' IN_GROUPS_CSV='.$self->in_group_file.' IN_LIBS_CSV='.$self->in_libs_file;
 
     $self->status_message("Run PrepareAllPathsInput");
     Genome::Sys->shellcmd(cmd => $prepare_cmd); 
@@ -99,7 +104,14 @@ sub execute {
     else {
         $overwrite = "False";
     }
-    my $cmd = 'ulimit -s 100000 && PATH='.$self->allpaths_version_directory($self->version).':'.$ENV{PATH}.' RunAllPathsLG PRE='.$self->pre.' REFERENCE_NAME='.$self->reference_name.' DATA_SUBDIR=data RUN='.$self->run.' SUBDIR='.$self->sub_dir.' TARGETS=standard OVERWRITE='.$overwrite;
+    my $haploidify;
+    if ($self->haploidify) {
+        $haploidify="True";
+    }
+    else {
+        $haploidify="False";
+    }
+    my $cmd = 'ulimit -s 100000 && '.$self->executable_for_version("RunAllPathsLG").' PRE='.$self->pre.' REFERENCE_NAME='.$self->reference_name.' DATA_SUBDIR=data RUN='.$self->run.' SUBDIR='.$self->sub_dir.' TARGETS=standard OVERWRITE='.$overwrite.' HAPLOIDIFY='.$haploidify;
 
     $self->status_message("Run ALLPATHS de novo");
     Genome::Sys->shellcmd(cmd => $cmd);
