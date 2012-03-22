@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Data::Dumper;
 
-our $MINIMUM_JOINX_VERSION = 1.4;
+our $MINIMUM_JOINX_VERSION = 1.4; #available but horribly broken in 1.3
 
 class Genome::Model::Tools::Joinx::VcfAnnotate {
     is => 'Genome::Model::Tools::Joinx',
