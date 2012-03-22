@@ -169,11 +169,17 @@ sub move {
 
 sub archive {
     my ($class, %params) = @_;
+    unless (Genome::Sys->current_user_has_role('archive')) {
+        confess "Only users with role 'archive' can archive allocations!";
+    }
     return $class->_execute_system_command('_archive', %params);
 }
 
 sub unarchive {
     my ($class, %params) = @_;
+    unless (Genome::Sys->current_user_has_role('archive')) {
+        confess "Only users with role 'archive' can unarchive allocations!";
+    }
     return $class->_execute_system_command('_unarchive', %params);
 }
 
