@@ -89,7 +89,7 @@ sub execute {
 	    my @quals;
 	    for my $i (0..length($qual)-1) {
                 unless (substr($seq, $i, 1) eq '*') {
-                    push @quals, ord(substr($qual, $i, 1)) - ord('0');
+                    push @quals, 20;#ord(substr($qual, $i, 1)) - ord('0');
                 }
             }
 	    my $qual_obj = Bio::Seq::Quality->new(-display_id => $contig_id, -seq => $seq, -qual => \@quals);

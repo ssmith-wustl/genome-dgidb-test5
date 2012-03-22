@@ -209,8 +209,8 @@ sub execute {
         if ($subject_class_name and $subject_id and @processing_profile_ids) {
             my $subject      = $subject_class_name->get($subject_id);
 
-            if ( $instrument_data_type =~ /454/i and $subject->name eq 'n-ctrl' ) { 
-                # Do not process 454 negative control (n-ctrl)
+            if ( $instrument_data_type =~ /454/i and $subject->name =~ /^n\-cn?trl$/i ) { 
+                # Do not process 454 negative control (n-ctrl, n-cntrl)
                 $self->status_message('Skipping n-ctrl PSE '.$pse->id);
                 next PSE;
             }

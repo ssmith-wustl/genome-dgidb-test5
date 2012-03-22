@@ -67,6 +67,9 @@ my $frag_library = Genome::Library->__define__(
 ok($frag_library, 'define frag library') or die;
 my $frag_inst_data = Genome::InstrumentData::Solexa->__define__(
     id => -6666,
+    original_est_fragment_size => 180,
+    original_est_fragment_size_min => 153,
+    original_est_fragment_size_max => 207,
     sequencing_platform => 'solexa',
     read_length => 101,
     subset_name => '1-AAAAA',

@@ -10,6 +10,7 @@ class Genome::Disk::Command::Allocation::Move {
         allocations => {
             is => 'Genome::Disk::Allocation',
             is_many => 1,
+            shell_args_position => 1,
             doc => 'Allocations to move',
         }
     ],
@@ -23,7 +24,7 @@ class Genome::Disk::Command::Allocation::Move {
             doc => 'Group that allocations are to be moved to',
         },
     ],
-    doc => 'Move alloations from one volume to another',
+    doc => 'move alloations from one volume to another',
 };
 
 sub help_detail {
@@ -34,7 +35,7 @@ EOS
 }
 
 sub help_brief {
-    return 'Moves alloations from one volume to another';
+    return 'moves alloations from one volume to another';
 }
 
 sub execute {
@@ -49,11 +50,12 @@ sub execute {
             $params{target_mount_path} = $self->target_volume->mount_path;
         }
         else {
-            $params{disk_group_name} = $self->target_group->name;
+            $params{disk_group_name} = $self->target_group->disk_group_name;
         }
         $allocation->move(%params);
     }
 
+    $self->status_message("Successfully moved allocations!");
     return 1;
 }
 
