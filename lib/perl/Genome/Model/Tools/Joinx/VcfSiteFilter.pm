@@ -50,7 +50,7 @@ sub execute {
     my $self = shift;
 
     if($self->use_version < $MINIMUM_JOINX_VERSION) {
-        die $self->error_message("This module requires joinx version 1.4 or higher to function correctly.");
+        die $self->error_message("This module requires joinx version $MINIMUM_JOINX_VERSION or higher to function correctly.");
     }
     
     if(defined($self->use_bgzip) && not defined($self->output_file)){
