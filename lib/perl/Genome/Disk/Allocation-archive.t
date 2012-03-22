@@ -16,6 +16,10 @@ use File::Basename;
 use_ok('Genome::Disk::Allocation') or die;
 use_ok('Genome::Disk::Volume') or die;
 
+no warnings 'redefine';
+*Genome::Sys::current_user_has_role = sub { return 1 };
+use warnings;
+
 my @volumes = create_test_volumes();
 
 # Make test allocation
