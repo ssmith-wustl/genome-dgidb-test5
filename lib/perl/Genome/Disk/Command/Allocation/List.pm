@@ -14,7 +14,7 @@ class Genome::Disk::Command::Allocation::List {
         },
         show => { default_value => 'id,absolute_path,kilobytes_requested,owner_class_name,owner_id,creation_time,reallocation_time' },
     ],
-    doc => 'Lists Genome::Disk::Allocation objects',
+    doc => 'lists Genome::Disk::Allocation objects',
 };
 
 1;

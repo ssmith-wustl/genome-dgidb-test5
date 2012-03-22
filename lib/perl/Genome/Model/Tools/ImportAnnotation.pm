@@ -334,7 +334,7 @@ sub create_flanking_sub_structures_and_introns {
 
     my $left_flank_structure_stop = $a[0]->structure_start - 1;
     my $left_flank_structure_start = $a[0]->structure_start - 50000;
-    my $left_flank = Genome::Db::Ensembl::Import::Base::create_transcript_structure(
+    my $left_flank = Genome::Db::Ensembl::Import::Base->create_transcript_structure(
         chrom_name => $transcript->chrom_name,
         transcript_structure_id => $$tss_id_ref,
         transcript => $transcript,
@@ -351,7 +351,7 @@ sub create_flanking_sub_structures_and_introns {
 
     my $right_flank_structure_start = $a[-1]->structure_stop + 1;
     my $right_flank_structure_stop = $a[-1]->structure_stop + 50000;
-    my $right_flank = Genome::Db::Ensembl::Import::Base::create_transcript_structure(
+    my $right_flank = Genome::Db::Ensembl::Import::Base->create_transcript_structure(
         chrom_name => $transcript->chrom_name,
         transcript_structure_id => $$tss_id_ref,
         transcript => $transcript,
@@ -381,7 +381,7 @@ sub create_flanking_sub_structures_and_introns {
         if ( $right_structure_start > $left_structure_stop + 1 ){
             my $intron_start = $left_structure_stop+1;
             my $intron_stop = $right_structure_start-1;
-            my $intron = Genome::Db::Ensembl::Import::Base::create_transcript_structure(
+            my $intron = Genome::Db::Ensembl::Import::Base->create_transcript_structure(
                 chrom_name => $transcript->chrom_name,
                 transcript_structure_id => $$tss_id_ref,
                 transcript => $transcript,

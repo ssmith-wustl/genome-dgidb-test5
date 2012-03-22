@@ -223,7 +223,7 @@ sub execute {
             my @ctg_quals;
             for my $i (0..length($ctg_qual)-1) {
                 unless (substr($ctg_seq, $i, 1) eq '*') {
-                    push @ctg_quals, ord(substr($ctg_qual, $i, 1)) - ord('0');
+                    push @ctg_quals, 20;#ord(substr($ctg_qual, $i, 1)) - ord('0');
                 }
             }
 
