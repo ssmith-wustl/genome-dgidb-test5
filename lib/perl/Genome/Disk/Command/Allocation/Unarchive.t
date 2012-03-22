@@ -9,7 +9,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More skip_all => 'unarchiving not fully implemented yet';
+use Test::More; #skip_all => 'unarchiving not fully implemented yet';
 use File::Temp 'tempdir';
 
 use_ok('Genome::Disk::Allocation') or die;
@@ -79,6 +79,21 @@ my $assignment = Genome::Disk::Assignment->create(
     volume => $volume,
 );
 ok($assignment, 'added volume to test group successfully');
+Genome::Sys->create_directory(join('/', $volume->mount_path, $group->subdirectory));
+
+my $archive_assignment = Genome::Disk::Assignment->create(
+    group => $group,
+    volume => $archive_volume,
+);
+ok($archive_assignment, 'added archive volume to test group successfully');
+Genome::Sys->create_directory(join('/', $archive_volume->mount_path, $group->subdirectory));
+
+# Override these methods so archive/active volume linking works for our test volumes
+no warnings 'redefine';
+*Genome::Disk::Volume::archive_volume_prefix = sub { return $archive_volume->mount_path };
+*Genome::Disk::Volume::active_volume_prefix = sub { return $volume->mount_path };
+*Genome::Sys::current_user_has_role = sub { return 1 };
+use warnings;
 
 # Make test allocation
 my $allocation_path = tempdir(
@@ -98,11 +113,14 @@ my $allocation = Genome::Disk::Allocation->create(
 ok($allocation, 'created test allocation');
 ok($allocation->is_archived, 'allocation is archived prior to running command, as expected');
 
-# Override these methods so archive/active volume linking works for our test volumes
-no warnings 'redefine';
-*Genome::Disk::Volume::archive_volume_prefix = sub { return $archive_volume->mount_path };
-*Genome::Disk::Volume::active_volume_prefix = sub { return $volume->mount_path };
-use warnings;
+# Create a test tarball
+system("touch " . $allocation->absolute_path . "/a.out");
+Genome::Sys->tar(
+    tar_path => $allocation->absolute_path . "/archive.tar",
+    input_directory => $allocation->absolute_path,
+);
+ok(-e join('/', $allocation->absolute_path, 'archive.tar'), 'archive tarball successfully created');
+unlink join('/', $allocation->absolute_path, 'a.out');
 
 # Create command object and execute it
 my $cmd = Genome::Disk::Command::Allocation::Unarchive->create(
@@ -130,9 +148,18 @@ $allocation = Genome::Disk::Allocation->create(
 ok($allocation, 'created test allocation');
 ok($allocation->is_archived, 'allocation is archived before running command, as expected');
 
+# Create a test tarball
+system("touch " . $allocation->absolute_path . "/a.out");
+Genome::Sys->tar(
+    tar_path => $allocation->absolute_path . "/archive.tar",
+    input_directory => $allocation->absolute_path,
+);
+ok(-e join('/', $allocation->absolute_path, 'archive.tar'), 'archive tarball successfully created');
+unlink join('/', $allocation->absolute_path, 'a.out');
+
 # Now simulate the command being run from the CLI
 my @args = ('genome', 'disk', 'allocation', 'unarchive', $allocation->id);
-my $rv = Genome::Disk::Command::Allocation::UnArchive->_execute_with_shell_params_and_return_exit_code(@args);
+my $rv = Genome::Disk::Command::Allocation::Unarchive->_execute_with_shell_params_and_return_exit_code(@args);
 ok($rv == 0, 'successfully executed command using simulated command line arguments');
 is($allocation->volume->id, $volume->id, 'allocation updated as expected after archive');
 

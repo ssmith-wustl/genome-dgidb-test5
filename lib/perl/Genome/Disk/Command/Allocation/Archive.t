@@ -9,7 +9,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More skip_all => 'archiving not fully implemented yet';
+use Test::More; #skip_all => 'archiving not fully implemented yet';
 use File::Temp 'tempdir';
 
 use_ok('Genome::Disk::Allocation') or die;
@@ -79,6 +79,14 @@ my $assignment = Genome::Disk::Assignment->create(
     volume => $volume,
 );
 ok($assignment, 'added volume to test group successfully');
+Genome::Sys->create_directory(join('/', $volume->mount_path, $group->subdirectory));
+
+my $archive_assignment = Genome::Disk::Assignment->create(
+    group => $group,
+    volume => $archive_volume
+);
+ok($archive_assignment, 'added archiev volume to test group successfully');
+Genome::Sys->create_directory(join('/', $archive_volume->mount_path, $group->subdirectory));
 
 # Make test allocation
 my $allocation_path = tempdir(
@@ -96,11 +104,13 @@ my $allocation = Genome::Disk::Allocation->create(
     mount_path => $volume->mount_path,
 );
 ok($allocation, 'created test allocation');
+system("touch " . $allocation->absolute_path . "/a.out");
 
 # Override these methods so archive/active volume linking works for our test volumes
 no warnings 'redefine';
 *Genome::Disk::Volume::archive_volume_prefix = sub { return $archive_volume->mount_path };
 *Genome::Disk::Volume::active_volume_prefix = sub { return $volume->mount_path };
+*Genome::Sys::current_user_has_role = sub { return 1 };
 use warnings;
 
 # Create command object and execute it
@@ -127,6 +137,7 @@ $allocation = Genome::Disk::Allocation->create(
     mount_path => $volume->mount_path,
 );
 ok($allocation, 'created test allocation');
+system("touch " . $allocation->absolute_path . "/a.out");
 
 # Now simulate the command being run from the CLI
 my @args = ('genome', 'disk', 'allocation', 'archive', $allocation->id);
