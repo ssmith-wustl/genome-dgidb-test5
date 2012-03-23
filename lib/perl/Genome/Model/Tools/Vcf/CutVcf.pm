@@ -122,8 +122,19 @@ sub execute {
 
         for my $key ( keys(%bc)){    
             my ($gt) = split /\:/, $cols[$bc{$key}];
-            my ($a1,$a2) = split /\//, $gt;
-            map { if(($_ != 0) && ($_ ne '.')){ $bad_alleles{$_} = 1; } } ($a1,$a2);
+            my $a1;
+            my $a2;
+            if ($gt eq '.') {
+                $a1 = $a2 = '.';
+            }
+            else {
+                ($a1,$a2) = split /\//, $gt;
+            }
+            unless(defined($a2)) {
+                $a2 = $a1;
+                warn "This sample data doesn't have a properly formed GT: $cols[$bc{$key}] so I'm assuming $a1/$a2 is what you meant\n";
+            }
+            map { if(($_ ne '.') && ($_ != 0)){ $bad_alleles{$_} = 1; } } ($a1,$a2);
         }
         my $remaining_alts = 0;
         if(keys(%bad_alleles)){
@@ -133,9 +144,21 @@ sub execute {
                     next;
                 }
                 my ($gt) = split /\:/, $cols[$idx];
-                my ($a1,$a2) = split /\//, $gt;
+                my $a1;
+                my $a2;
+                if ($gt eq '.') {
+                    $a1 = $a2 = '.';
+                }
+                else {
+                    ($a1,$a2) = split /\//, $gt;
+                }
+                unless(defined($a2)) {
+                    $a2 = $a1;
+                    warn "This sample data doesn't have a properly formed GT: $cols[$idx] so I'm assuming $a1/$a2 is what you meant\n";
+                }
+
                 for ($a1, $a2){
-                    if(($_ != 0) &&($_ ne '.')){
+                    if(($_ ne '.') && ($_ != 0)){
                         $remaining_alts = 1;
                     }
                     if(exists($bad_alleles{$_})){
@@ -147,10 +170,12 @@ sub execute {
                 next LINE;
             }
         }
-        my $count = 0;
+        my @bad_column_counts;
         for my $key (keys(%bad_columns)){
-            splice(@cols,$bad_columns{$key}+$count,1);
-            $count--;
+            push(@bad_column_counts,$bad_columns{$key});
+        }
+        for my $column_number (sort {$b <=> $a} @bad_column_counts) {
+            splice(@cols,$column_number,1);
         }
 
         if(keys(%bad_alleles)){
@@ -194,16 +219,18 @@ sub fix_sample_data {
     my @fields = split /\:/, $sample;
     my @gts = split /\//, $fields[0];
     my @new_gt;
-    for my $gt (@gts){
-        if($gt == 0){
-            push @new_gt, $gt;
-        } elsif(exists( $alt_convert->{$gt})) {
-            push @new_gt, $alt_convert->{$gt};
-        } else {
-            die $self->error_message("An allele has been removed from ALT which is still referenced!");
+    unless ($fields[0] eq ".") {
+        for my $gt (@gts){
+            if($gt == 0){
+                push @new_gt, $gt;
+            } elsif(exists( $alt_convert->{$gt})) {
+                push @new_gt, $alt_convert->{$gt};
+            } else {
+                die $self->error_message("An allele has been removed from ALT which is still referenced!");
+            }
         }
+        $fields[0] = join("/",@new_gt);
     }
-    $fields[0] = join("/",@new_gt);
     $answer = join(":", @fields);
     return $answer;
 }
