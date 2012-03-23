@@ -1,4 +1,4 @@
-package Genome::Disk::Command::Allocation::FindUnallocatedPaths;
+package Genome::Disk::Command::Volume::FindUnallocatedPaths;
 
 use warnings;
 use strict;
@@ -6,7 +6,7 @@ use strict;
 use Genome;
 use IO::Dir;
 
-class Genome::Disk::Command::Allocation::FindUnallocatedPaths{
+class Genome::Disk::Command::Volume::FindUnallocatedPaths{
     is => 'Command::V2',
     has_input => [
         volume => {
