@@ -5,6 +5,29 @@ use warnings;
 use Genome;
 use List::MoreUtils qw/ uniq /;
 
+=cut
+Concept Design Notes:
+
+(  gene 1 )  (  gene 2  )  (gene 3)
+  |  |   |    |   |   |      |   |
+ a1  a2 a3    a2  a3  a4    a4  a5   <== alternate names, now hash keys to genes
+
+hash{a1} is gene1
+hash{a3} is g1, g2
+hash{a4} is g2, g3
+
+for hugo keys in hash (like a1)
+is hash{a1} already in group?, add to group
+multiple groups? merge them
+else
+Create group named after a1's hugo name
+add all genes from hash{a1} to this new group
+
+Next, cycle through all genes, and add to hugo groups
+if name or alt names match exactly 1 group name,
+or if alternate names map to exactly 1 group
+=cut
+
 class Genome::DruggableGene::Command::GeneNameGroup::Generate{
     is => 'Genome::Command::Base',
     doc => 'Generate a ton of groups to bundle genes with similar alternate names',
@@ -47,7 +70,7 @@ sub create_groups {
     my $alt_to_entrez = shift;
     my $progress_counter = 0;
 
-    print "Putting " . scalar(keys(%{$alt_to_entrez})) . " entrez gene symbol hugo names into groups\n";
+    print "Putting " . scalar(keys(%{$alt_to_entrez})) . " entrez gene symbol hugo names into hugo groups\n";
     for my $alt (keys %{$alt_to_entrez}) {
         $progress_counter++;
         my @genes = map{$_->gene} @{$alt_to_entrez->{$alt}};
