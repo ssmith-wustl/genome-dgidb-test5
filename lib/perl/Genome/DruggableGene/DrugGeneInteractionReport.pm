@@ -90,7 +90,7 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
 
 sub __display_name__ {
     my $self = shift;
-    return $self->drug_name. ' as ' .  join(' and ',$self->interaction_types) .  ' for ' . $self->gene_name;
+    return $self->drug->human_readable_name. ' as ' .  join(' and ',$self->interaction_types) .  ' for ' . $self->gene->human_readable_name;
 }
 
 if ($INC{"Genome/Search.pm"}) {

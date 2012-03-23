@@ -251,4 +251,14 @@ sub _merge_conversion_results{
     return \%merged;
 }
 
+sub human_readable_name {
+    my $self = shift;
+    #Pick a name that is likely human readable
+    my ($name) = map{$_->alternate_name}grep{$_->nomenclature eq 'entrez_gene_symbol'} $self->gene_alt_names;
+    $name = $self->name if not $name and $self->source_db_name eq 'GO';
+    ($name) = $self->alternate_names unless $name;
+    $name = $self->name unless $name;
+    return $name;
+}
+
 1;
