@@ -11,13 +11,78 @@
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
-      <xsl:with-param name="label_name" select="'Druggable Gene:'" />
-      <xsl:with-param name="display_name" select="'Drug Gene Interactions'"/>
+      <xsl:with-param name="label_name" select="'The Drug-Gene Interactions Database'" />
       <xsl:with-param name="icon" select="'genome_genename_32'" />
     </xsl:call-template>
 
     <div class="content rounded shadow">
       <div class="container">
+
+
+        <div class="span_24_box_masonry">
+          <div class="box_header span-24 last rounded-top">
+            <div class="box_title"><h3 class="genome_genenamereport_16 span-7 last">Interactions</h3></div>
+          </div>
+
+          <div class="box_content rounded-bottom span-24 last">
+
+            <br />
+            <table class='dataTable' id='interactions'>
+              <thead>
+                <tr>
+                  <th>Drug</th>
+                  <th>Interaction Type</th>
+                  <th>Gene</th>
+                  <th>Search Term</th>
+                </tr>
+              </thead>
+              <tbody>
+                <xsl:for-each select="interactions/item">
+                  <tr>
+                    <th>
+                      <xsl:call-template name='object_link_button'>
+                        <xsl:with-param name='type' select="'Genome::DruggableGene::DrugNameReport::Set'"/>
+                        <xsl:with-param name="key" select="'name'"/>
+                        <xsl:with-param name="id" select="drug"/>
+                        <xsl:with-param name="linktext" select="human_readable_drug_name"/>
+                      </xsl:call-template>
+                    </th>
+                    <th>
+                      <xsl:call-template name='object_link_button'>
+                        <xsl:with-param name='type' select="'Genome::DruggableGene::DrugGeneInteractionReport::Set'"/>
+                        <xsl:with-param name="keys" select='.'/>
+                        <xsl:with-param name="linktext" select="interaction_type"/>
+                      </xsl:call-template>
+                    </th>
+                    <th>
+                      <xsl:choose>
+                        <xsl:when test="group">
+                          <xsl:call-template name='object_link_button'>
+                            <xsl:with-param name='type' select="'Genome::DruggableGene::GeneNameGroup'"/>
+                            <xsl:with-param name="key" select="'name'"/>
+                            <xsl:with-param name="id" select="group"/>
+                            <xsl:with-param name="linktext" select="group"/>
+                          </xsl:call-template>
+                        </xsl:when>
+                        <xsl:otherwise>
+                          <xsl:call-template name='object_link_button'>
+                            <xsl:with-param name='type' select="'Genome::DruggableGene::GeneNameReport::Set'"/>
+                            <xsl:with-param name="key" select="'name'"/>
+                            <xsl:with-param name="id" select="gene"/>
+                            <xsl:with-param name="linktext" select="human_readable_gene_name"/>
+                          </xsl:call-template>
+                        </xsl:otherwise>
+                      </xsl:choose>
+                    </th>
+                    <th><xsl:value-of select='identifier' /></th>
+                  </tr>
+                </xsl:for-each>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+
         <div id='objects' class='span-24 last'>
           <div class="span_12_box_masonry">
             <div class="box_header span-12 last rounded-top">
@@ -77,56 +142,6 @@
 
         </div>
 
-        <div class="span_24_box_masonry">
-          <div class="box_header span-24 last rounded-top">
-            <div class="box_title"><h3 class="genome_genenamereport_16 span-7 last">Interactions</h3></div>
-          </div>
-
-          <div class="box_content rounded-bottom span-24 last">
-
-            <br />
-            <table class='dataTable' id='interactions'>
-              <thead>
-                <tr>
-                  <th>Drug</th>
-                  <th>Interaction</th>
-                  <th>Gene</th>
-                  <th>Search Term</th>
-                </tr>
-              </thead>
-              <tbody>
-                <xsl:for-each select="interactions/item">
-                  <tr>
-                    <th>
-                      <xsl:call-template name='object_link_button'>
-                        <xsl:with-param name='type' select="'Genome::DruggableGene::DrugNameReport::Set'"/>
-                        <xsl:with-param name="key" select="'name'"/>
-                        <xsl:with-param name="id" select="drug"/>
-                        <xsl:with-param name="linktext" select="drug"/>
-                      </xsl:call-template>
-                    </th>
-                    <th>
-                      <xsl:call-template name='object_link_button'>
-                        <xsl:with-param name='type' select="'Genome::DruggableGene::DrugGeneInteractionReport::Set'"/>
-                        <xsl:with-param name="keys" select='.'/>
-                        <xsl:with-param name="linktext" select="interaction_type"/>
-                      </xsl:call-template>
-                    </th>
-                    <th>
-                      <xsl:call-template name='object_link_button'>
-                        <xsl:with-param name='type' select="'Genome::DruggableGene::GeneNameGroup'"/>
-                        <xsl:with-param name="key" select="'name'"/>
-                        <xsl:with-param name="id" select="group"/>
-                        <xsl:with-param name="linktext" select="group"/>
-                      </xsl:call-template>
-                    </th>
-                    <th><xsl:value-of select='identifier' /></th>
-                  </tr>
-                </xsl:for-each>
-              </tbody>
-            </table>
-          </div>
-        </div>
 
       </div> <!-- end container -->
     </div> <!-- end content -->
@@ -148,7 +163,7 @@
 
     <xsl:call-template name="footer">
       <xsl:with-param name="footer_text">
-        <br/>
+        <FORM><INPUT TYPE="button" VALUE="Back" onClick="history.go(-1);return true;" /></FORM>
       </xsl:with-param>
     </xsl:call-template>
 
@@ -261,16 +276,16 @@
             </tr>
 
             <tr>
-              <td class="name">Source URL:
+              <td class="name">Source Database Citation:
               </td>
               <td class="value">
                 <xsl:choose>
                   <xsl:when test="string(normalize-space(aspect[@name='original_data_source_url']/value))">
-                    <a>
+                    <a target="_blank">
                       <xsl:attribute name="href">
                         <xsl:value-of select="normalize-space(aspect[@name='original_data_source_url']/value)"/>
                       </xsl:attribute>
-                      <xsl:value-of select="normalize-space(aspect[@name='original_data_source_url']/value)"/>
+                      <xsl:value-of select="normalize-space(aspect[@name='name']/value)"/>
                     </a>
                   </xsl:when>
                 </xsl:choose>

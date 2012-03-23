@@ -48,12 +48,12 @@ class Genome::DruggableGene::DrugNameReport::Set::View::Solr::Xml {
         display_title => {
             is => 'Text',
             calculate_from => ['subject'],
-            calculate => q{ ($subject->members)[0]->name }
+            calculate => q{ ($subject->members)[0]->human_readable_name}
         },
         title => {
             is => 'Text',
             calculate_from => ['subject'],
-            calculate => q{ ($subject->members)[0]->name }
+            calculate => q{ ($subject->members)[0]->human_readable_name }
         },
         default_aspects => {
             is => 'ARRAY',

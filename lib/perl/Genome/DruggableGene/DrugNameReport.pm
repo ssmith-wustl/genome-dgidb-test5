@@ -127,4 +127,13 @@ sub original_data_source_url {
     return $url;
 }
 
+sub human_readable_name {
+    my $self = shift;
+    #Pick a name that is likely human readable
+    my ($name) =  map{$_->alternate_name}grep{$_->nomenclature eq 'TTD_primary_drug_name' or $_->nomenclature eq 'Primary DrugBank drug name'} $self->drug_alt_names;
+    ($name) =  map{$_->alternate_name} $self->drug_alt_names unless $name;
+    $name = $self->name unless $name;
+    return $name;
+}
+
 1;
