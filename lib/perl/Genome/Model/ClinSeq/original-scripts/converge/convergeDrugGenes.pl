@@ -1,7 +1,20 @@
 #!/usr/bin/perl
 #Written by Malachi Griffith
 #For a group of ClinSeq models, converge various types of Druggable genes results
-#Consider the following event types (individually, and then together)
+
+#Consider the following event types (individually, and then together):
+#SNVs, InDels, CNV amplifications, fusion genes, etc.
+#Create a summary at the gene level
+
+#Create a separate report for known druggable (e.g. DrugBank) and potentially druggable genes (e.g. kinases, etc.)
+#For potentially druggable summarize to Gene level as well as the Gene-Family level
+
+#Create a series of final reports that list genes/drugs and summarizes totals
+# - genes with each kind of event
+# - genes with any event
+# - patients with at least 1 druggable gene (each type of event - then all event types together)
+# - drugs indicated in at least 1 patient, 2 patients, etc.
+# - total number of drugs
 
 use strict;
 use warnings;
@@ -23,56 +36,44 @@ use lib $lib_dir;
 use ClinSeq qw(:all);
 use converge::Converge qw(:all);
 
-
 my $build_ids = '';
 my $model_ids = '';
 my $model_group_id = '';
-my $target_file_name = '';
-my $expression_subdir = '';
-my $join_column_name = '';
-my $data_column_name = '';
-my $annotation_column_names = '';
-my $outfile = '';
+my $filter_name = '';
+my $outdir = '';
 my $verbose = 0;
 
 GetOptions ('build_ids=s'=>\$build_ids, 'model_ids=s'=>\$model_ids, 'model_group_id=s'=>\$model_group_id,
-            'target_file_name=s'=>\$target_file_name, 'expression_subdir=s'=>\$expression_subdir,
-            'join_column_name=s'=>\$join_column_name, 'data_column_name=s'=>\$data_column_name, 'annotation_column_names=s'=>\$annotation_column_names,
-            'outfile=s'=>\$outfile, 'verbose=i'=>\$verbose);
+            'filter_name=s'=>\$filter_name, 'outdir=s'=>\$outdir, 'verbose=i'=>\$verbose);
 
 my $usage=<<INFO;
   Example usage: 
 
-  Gene-level using isoforms merged to each gene
-  convergeCufflinksExpression.pl  --model_group_id='25134'  --target_file_name='isoforms.merged.fpkm.expsort.tsv'  --expression_subdir='isoforms_merged'  --join_column_name='tracking_id'  --data_column_name='FPKM'  --annotation_column_names='ensg_name,mapped_gene_name,locus'  --outfile=Cufflinks_GeneLevel_Malat1Mutants.tsv  --verbose=1
-
-  Transcript-level using isoforms individually
-  convergeCufflinksExpression.pl  --model_group_id='25134'  --target_file_name='isoforms.fpkm.expsort.tsv'  --expression_subdir='isoforms'  --join_column_name='tracking_id'  --data_column_name='FPKM'  --annotation_column_names='gene_id,mapped_gene_name,locus'  --outfile=Cufflinks_IsoformLevel_Malat1Mutants.tsv  --verbose=1
+  convergeDrugGenes.pl  --model_group_id='31779'  --filter_name='antineo'  --outdir=/gscmnt/sata132/techd/mgriffit/luc/druggable_genes/  --verbose=1
 
   Specify *one* of the following as input (each model/build should be a ClinSeq model)
   --build_ids                Comma separated list of specific build IDs
   --model_ids                Comma separated list of specific model IDs
-  --model_group_id           A singe genome model group ID
-
-  Combines Cufflinks expression results from a group of Clinseq models into a single report:
-  --target_file_name         The files to be joined across multiple ClinSeq models
-  --expression_subdir        The expression subdir of Clinseq to use: ('genes', 'isoforms', 'isoforms_merged')
-                             The values in these columns are assumed to be constant across the files being merged!
-  --outfile                  Path of the output file to be written
+  --model_group_id           A single genome model group ID
+  --filter_name              The name appended to each file indicating which filter was applied
+  --outdir                   Path of the a directory for output files
   --verbose                  More descriptive stdout messages
 
   Test Clinseq model groups:
-  25307                      BRAF inhibitor resistant cell lines
-  25134                      MALAT1 mutant vs. wild type BRCs
-  30176                      LUC RNA-seq vs. RNA-cap
+  31779                      LUC17 project
 
 INFO
 
-unless (($build_ids || $model_ids || $model_group_id) && $target_file_name && $expression_subdir && $join_column_name && $data_column_name && $outfile){
+unless (($build_ids || $model_ids || $model_group_id) && $filter_name && $outdir){
   print RED, "\n\nRequired parameter missing", RESET;
   print GREEN, "\n\n$usage", RESET;
   exit(1);
 }
+
+#Set output file names
+$outdir = &checkDir('-dir'=>$outdir, '-clear'=>"no");
+my $known_gene_drug_table = $outdir . "KnownGeneDrugTable.tsv";
+my $known_interaction_table = $outdir . "KnownInteractionTable.tsv";
 
 #Get the models/builds
 if ($verbose){print BLUE, "\n\nGet genome models/builds for supplied list", RESET;}
@@ -90,12 +91,368 @@ if ($build_ids){
   exit();
 }
 
+#Get files:
+# - drug-gene interaction files for each event type
+# - annotated files for each event type containing potentially druggable results
+my $dgidb_subdir_name = "drugbank";
+my $files = &getFiles('-models_builds'=>$models_builds, '-filter_name'=>$filter_name, '-dgidb_subdir_name'=>$dgidb_subdir_name);
+
+#Go through each event type for each patient and parse out the values needed.
+my @event_types = qw (snv indel cnv_gain rna_cufflinks_absolute rna_tophat_absolute);
+
+#Known druggable ge
+my $result = &parseKnownDruggableFiles('-files'=>$files, '-event_types'=>\@event_types);
+my $k_g = $result->{'genes'}; #Known druggable genes
+my $k_i = $result->{'interactions'}; #Known druggable gene interactions
+#print Dumper $k_g;
+
+#Potentially druggable
+#my %p_druggable = &parsePotentiallyDruggableFiles();
+
+
+
+#Generate a header for the event types output columns
+my @et_header;
+foreach my $et (@event_types){
+	push(@et_header, "$et"."_sample_count");
+	push(@et_header, "$et"."_sample_list");
+}
+my $et_header_s = join("\t", @et_header);
+
+
+#A.) Generate Gene -> patient events <- known drugs table (all drugs that target that gene)
+print BLUE, "\n\nWriting (gene -> patient events <- known drugs) table to: $known_gene_drug_table", RESET;
+open (OUT, ">$known_gene_drug_table") || die "\n\nCould not open output file: $known_gene_drug_table\n\n";
+print OUT "gene\tgene_name\tgrand_patient_count\tgrand_patient_list\tdrug_count\tdrug_list\t$et_header_s\n";
+foreach my $gene (sort keys %{$k_g}){
+	my $gene_name = $k_g->{$gene}->{gene_name};
+	my $grand_patient_list = $k_g->{$gene}->{grand_list};
+	my $grand_patient_count = keys %{$grand_patient_list};
+	my @grand_patient_list = keys %{$grand_patient_list};
+	my @tmp = sort { substr($a, &lengthOfAlpha($a)) <=> substr($b, &lengthOfAlpha($b)) } @grand_patient_list;;
+	my $grand_patient_list_s = join (",", @tmp);
+	my $drug_list = $k_g->{$gene}->{drug_list};
+	my $drug_count = keys %{$drug_list};
+	my @drug_list = keys %{$drug_list};
+	@tmp = sort @drug_list;
+  my $drug_list_s = join(",", @tmp);
+
+	my @et_values;
+	foreach my $et (@event_types){
+		if (defined($k_g->{$gene}->{$et})){
+			my %patients = %{$k_g->{$gene}->{$et}->{patient_list}};
+			my @patient_list = keys %patients;
+			my @tmp = sort { substr($a, &lengthOfAlpha($a)) <=> substr($b, &lengthOfAlpha($b)) } @patient_list;;
+      my $patient_list_s = join (",", @tmp);
+			my $patient_count = scalar(@patient_list);
+			push(@et_values, $patient_count);
+			push(@et_values, $patient_list_s);
+		}else{
+			push(@et_values, 0);
+			push(@et_values, "NA");
+		}
+	}
+	my $et_values_s = join("\t", @et_values);
+	print OUT "$gene\t$gene_name\t$grand_patient_count\t$grand_patient_list_s\t$drug_count\t$drug_list_s\t$et_values_s\n";
+}
+close(OUT);
+
+
+#B.) Generate Interaction -> patient events <- known drug table (only the one drug of the interaction)
+print BLUE, "\n\nWriting (interaction -> patient events <- known drug) table to: $known_interaction_table", RESET;
+open (OUT, ">$known_interaction_table") || die "\n\nCould not open output file: $known_interaction_table\n\n";
+print OUT "gene\tgene_name\tgrand_patient_count\tgrand_patient_list\tdrug_count\tdrug_list\t$et_header_s\n";
+foreach my $interaction (sort keys %{$k_i}){
+  my $mapped_gene_name = $k_i->{$interaction}->{mapped_gene_name};
+	my $gene_name = $k_i->{$interaction}->{gene_name};
+	my $grand_patient_list = $k_i->{$interaction}->{grand_list};
+	my $grand_patient_count = keys %{$grand_patient_list};
+	my @grand_patient_list = keys %{$grand_patient_list};
+	my @tmp = sort { substr($a, &lengthOfAlpha($a)) <=> substr($b, &lengthOfAlpha($b)) } @grand_patient_list;;
+	my $grand_patient_list_s = join (",", @tmp);
+	my $drug_list_s = $k_i->{$interaction}->{drug_name};
+
+	my @et_values;
+	foreach my $et (@event_types){
+		if (defined($k_i->{$interaction}->{$et})){
+			my %patients = %{$k_i->{$interaction}->{$et}->{patient_list}};
+			my @patient_list = keys %patients;
+			my @tmp = sort { substr($a, &lengthOfAlpha($a)) <=> substr($b, &lengthOfAlpha($b)) } @patient_list;;
+      my $patient_list_s = join (",", @tmp);
+			my $patient_count = scalar(@patient_list);
+			push(@et_values, $patient_count);
+			push(@et_values, $patient_list_s);
+		}else{
+			push(@et_values, 0);
+			push(@et_values, "NA");
+		}
+	}
+	my $et_values_s = join("\t", @et_values);
+	print OUT "$mapped_gene_name\t$gene_name\t$grand_patient_count\t$grand_patient_list_s\t1\t$drug_list_s\t$et_values_s\n";
+}
+close(OUT);
 
 
 
 
+
+
+
+
+
+print "\n\n";
 
 exit();
+
+
+############################################################################################################################
+#Determine length of non-numeric portion of an alphanumeric string                                                         #
+############################################################################################################################
+sub lengthOfAlpha{
+	my ($input) = @_;
+	my ($alpha) = $input =~ /(\D{1,})/;
+	my $length = length($alpha);
+	return ($length);
+}
+
+
+############################################################################################################################
+#Get input files to be parsed                                                                                              #
+############################################################################################################################
+sub getFiles{
+  my %args = @_;
+  my $models_builds = $args{'-models_builds'};
+  my $filter_name = $args{'-filter_name'};
+  my $dgidb_subdir_name = $args{'-dgidb_subdir_name'};
+  my %files;
+
+  if ($verbose){print BLUE, "\n\nGet annotation files and drug-gene interaction files from these builds", RESET;}
+  my %mb = %{$models_builds->{cases}};
+  foreach my $c (keys %mb){
+    my $b = $mb{$c}{build};
+    my $m = $mb{$c}{model};
+    my $build_directory = $b->data_directory;
+    my $subject_name = $b->subject->name;
+    my $subject_common_name = $b->subject->common_name;
+    my $build_id = $b->id;
+
+    #If the subject name is not defined, die
+    unless ($subject_name){
+      print RED, "\n\nCould not determine subject name for build: $build_id\n\n", RESET;
+      exit(1);
+    }
+
+    my $final_name = "Unknown";
+    if ($subject_name){$final_name = $subject_name;}
+    if ($subject_common_name){$final_name = $subject_common_name;}
+    if ($verbose){print BLUE, "\n\t$final_name\t$build_id\t$build_directory", RESET;}
+
+    my $topdir = "$build_directory"."/$final_name/";
+
+    #Some event types could have come from exome, wgs, or wgs_exome... depending on the event type allow these options and check in order
+
+    #1.) Look for SNV files
+    my @snv_subdir_options = qw (wgs_exome wgs exome);
+    my $snv_annot_file_name = "snvs.hq.tier1.v1.annotated.compact.tsv";
+    my $snv_drug_file_name = "snvs.hq.tier1.v1.annotated.compact.dgidb."."$filter_name".".tsv";
+    foreach my $dir_name (@snv_subdir_options){
+      my $annot_file_path = $topdir . "snv/$dir_name/$snv_annot_file_name";
+      my $drug_file_path = $topdir . "snv/$dir_name/dgidb/$dgidb_subdir_name/$snv_drug_file_name";
+      #If a file was already found, do nothing
+      unless (defined($files{$final_name}{snv}{annot_file_path})){
+        #If both files are present, store for later
+        if (-e $annot_file_path && -e $drug_file_path){
+          $files{$final_name}{snv}{annot_file_path} = $annot_file_path;
+          $files{$final_name}{snv}{drug_file_path} = $drug_file_path;
+        }
+      }
+    }
+    #Make sure at least one pair of files was found
+    unless (defined($files{$final_name}{snv}{annot_file_path}) && defined($files{$final_name}{snv}{drug_file_path})){
+      print RED, "\n\nCould not find SNV drug-gene and annotation files for $final_name ($subject_name - $subject_common_name) in:\n\t$build_directory\n\n", RESET;
+      exit(1);
+    }
+
+    #2.) Look for InDel files
+    my @indel_subdir_options = qw (wgs_exome wgs exome);
+    my $indel_annot_file_name = "indels.hq.tier1.v1.annotated.compact.tsv";
+    my $indel_drug_file_name = "indels.hq.tier1.v1.annotated.compact.dgidb."."$filter_name".".tsv";
+    foreach my $dir_name (@indel_subdir_options){
+      my $annot_file_path = $topdir . "indel/$dir_name/$indel_annot_file_name";
+      my $drug_file_path = $topdir . "indel/$dir_name/dgidb/$dgidb_subdir_name/$indel_drug_file_name";
+      #If a file was already found, do nothing
+      unless (defined($files{$final_name}{indel}{annot_file_path})){
+        #If both files are present, store for later
+        if (-e $annot_file_path && -e $drug_file_path){
+          $files{$final_name}{indel}{annot_file_path} = $annot_file_path;
+          $files{$final_name}{indel}{drug_file_path} = $drug_file_path;
+        }
+      }
+    }
+    #Make sure at least one was found
+    unless (defined($files{$final_name}{indel}{annot_file_path}) && defined($files{$final_name}{indel}{drug_file_path})){
+      print RED, "\n\nCould not find INDEL drug-gene and annotation files for $final_name ($subject_name - $subject_common_name) in:\n\t$build_directory\n\n", RESET;
+      exit(1);
+    }
+
+    #3.) Look for CNV gain files
+    my $cnv_gain_annot_file_name = "cnv.Ensembl_v58.amp.tsv";
+    my $cnv_gain_drug_file_name = "cnv.Ensembl_v58.amp.dgidb."."$filter_name".".tsv";
+
+    my $annot_file_path = $topdir . "cnv/$cnv_gain_annot_file_name";
+    my $drug_file_path = $topdir . "cnv/dgidb/$dgidb_subdir_name/$cnv_gain_drug_file_name";
+    if (-e $annot_file_path && -e $drug_file_path){
+      $files{$final_name}{cnv_gain}{annot_file_path} = $annot_file_path;
+      $files{$final_name}{cnv_gain}{drug_file_path} = $drug_file_path;
+    }else{
+      print RED, "\n\nCould not find INDEL drug-gene and annotation files for $final_name ($subject_name - $subject_common_name) in:\n\t$build_directory\n\n", RESET;
+      exit(1);
+    }
+
+    #4.) Look for Cufflinks RNAseq outlier expression files 
+    my $rna_cufflinks_annot_file_name = "isoforms.merged.fpkm.expsort.top1percent.tsv";
+    my $rna_cufflinks_drug_file_name = "isoforms.merged.fpkm.expsort.top1percent.dgidb."."$filter_name".".tsv";
+
+    $annot_file_path = $topdir . "rnaseq/tumor/cufflinks_absolute/isoforms_merged/$rna_cufflinks_annot_file_name";
+    $drug_file_path = $topdir . "rnaseq/tumor/cufflinks_absolute/isoforms_merged/dgidb/$dgidb_subdir_name/$rna_cufflinks_drug_file_name";
+    if (-e $annot_file_path && -e $drug_file_path){
+      $files{$final_name}{rna_cufflinks_absolute}{annot_file_path} = $annot_file_path;
+      $files{$final_name}{rna_cufflinks_absolute}{drug_file_path} = $drug_file_path;
+    }else{
+      print RED, "\n\nCould not find Cufflinks Absolute drug-gene and annotation files for $final_name ($subject_name - $subject_common_name) in:\n\t$build_directory\n\t$annot_file_path\n\t$drug_file_path\n\n", RESET;
+      exit(1);
+    }
+
+    #5.) Look for Tophat junction RNAseq outlier expression files
+    my $rna_tophat_annot_file_name = "Ensembl.Junction.GeneExpression.top1percent.tsv";
+    my $rna_tophat_drug_file_name = "Ensembl.Junction.GeneExpression.top1percent.dgidb."."$filter_name".".tsv";
+
+    $annot_file_path = $topdir . "rnaseq/tumor/tophat_junctions_absolute/$rna_tophat_annot_file_name";
+    $drug_file_path = $topdir . "rnaseq/tumor/tophat_junctions_absolute/dgidb/$dgidb_subdir_name/$rna_tophat_drug_file_name";
+    if (-e $annot_file_path && -e $drug_file_path){
+      $files{$final_name}{rna_tophat_absolute}{annot_file_path} = $annot_file_path;
+      $files{$final_name}{rna_tophat_absolute}{drug_file_path} = $drug_file_path;
+    }else{
+      print RED, "\n\nCould not find Tophat Absolute drug-gene and annotation files for $final_name ($subject_name - $subject_common_name) in:\n\t$build_directory\n\t$annot_file_path\n\t$drug_file_path\n\n", RESET;
+      exit(1);
+    }
+  }
+  return(\%files);
+}
+
+
+############################################################################################################################
+#Parse known druggable files                                                                                               #
+############################################################################################################################
+sub parseKnownDruggableFiles{
+  my %args = @_;
+  my $files = $args{'-files'};
+  my @event_types = @{$args{'-event_types'}};
+
+  print BLUE, "\n\nParsing files containing known drug-gene interaction data", RESET;
+
+	#Store all results organized by gene and separately by drug-gene interaction
+  my %result;
+  my %genes;
+  my %interactions;
+
+	#Note that the druggable files are already filtered down to only the variant affected genes with a drug interaction
+  #To get a sense of the total number of events will have to wait until the annotation files are being proccessed 
+
+  foreach my $patient (keys %{$files}){
+    print BLUE, "\n\t$patient", RESET;
+    foreach my $event_type (@event_types){
+      my $drug_file_path = $files->{$patient}->{$event_type}->{drug_file_path};
+      print BLUE, "\n\t\t$drug_file_path", RESET;
+
+      open (IN, "$drug_file_path") || die "\n\nCould not open gene-drug interaction file: $drug_file_path\n\n";
+      my $header = 1;
+      my %columns;
+      while(<IN>){
+        chomp($_);
+        my @line = split("\t", $_);
+        if ($header){
+          my $p = 0;
+          foreach my $column (@line){
+            $columns{$column}{position} = $p;
+            $p++;
+          }
+          $header = 0;
+          next();
+        }
+        my $gene_name = $line[$columns{'gene_name'}{position}];
+        my $mapped_gene_name = $line[$columns{'mapped_gene_name'}{position}];
+        my $drug_name = $line[$columns{'drug_name'}{position}];
+        my $interaction = "$mapped_gene_name"."_"."$drug_name";
+        $genes{$mapped_gene_name}{gene_name} = $gene_name;
+        $interactions{$interaction}{gene_name} = $gene_name;
+        $interactions{$interaction}{mapped_gene_name} = $mapped_gene_name;
+        $interactions{$interaction}{drug_name} = $drug_name;
+
+        #If the gene has any events it will be associated with all drugs that interact with that gene
+        if (defined($genes{$mapped_gene_name}{drug_list})){
+          my $drugs = $genes{$mapped_gene_name}{drug_list};
+          $drugs->{$drug_name} = 1;
+        }else{
+          my %drugs;
+          $drugs{$drug_name} = 1;
+          $genes{$mapped_gene_name}{drug_list} = \%drugs;
+        }
+
+        #Add patient lists specific to this event type
+        if (defined($genes{$mapped_gene_name}{$event_type})){
+          my $patients = $genes{$mapped_gene_name}{$event_type}{patient_list};
+          $patients->{$patient} = 1;
+        }else{
+          my %patients;
+          $patients{$patient} = 1;
+          $genes{$mapped_gene_name}{$event_type}{patient_list} = \%patients;
+        }
+
+        if (defined($interactions{$interaction}{$event_type})){
+          my $patients = $interactions{$interaction}{$event_type}{patient_list};
+          $patients->{$patient} = 1;
+        }else{
+           my %patients;
+           $patients{$patient} = 1;
+           $interactions{$interaction}{$event_type}{patient_list} = \%patients;
+        }
+
+        #Create or update the grand list of patients with ANY events hitting this gene
+        if (defined($genes{$mapped_gene_name}{grand_list})){
+          my $patients =$genes{$mapped_gene_name}{grand_list};
+          $patients->{$patient} = 1;
+        }else{
+          my %patients;
+          $patients{$patient} = 1;
+          $genes{$mapped_gene_name}{grand_list} = \%patients;
+        }
+
+        if (defined($interactions{$interaction}{grand_list})){
+          my $patients = $interactions{$interaction}{grand_list};
+          $patients->{$patient} = 1;
+        }else{
+          my %patients;
+          $patients{$patient} = 1;
+          $interactions{$interaction}{grand_list} = \%patients;
+        }
+
+      }
+
+      close(IN);
+    }
+  }
+  $result{genes} = \%genes;
+  $result{interactions} = \%interactions;
+
+  return(\%result);
+}
+
+
+
+
+
+
 
 
 
