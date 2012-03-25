@@ -249,7 +249,7 @@ sub execute
                         }
 
                         my $utr_stop = $coding_region_start - 1;
-                        my $utr_exon = Genome::Db::Ensembl::Import::Base::create_transcript_structure(
+                        my $utr_exon = Genome::Db::Ensembl::Import::Base->create_transcript_structure(
                             transcript => $transcript,
                             chrom_name => $transcript->chrom_name,
                             transcript_structure_id => $tss_id,
@@ -282,7 +282,7 @@ sub execute
                         = substr( $exon_sequence, $stop - $coding_region_stop, $coding_region_stop - $coding_region_start + 1 );
                     }
 
-                    my $cds_exon = Genome::Db::Ensembl::Import::Base::create_transcript_structure(
+                    my $cds_exon = Genome::Db::Ensembl::Import::Base->create_transcript_structure(
                         transcript => $transcript,
                         chrom_name => $transcript->chrom_name,
                         transcript_structure_id => $tss_id,
@@ -313,7 +313,7 @@ sub execute
 
                         my $utr_start = $coding_region_stop + 1;
 
-                        my $utr_exon = Genome::Db::Ensembl::Import::Base::create_transcript_structure(
+                        my $utr_exon = Genome::Db::Ensembl::Import::Base->create_transcript_structure(
                             transcript => $transcript,
                             chrom_name => $transcript->chrom_name,
                             transcript_structure_id => $tss_id,
@@ -343,7 +343,7 @@ sub execute
                         $structure_type = 'rna';
                     }
 
-                    my $structure = Genome::Db::Ensembl::Import::Base::create_transcript_structure(
+                    my $structure = Genome::Db::Ensembl::Import::Base->create_transcript_structure(
                         transcript => $transcript,
                         chrom_name => $transcript->chrom_name,
                         transcript_structure_id => $tss_id,

@@ -28,15 +28,15 @@ class Genome::Disk::Command::Allocation::Reallocate {
             doc => 'Allow the allocation to be moved to a new volume if current volume is too small.',
         },
     ],
-    doc => 'This command changes the requested kilobytes for a target allocation',
+    doc => 'changes the requested kilobytes for a target allocation',
 };
 
 sub help_brief {
-    return 'Changes the requested kilobytes field on the target allocation';
+    return 'updates kilobytes requested for given allocations';
 }
 
 sub help_synopsis { 
-    return 'Changes the requested kilobytes field on the target allocation';
+    return 'changes the requested kilobytes field on the target allocation';
 }
 
 sub help_detail {

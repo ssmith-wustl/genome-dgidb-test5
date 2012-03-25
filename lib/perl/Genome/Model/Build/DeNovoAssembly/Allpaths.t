@@ -67,6 +67,9 @@ my $frag_library = Genome::Library->__define__(
 ok($frag_library, 'define frag library') or die;
 my $frag_inst_data = Genome::InstrumentData::Solexa->__define__(
     id => -6666,
+    original_est_fragment_size => 180,
+    original_est_fragment_size_min => 153,
+    original_est_fragment_size_max => 207,
     sequencing_platform => 'solexa',
     read_length => 101,
     subset_name => '1-AAAAA',
@@ -122,7 +125,7 @@ ok(-s $jump_inst_data->bam_path, 'inst data bam path');
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->__define__(
     name => 'De Novo Assembly Allpaths PGA Test',
     assembler_name => 'allpaths de-novo-assemble',
-    assembler_version => '39099',
+    assembler_version => '41055',
     assembler_params => '-ploidy 1',
     type_name => 'de novo assembly',
     #read_processor => 'trim bwa-style -trim-qual-level 10 | filter by-length -filter-length 35 | rename illumina-to-pcap',

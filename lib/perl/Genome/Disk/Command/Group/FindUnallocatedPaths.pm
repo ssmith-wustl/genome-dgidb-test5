@@ -38,8 +38,8 @@ sub execute{
         unless($volume->can_allocate){
             next;
         }
-        my $cmd = Genome::Disk::Allocation::Command::FindUnallocatedPaths->create(
-            disk_volume => $volume,
+        my $cmd = Genome::Disk::Command::Volume::FindUnallocatedPaths->create(
+            volume => $volume,
         );
         $cmd->execute;
         my @paths = $self->_unallocated_paths(), $cmd->_unallocated_paths();

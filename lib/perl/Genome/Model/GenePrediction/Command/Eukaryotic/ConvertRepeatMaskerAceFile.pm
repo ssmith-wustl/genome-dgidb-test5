@@ -53,9 +53,6 @@ sub help_detailed {
 sub execute {
     my $self = shift;
 
-    $self->status_message("Converting ace file " . $self->ace_file . " to new ace format, " . 
-        "output being placed in " . $self->converted_ace_file);
-
     my $ace_fh = $self->_get_ace_file_handle;
     Carp::confess 'Could not create file handle for input ace file ' . $self->ace_file unless $ace_fh;
     my $gff_fh = $self->_get_gff_file_handle;
@@ -64,6 +61,9 @@ sub execute {
     Carp::confess 'Could not create file handle for output ace file ' . $self->converted_ace_file unless $output_fh;
     my $fasta_io = $self->_get_fasta_seq_object;
     Carp::confess 'Could not create Bio::SeqIO object for input fasta file ' . $self->fasta_file unless $fasta_io;
+
+    $self->status_message("Converting ace file " . $self->ace_file . " to new ace format, " . 
+        "output being placed in " . $self->converted_ace_file);
 
     my $current_seq;
     my @lines_for_seq;

@@ -72,27 +72,6 @@ sub __display_name__ {
     return $self->name . '(' . $self->source_db_name . ' ' . $self->source_db_version . ')';
 }
 
-if ($INC{"Genome/Search.pm"}) {
-    __PACKAGE__->create_subscription(
-        method => 'commit',
-        callback => \&add_to_search_index_queue,
-    );
-    __PACKAGE__->create_subscription(
-        method => 'delete',
-        callback => \&add_to_search_index_queue,
-    );
-}
-
-sub add_to_search_index_queue {
-    my $self = shift;
-    my $set = Genome::DruggableGene::GeneNameReport->define_set(name => $self->name);
-    Genome::Search::Queue->create(
-        subject_id => $set->id,
-        subject_class => $set->class,
-        priority => 9,
-    );
-}
-
 sub source_id {
     my $self = shift;
     my $source_id = $self->name;
@@ -270,6 +249,16 @@ sub _merge_conversion_results{
         %merged = (%merged, %$conversion_result) if $conversion_result;
     }
     return \%merged;
+}
+
+sub human_readable_name {
+    my $self = shift;
+    #Pick a name that is likely human readable
+    my ($name) = map{$_->alternate_name}grep{$_->nomenclature eq 'entrez_gene_symbol'} $self->gene_alt_names;
+    $name = $self->name if not $name and $self->source_db_name eq 'GO';
+    ($name) = $self->alternate_names unless $name;
+    $name = $self->name unless $name;
+    return $name;
 }
 
 1;

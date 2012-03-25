@@ -6,6 +6,8 @@ use warnings;
 use Genome;
 use Data::Dumper;
 
+our $MINIMUM_JOINX_VERSION = 1.3; #Not present in earlier versions
+
 class Genome::Model::Tools::Joinx::VcfSiteFilter {
     is => 'Genome::Model::Tools::Joinx',
     has_input => [
@@ -46,6 +48,11 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    if($self->use_version < $MINIMUM_JOINX_VERSION) {
+        die $self->error_message("This module requires joinx version $MINIMUM_JOINX_VERSION or higher to function correctly.");
+    }
+    
     if(defined($self->use_bgzip) && not defined($self->output_file)){
        die $self->error_message("If use_bgzip is set, output_file must also be set, otherwise binary nonsense will spew forth."); 
     }
@@ -76,6 +83,7 @@ sub execute {
         cmd => $cmd,
     );
     $params{output_files} = [$output] if $output ne "-";
+    $params{skip_if_output_is_present} = 0;
     Genome::Sys->shellcmd(%params);
 
     return 1;
