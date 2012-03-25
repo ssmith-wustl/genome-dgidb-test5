@@ -467,7 +467,8 @@ print "preparing clinical files\n";
         }
         close($clinical_inFh);
 
-#        my $glm_model_file = '/gscmnt/sata424/info/medseq/Freimer-Boehnke/Final_Data_Set_20111213/3Center/MAF_File/glm-model-file.txt';
+        my $glm_model_file = '/gscmnt/sata424/info/medseq/Freimer-Boehnke/Final_Data_Set_20111213/3Center/MAF_File/glm-model-file.txt';
+=cut
         my $glm_model_file = "$temp_path/Glm_Model_File.txt";
         my $glm_model_file_inFh = Genome::Sys->open_file_for_writing($glm_model_file);
 #need a way to set this
@@ -508,6 +509,8 @@ print "preparing clinical files\n";
             print $glm_model_file_inFh "$analysis_data_type\t$glm_attr\tNA\t$covariates\tNA\n";
         }
         close($glm_model_file_inFh);
+=cut
+
         #$name is project name or some other good identifier
         my $name = $self->name;
 #smg bedfile $temp_path/smg_restricted_bed.bed
@@ -629,16 +632,16 @@ print "starting burden analysis\n";
         }
         my $burden_cmd = Genome::Model::Tools::Germline::BurdenAnalysis->execute(
             mutation_file => $mutation_matrix,
-            phenotype_file => $clinical_data,
+            glm_clinical_data_file => $clinical_data,
             VEP_annotation_file => $vep_annotation_parsed_file_path,
             project_name => $name,
             output_directory => $burden_temp_path_output,
+            glm_model_file => $glm_model_file,
 #            base_R_commands => '/gscuser/qzhang/gstat/burdentest/burdentest.R',
 #            maf_cutoff => '0.01',
 #            permutations => '10000',
-#            covariates => 'NONE',
 #            trv_types => 'NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING:NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING,SPLICE_SITE:NMD_TRANSCRIPT,STOP_LOST:NON_SYNONYMOUS_CODING:NON_SYNONYMOUS_CODING,SPLICE_SITE:STOP_GAINED:STOP_GAINED,SPLICE_SITE',
-            select_phenotypes => $phenotype_list,
+#            select_phenotypes => $phenotype_list,
             testing_mode => $testing_mode,
         );
         unless($burden_cmd){
@@ -902,7 +905,8 @@ print "preparing clinical files\n";
         }
         close($clinical_inFh);
 
-#        my $glm_model_file = '/gscmnt/sata424/info/medseq/Freimer-Boehnke/Final_Data_Set_20111213/3Center/MAF_File/glm-model-file.txt';
+        my $glm_model_file = '/gscmnt/sata424/info/medseq/Freimer-Boehnke/Final_Data_Set_20111213/3Center/MAF_File/glm-model-file.txt';
+=cut
         my $glm_model_file = "$temp_path/Glm_Model_File.txt";
         my $glm_model_file_inFh = Genome::Sys->open_file_for_writing($glm_model_file);
 #need a way to set this
@@ -944,6 +948,7 @@ print "preparing clinical files\n";
             print $glm_model_file_inFh "$analysis_data_type\t$glm_attr\tNA\t$covariates\tNA\n";
         }
         close($glm_model_file_inFh);
+=cut
 
 #example: /gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/music/input/sample_phenotypes2.csv
 #$name is project name or some other good identifier
@@ -1060,22 +1065,21 @@ print "starting burden analysis\n";
         }
         my $burden_cmd = Genome::Model::Tools::Germline::BurdenAnalysis->execute(
             mutation_file => $mutation_matrix,
-            phenotype_file => $clinical_data,
+            glm_clinical_data_file => $clinical_data,
             VEP_annotation_file => $vep_annotation_parsed_file_path,
             project_name => $name,
             output_directory => $burden_temp_path_output,
+            glm_model_file => $glm_model_file,
 #            base_R_commands => '/gscuser/qzhang/gstat/burdentest/burdentest.R',
 #            maf_cutoff => '0.01',
 #            permutations => '10000',
-#            covariates => 'NONE',
 #            trv_types => 'NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING:NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING,SPLICE_SITE:NMD_TRANSCRIPT,STOP_LOST:NON_SYNONYMOUS_CODING:NON_SYNONYMOUS_CODING,SPLICE_SITE:STOP_GAINED:STOP_GAINED,SPLICE_SITE',
-            select_phenotypes => $phenotype_list,
+#            select_phenotypes => $phenotype_list,
             testing_mode => $testing_mode,
         );
         unless($burden_cmd){
             die $self->error_message("Could not complete burden analysis!");
         }
-
     }
 
     return 1;

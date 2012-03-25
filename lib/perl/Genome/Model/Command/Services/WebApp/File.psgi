@@ -37,25 +37,26 @@ sub dispatch_request {
         chomp @gene_names;
         @gene_names = grep{/[\w\d]/}@gene_names;
         @gene_names = map{uc $_}@gene_names;
-        my $filter;
+        my @filter;
         for($params->{'filter'}){
-            $filter = 'drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_types!:potentiator/na' if /default/;
-            $filter = '' if /none/;
+            push @filter, 'drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_types!:potentiator/na' if /default/;
         }
 
         my @sources;
         push @sources, 'TTD' if $params->{'ttd'};
         push @sources, 'DrugBank' if $params->{'db'};
         if(@sources){
-            $filter .= ',source_db_name';
+            my $filter;
+            $filter .= 'source_db_name';
             $filter .= '=' if @sources == 1;
             $filter .= ':' if @sources > 1;#if we have multiple sources, we need to use : with / delimited list for boolean expr syntax
             $filter .= join '/', @sources;
+            push @filter, $filter;
         }
 
         my $command = Genome::DruggableGene::Command::GeneNameReport::LookupInteractions->execute(
             gene_identifiers => \@gene_names,
-            filter => $filter,
+            filter => join(',',@filter),
         );
         my %params = (
             no_match_genes => [$command->no_match_genes],

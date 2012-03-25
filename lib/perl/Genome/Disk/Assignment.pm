@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 class Genome::Disk::Assignment {
-    # TODO This is really really site specific and needs to be changed
     table_name => 'DISK_VOLUME_GROUP',
     id_by => [
         dg_id => {

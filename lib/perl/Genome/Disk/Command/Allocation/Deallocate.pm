@@ -15,19 +15,19 @@ class Genome::Disk::Command::Allocation::Deallocate {
             doc => 'Allocations to delete',
         },
     ],
-    doc => 'Removes target allocation and deletes its directories',
+    doc => 'removes target allocation and deletes its directories',
 };
 
 sub help_brief {
-    return 'Removes the target allocation and deletes its directories';
+    return 'removes the target allocation and deletes its directories';
 }
 
 sub help_synopsis {
-    return 'Removes the target allocation and deletes its directories';
+    return 'removes the target allocation and deletes its directories';
 }
 
 sub help_detail {
-    return 'Removes the target allocation and deletes its directories';
+    return 'removes the target allocation and deletes its directories';
 }
 
 sub execute { 

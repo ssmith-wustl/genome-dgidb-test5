@@ -8,8 +8,8 @@
         <textarea name='genes'/>
         <br />
         Exclusively Use Sources, leave unchecked to not limit sources:<br />
-        <input type="checkbox" name="ttd" value='1' />TTD<br />
-        <input type="checkbox" name="db" value='1' />Drug Bank<br />
+        <input type="checkbox" name="ttd" value='1' /><a href='http://bidd.nus.edu.sg/group/ttd/ttd.asp'>TTD</a><br />
+        <input type="checkbox" name="db" value='1' /><a href='http://www.drugbank.ca/'>Drug Bank</a><br />
         <br />
         Filters: <br />
         <input type='radio' name='filter' value='default' checked='true'/>Drug is not (withdrawn or nutraceutical) and interaction is not (potentiator or na)<br />
@@ -19,6 +19,9 @@
         <input type='radio' name='return' value='html' checked='true'/>HTML<br />
         <input type='radio' name='return' value='tsv' />TSV<br />
         <input type='radio' name='return' value='xml' />XML<br />
+        <br />
         <button id='submit-button'>Find Drug Interactions</button>
+        <br />
+        <br />
     </form>
 </div>

@@ -18,7 +18,8 @@ sub string_to_camel_case {
         Carp::cluck('No string to convert to camel case');
         return;
     }
-    return join('', map { ucfirst } split(/[\s_]+/, $string));
+    my $split_chars = $_[0] ? $_[0] : qr([\s_]+);
+    return join('', map { ucfirst } split($split_chars, $string));
 }
 
 sub camel_case_to_string {

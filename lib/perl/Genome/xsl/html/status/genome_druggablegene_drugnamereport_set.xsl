@@ -58,7 +58,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <td class="name">Name:
               </td>
               <td class="value">
-                  <xsl:value-of select="normalize-space(aspect[@name='name']/value)"/>
+                  <xsl:value-of select="normalize-space(aspect[@name='human_readable_name']/value)"/>
               </td>
             </tr>
 
