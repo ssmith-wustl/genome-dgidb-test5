@@ -10,7 +10,7 @@ class Genome::Sys::User {
     is => 'Genome::Searchable',
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
-    table_name => 'genome_sys_user',
+    table_name => 'GENOME_SYS_USER',
     id_by => [
         email => { 
             is => 'Text',
