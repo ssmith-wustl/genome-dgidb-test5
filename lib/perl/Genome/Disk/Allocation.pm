@@ -106,17 +106,8 @@ our @APIPE_DISK_GROUPS = qw/
     systems_benchmarking
 /;
 our $CREATE_DUMMY_VOLUMES_FOR_TESTING = 1;
-my $MAX_VOLUMES = 5;
-my $MINIMUM_ALLOCATION_SIZE = 0;
-my $MAX_ATTEMPTS_TO_LOCK_VOLUME = 30;
+our $MAX_VOLUMES = 5;
 my @PATHS_TO_REMOVE; # Keeps track of paths created when no commit is on
-my @REQUIRED_PARAMETERS = qw/
-    disk_group_name
-    allocation_path
-    kilobytes_requested
-    owner_class_name
-    owner_id
-/;
 
 sub allocate { return shift->create(@_); }
 sub create {
@@ -199,7 +190,7 @@ sub _create {
 
     # Make sure that required parameters are provided
     my @missing_params;
-    for my $param (@REQUIRED_PARAMETERS) {
+    for my $param (qw/ disk_group_name allocation_path kilobytes_requested owner_class_name owner_id /) {
         unless (exists $params{$param} and defined $params{$param}) {
             push @missing_params, $param;
         }
@@ -514,19 +505,21 @@ sub _move {
         );
         ($new_volume, $new_volume_lock) = $self->_lock_volume_from_list($kilobytes_requested, @candidate_volumes);
     }
+
     my $old_allocation_dir = $self->absolute_path;
     my $new_allocation_dir = join('/', $new_volume->mount_path, $self->group_subdirectory, $self->allocation_path);
 
-    unless (Genome::Sys->validate_directory_for_read_write_access($new_allocation_dir)) {
+    # Create target directory and check for errors. This is especially relevant for archiving, since archive volumes
+    # are only mounted on a few hosts and it's expected that directory creation will fail on all other hosts.
+    my $create_dir_rv = eval { Genome::Sys->create_directory($new_allocation_dir) };
+    if (!$create_dir_rv or $@ or !(-d $new_allocation_dir)) {
         Genome::Sys->unlock_resource(resource_lock => $new_volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
-        confess "Cannot write to target volume, cannot move data!";
-    }
 
-    unless (-d $new_allocation_dir) {
-        unless (Genome::Sys->create_directory($new_allocation_dir)) {
-            confess "Could not create new allocation directory $new_allocation_dir!";
-        }
+        my $error = $@;
+        my $msg = "Failed to create directory $new_allocation_dir";
+        $msg .= ", reason: $error" if $error;
+        confess $msg;
     }
 
     $self->status_message("Moving allocation " . $self->id . " from volume " . $old_volume->mount_path . " to a new volume");
@@ -866,7 +859,6 @@ sub _verify_no_child_allocations {
 sub _check_kb_requested {
     my ($class, $kb) = @_;
     return 0 unless defined $kb;
-    return 0 if $kb < $MINIMUM_ALLOCATION_SIZE;
     return 1;
 }
 
@@ -918,9 +910,10 @@ sub _lock_volume_from_list {
     my $volume;
     my $volume_lock;
     my $attempts = 0;
+    my $max_attempts = 30;
     while (1) {
-        if ($attempts++ > $MAX_ATTEMPTS_TO_LOCK_VOLUME) {
-            confess "Could not lock a volume after $MAX_ATTEMPTS_TO_LOCK_VOLUME attempts, giving up";
+        if ($attempts++ > $max_attempts) {
+            confess "Could not lock a volume after $max_attempts attempts, giving up";
         }
 
         # Pick a random volume from the list of candidates and try to lock it
