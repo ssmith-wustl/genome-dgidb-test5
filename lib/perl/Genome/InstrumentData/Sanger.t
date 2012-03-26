@@ -26,6 +26,7 @@ my $disk_allocation = Genome::Disk::Allocation->__define__(
 ok($disk_allocation, 'create disk allocation') or die;
 is_deeply($sanger->disk_allocation, $disk_allocation, 'got disk allocation from snager');
 ok($sanger->full_path, 'full path');
+is($sanger->read_count, 96, 'read count');
 
 done_testing();
 exit;
