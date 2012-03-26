@@ -89,17 +89,23 @@ my %params = (
 my $allocation = Genome::Disk::Allocation->create(%params);
 ok($allocation, 'successfully created test allocation');
 
+my $original_path = $allocation->absolute_path;
 my $rv = $allocation->move(
     target_mount_path => $volumes[1]->mount_path,
 );
 ok($rv, 'successfully moved allocation');
+my $new_path = $allocation->absolute_path;
 is($allocation->mount_path, $volumes[1]->mount_path, 'allocation has expected mount path');
+ok(!(-d $original_path), 'original allocation path no longer exists after move');
+ok(-d $new_path, 'new path exists, as expected');
 
 $rv = $allocation->move(
     disk_group_name => $group->disk_group_name,
 );
 ok($rv, 'successfully moved allocation given disk group instead of mount path');
 is($allocation->mount_path, $volumes[0]->mount_path, 'allocation moved to only other volume in group');
+ok(!(-d $new_path), 'after move, old allocation directory does not exist, as expected');
+ok(-d $original_path, 'new allocation path exists');
 
 done_testing();
 exit 0;
