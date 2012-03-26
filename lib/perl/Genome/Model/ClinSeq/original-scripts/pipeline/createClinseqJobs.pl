@@ -90,12 +90,12 @@ if ($rnaseq_model_group){
     my $sample = $model->subject;
     my $individual = $sample->patient;
     my $individual_name = $individual->name;
-    my $tissue_desc = $sample->tissue_desc;
-    my $common_name = $individual->common_name || "NA";
+    my $tissue_desc = $sample->tissue_desc || "NA";
+    my $common_name = $individual->common_name || $sample->name;
     #print "\nRNAseq\t$model_id\t$individual_name\t$common_name\t$tissue_desc";
 
     #Set tumor and normal RNAseq models if available - use '$normal_tissue_desc' to define which is 'normal'.  All others will be considered 'tumor' (e.g. 'occipital cortex')
-    if ($normal_tissue_names{$tissue_desc}){
+    if (defined($normal_tissue_names{$tissue_desc})){
       $individuals{$individual_name}{normal_rnaseq_model_id} = $model_id;
       $individuals{$individual_name}{common_name} = $common_name;
     }else{
@@ -110,7 +110,7 @@ open (OUT, ">$outfile") || die "\n\nCould not open output file: $outfile\n\n";
 foreach my $individual (sort keys %individuals){
   my ($wgs_somatic_model_id, $exome_somatic_model_id, $tumor_rnaseq_model_id, $normal_rnaseq_model_id, $common_name) = 0;
   $common_name = $individuals{$individual}{common_name};
- 
+
   my $model_name = "ClinSeq - $individual ($common_name)";
   if ($project_label){
     $model_name .= " - $project_label";
