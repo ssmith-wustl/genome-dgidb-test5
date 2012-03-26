@@ -10,7 +10,8 @@ use Test::More;# tests => 4;
 use_ok('Genome::Model::Tools::Velvet::ToAce');
 
 #test suite dir
-my $root_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/ToAce';
+my $test_version = '-v2';
+my $root_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/ToAce'.$test_version;
 
 #test dir
 my $run_dir = Genome::Sys->create_temp_directory();

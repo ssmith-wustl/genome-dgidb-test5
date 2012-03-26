@@ -7,7 +7,8 @@ use Genome;
 use Carp qw/confess/;
 use Sys::Hostname;
 
-my $DEFAULT_VER = '1.3';
+my $DEFAULT_VER = '1.5';
+my $MINIMUM_VER_FOR_RLIB = 1.5;
 
 class Genome::Model::Tools::Joinx {
     is  => 'Command',
@@ -46,7 +47,21 @@ sub joinx_path {
     return $path;
 }
 
-
+sub rlib_path {
+    my $self = shift;
+    my $ver = $self->use_version;
+    if($ver >= $MINIMUM_VER_FOR_RLIB) {
+        my $path = "/usr/share/joinx$ver/";
+        my $hostname = Sys::Hostname::hostname();
+        if(! -d $path) {
+            confess "Failed to find directory for joinx version $ver scripts at $hostname:$path!";
+        }
+        return $path;
+    }
+    else {
+        confess "joinx version $ver does not install scripts.";
+    }
+}
 
 1;
 

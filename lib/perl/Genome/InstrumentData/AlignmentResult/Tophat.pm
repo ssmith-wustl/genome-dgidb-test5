@@ -39,6 +39,10 @@ class Genome::InstrumentData::AlignmentResult::Tophat {
     ],
 
     has_input => [
+        reference_build_id => {
+            is => 'Number',
+            doc => 'the database id of the reference to use for this alignment',
+        },
         instrument_data_id => {
             is => 'Number',
             doc => 'the local database ids of the instrument data (reads) for this merged alignment',

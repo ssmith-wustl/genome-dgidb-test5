@@ -24,6 +24,7 @@ class Genome::DruggableGene::GeneNameReport::Set::View::Status::Xml {
                         'source_db_name',
                         'source_db_version',
                         'original_data_source_url',
+                        'human_readable_name',
                         {
                             name => 'gene_alt_names',
                             perspective => 'default',

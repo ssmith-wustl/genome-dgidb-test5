@@ -48,8 +48,7 @@ sub validate_sloptig_and_jump_instrument_data_assigned {
 sub _instrument_data_is_jumping {
     my ($self, $instrument_data) = @_;
     if ($instrument_data->read_orientation and $instrument_data->original_est_fragment_size
-        and $instrument_data->read_orientation eq "reverse_forward"
-        and $instrument_data->original_est_fragment_size > $instrument_data->library->fragment_size_range) {
+        and $instrument_data->read_orientation eq "reverse_forward") {
         return 1;
     }
     else {
@@ -106,8 +105,8 @@ sub before_assemble {
         if (! $libs_seen{$instrument_data->library_id}){
             my $lib = Genome::Library->get($instrument_data->library_id);
             if ($self->_instrument_data_is_sloptig($instrument_data)) {
-                my $fragment_std_dev = ($instrument_data->library->fragment_size_range)*.05;
-                $in_libs = $in_libs."\n".$lib->name.",\tproject_name,\t".$lib->species_name.",\tfragment,\t1,\t".$instrument_data->library->fragment_size_range.",\t".$fragment_std_dev.",\t,\t,\tinward,\t0,\t0";
+                my $fragment_std_dev = $instrument_data->original_est_fragment_std_dev;
+                $in_libs = $in_libs."\n".$lib->name.",\tproject_name,\t".$lib->species_name.",\tfragment,\t1,\t".$instrument_data->original_est_fragment_size.",\t".$fragment_std_dev.",\t,\t,\tinward,\t0,\t0";
             }
             elsif ($self->_instrument_data_is_jumping($instrument_data)){
                 my $fragment_std_dev = $instrument_data->original_est_fragment_std_dev;

@@ -192,20 +192,32 @@ legend(x=\"topright\", title = \"Burden Tests\", legend=plot_types,col=colors,pc
 x_log10 <- subset(x, select=c(CMC_log10,pCMC_log10,WSS_log10,aSum_log10,PWST_log10,SPWST_log10,SPWST.up_log10,SPWST.down_log10));
 
 #Q-Q Plots
+for(i in 1:length(plot_types)) {
+    index <- seq(1, nrow(x_log10[i]));
+    uni <- index/nrow(x_log10[i]);
+    loguni <- -log10(uni);
+    x_plot <- t(sort(loguni));
+    x_plot_label = paste(colnames(x_log10[i]),"_uniform");
+
+    y_plot <- sort(t(x_log10[i]));
+    y_plot_label <- colnames(x_log10[i]);
+
+    maxplot <- max(x_plot, y_plot, na.rm = TRUE);
+    qqplot(x=x_plot,y=y_plot, xlab=x_plot_label,ylab=y_plot_label, xlim=c(0,maxplot),ylim=c(0,maxplot));
+    abline(a=0,b=1);
+}
+
 for(i in 1:(length(plot_types) - 1)) {
     x_plot = x_log10[i];
     x_plot_label = colnames(x_log10[i]);
     for(j in (i+1):(length(plot_types))) {
         y_plot = x_log10[j];
         y_plot_label = colnames(x_log10[j]);
-        qqplot(x=t(x_plot),y=t(y_plot), xlab=x_plot_label,ylab=y_plot_label, xlim=c(0,1), ylim=c(0,1));
+        maxplot <- max(x_plot, y_plot, na.rm = TRUE);
+        qqplot(x=t(x_plot),y=t(y_plot), xlab=x_plot_label,ylab=y_plot_label, xlim=c(0,maxplot), ylim=c(0,maxplot));
         abline(a=0,b=1);
     }
 }
-
-
-
-
 
 dev.off();
 
