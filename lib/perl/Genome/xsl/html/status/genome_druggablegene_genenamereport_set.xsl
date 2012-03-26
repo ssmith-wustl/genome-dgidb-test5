@@ -80,6 +80,67 @@
               </tbody>
             </table>
           </div>
+
+          <div class="box_header span-24 last rounded-top">
+            <div class="box_title"><h3 class="genome_genenamereport_16 span-7 last">Filtered Out Interactions</h3></div>
+          </div>
+
+          <div class="box_content rounded-bottom span-24 last">
+
+            <br />
+            <table class='dataTable'>
+              <thead>
+                <tr>
+                  <th>Drug</th>
+                  <th>Interaction Type</th>
+                  <th>Gene</th>
+                  <th>Search Term</th>
+                </tr>
+              </thead>
+              <tbody>
+                <xsl:for-each select="filtered_out_interactions/item">
+                  <tr>
+                    <th>
+                      <xsl:call-template name='object_link_button'>
+                        <xsl:with-param name='type' select="'Genome::DruggableGene::DrugNameReport::Set'"/>
+                        <xsl:with-param name="key" select="'name'"/>
+                        <xsl:with-param name="id" select="drug"/>
+                        <xsl:with-param name="linktext" select="human_readable_drug_name"/>
+                      </xsl:call-template>
+                    </th>
+                    <th>
+                      <xsl:call-template name='object_link_button'>
+                        <xsl:with-param name='type' select="'Genome::DruggableGene::DrugGeneInteractionReport::Set'"/>
+                        <xsl:with-param name="keys" select='.'/>
+                        <xsl:with-param name="linktext" select="interaction_type"/>
+                      </xsl:call-template>
+                    </th>
+                    <th>
+                      <xsl:choose>
+                        <xsl:when test="group">
+                          <xsl:call-template name='object_link_button'>
+                            <xsl:with-param name='type' select="'Genome::DruggableGene::GeneNameGroup'"/>
+                            <xsl:with-param name="key" select="'name'"/>
+                            <xsl:with-param name="id" select="group"/>
+                            <xsl:with-param name="linktext" select="group"/>
+                          </xsl:call-template>
+                        </xsl:when>
+                        <xsl:otherwise>
+                          <xsl:call-template name='object_link_button'>
+                            <xsl:with-param name='type' select="'Genome::DruggableGene::GeneNameReport::Set'"/>
+                            <xsl:with-param name="key" select="'name'"/>
+                            <xsl:with-param name="id" select="gene"/>
+                            <xsl:with-param name="linktext" select="human_readable_gene_name"/>
+                          </xsl:call-template>
+                        </xsl:otherwise>
+                      </xsl:choose>
+                    </th>
+                    <th><xsl:value-of select='identifier' /></th>
+                  </tr>
+                </xsl:for-each>
+              </tbody>
+            </table>
+          </div>
         </div>
 
 
@@ -123,23 +184,6 @@
               </ul>
             </div>
           </div>
-
-          <div class="span_12_box_masonry">
-            <div class="box_header span-12 last rounded-top">
-              <div class="box_title"><h3 class="genome_genenamereport_16 span-7 last">Filtered Out Interactions</h3></div>
-            </div>
-
-            <div class="box_content rounded-bottom span-12 last">
-
-              <br />
-              <ul>
-                <xsl:for-each select="filtered_out_interactions/item">
-                  <li><xsl:value-of select='.' /></li>
-                </xsl:for-each>
-              </ul>
-            </div>
-          </div>
-
         </div>
 
 
@@ -149,13 +193,14 @@
 
     <script type="text/javascript">
       $(document).ready(function(){
-      $('#interactions').dataTable({
+      $('.dataTable').dataTable({
       "sScrollX": "100%",
       "sScrollInner": "110%",
       "bJQueryUI": true,
       "sPaginationType": "full_numbers",
       "bStateSave": true,
-      "iDisplayLength": 25
+      "iDisplayLength": 25,
+      'oLanguage': { 'sSearch': 'Filter results:' },
       });
       }
       );
