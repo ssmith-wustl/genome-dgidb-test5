@@ -25,7 +25,6 @@ class Genome::Model::Tools::BioSamtools::RefCov {
         },
         wingspan => {
             doc => 'A base pair wingspan value to add +/- of the input regions',
-            default_value => 0,
             is_optional => 1,
         },
         min_base_quality => {
@@ -92,6 +91,11 @@ sub execute {
     my $output_directory = $self->output_directory;
     my $wingspan = $self->wingspan;
     if ($output_directory) {
+        # TODO: Old CoverageStats required running RefCov with multiple Wingspan valude
+        # In reality, this create redundancy across the ROI.
+
+        # Moving forward CoverageStatsV2 will create multiple BED files.
+        # What do we do with this auto-generated subdirectory....
         if (defined($wingspan)) {
             $output_directory .= '/wingspan_'. $wingspan;
         }
