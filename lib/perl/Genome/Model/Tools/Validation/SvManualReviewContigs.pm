@@ -215,7 +215,7 @@ sub execute {
         overrides => [
         'name='.$new_tumor_model_name,
         'auto_build_alignments=0',
-        'processing_profile=name='.$new_pp,
+        "processing_profile=name='$new_pp'",
         'reference_sequence_build='.$new_ref_build_id,
         'annotation_reference_build=',
         'region_of_interest_set_name=',
@@ -233,7 +233,7 @@ sub execute {
         overrides => [
         'name='.$new_normal_model_name,
         'auto_build_alignments=0',
-        'processing_profile=name='.$new_pp,
+        "processing_profile=name='$new_pp'",
         'reference_sequence_build='.$new_ref_build_id,
         'annotation_reference_build=',
         'region_of_interest_set_name=',
