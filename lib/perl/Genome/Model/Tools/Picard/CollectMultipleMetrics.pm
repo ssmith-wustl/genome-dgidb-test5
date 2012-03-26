@@ -18,7 +18,7 @@ class Genome::Model::Tools::Picard::CollectMultipleMetrics {
         },
         program_list => {
             is_optional => 1,
-            default_value => 'CollectAlignmentSummaryMetrics,CollectInsertSizeMetrics,QualityScoreDistribution,MeanQualityByCycle',
+            doc => 'The default are CollectAlignmentSummaryMetrics,CollectInsertSizeMetrics,QualityScoreDistribution,MeanQualityByCycle',
         }, 
         reference_sequence => {
             is_optional => 1,
@@ -65,11 +65,22 @@ sub execute {
             $cmd .= ' ASSUME_SORTED=false';
         }
     }
-    my @programs = split(',',$self->program_list);
+
+    my $program_list = $self->program_list;
+    if ($program_list) {
+        $program_list = 'null,' . $program_list;  #turn off the default 4
+    }
+    else {
+        $program_list = 'CollectAlignmentSummaryMetrics,CollectInsertSizeMetrics,QualityScoreDistribution,MeanQualityByCycle';
+    }
+
+    my @programs = split(',', $program_list);
+
     for my $program (@programs) {
         $program =~ s/ //g;
         $cmd .= ' PROGRAM='. $program;
     }
+
     $self->run_java_vm(
         cmd          => $cmd,
         input_files  => [$self->input_file],
