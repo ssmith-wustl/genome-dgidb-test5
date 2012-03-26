@@ -101,14 +101,64 @@ my $files = &getFiles('-models_builds'=>$models_builds, '-filter_name'=>$filter_
 my @event_types = qw (snv indel cnv_gain rna_cufflinks_absolute rna_tophat_absolute);
 
 #Known druggable ge
-my $result = &parseKnownDruggableFiles('-files'=>$files, '-event_types'=>\@event_types);
-my $k_g = $result->{'genes'}; #Known druggable genes
-my $k_i = $result->{'interactions'}; #Known druggable gene interactions
+my $k_result = &parseKnownDruggableFiles('-files'=>$files, '-event_types'=>\@event_types);
+my $k_g = $k_result->{'genes'}; #Known druggable genes
+my $k_i = $k_result->{'interactions'}; #Known druggable gene interactions
 #print Dumper $k_g;
 
-#Potentially druggable
-#my %p_druggable = &parsePotentiallyDruggableFiles();
+#Define potentially druggable families
+#TODO: Do not hard code these groupings of gene list names here.  Either do all of this using DGIdb
+#Or at least define the meta groups in the same location as where the gene lists are stored and load them here.
+my %gene_families;
+my @potentially_druggable = qw ( Druggable_RussLampel );
+my @kinases = qw ( Kinases KinasesGO ProteinKinaseEntrezQuery LipidKinaseActivity_GO0001727 ProteinSerineThreonineKinaseActivity_GO0004674 ProteinTyrosineKinaseActivity_GO0004713 TyrosineKinaseEntrezQuery );
+my @ion_channels = qw ( IonChannelActivity_GO0005216 ); 
+my @phosphatases = qw ( PhospoproteinPhosphataseActivity_GO0004721 PhosphataseEntrezQuery ); 
+my @gpcrs = qw ( GpcrActivity_GO0045028 );
+my @phospholipases = qw ( PhospholipaseActivity_GO0004620 );
+my @peptidases = qw ( PeptidaseInhibitorActivity_GO0030414 );
+my @transporter = qw ( TransporterActivity_GO0005215 IonChannelActivity_GO0005216 );
+my @growth_factors = qw ( GrowthFactorActivity_GO0008083 );
+my @hormone_related = qw ( HormoneActivity_GO000517 NuclearHormoneReceptor_GO0004879 );
+my @cell_surface = qw ( CellSurface_GO0009986 ExternalSideOfPlasmaMembrane_GO0009897  );
+my @response_to_drug = qw ( DrugMetabolism_GO0017144 TransporterActivity_GO0005215 ResponseToDrug_GO0042493 );
+my @transcription_factors = qw ( TfcatTransFactors FactorBookTransFactors TranscriptionFactorBinding_GO0008134 TranscriptionFactorComplex_GO0005667 );
+my @cancer_genes = qw ( CancerGeneCensus FutrealEtAl2004Review HahnAndWeinberg2002Review Mitelman2000Review VogelsteinAndKinzler2004Review OncogeneEntrezQuery TumorSuppresorEntrezQuery );
+my @oncogenes = qw ( OncogeneEntrezQuery );
+my @tumor_suppressors = qw ( TumorSuppresorEntrezQuery RegulationOfCellCycle_GO0051726 );
+my @dna_repair = qw ( DnaRepair_GO0006281 );
+my @cancer_pathway = qw ( Alpha6Beta4IntegrinPathway AndrogenReceptorPathway EGFR1Pathway HedgehogPathway IDPathway KitReceptorPathway NotchPathway TGFBRPathway TNFAlphaNFkBPathway WntPathway );
+my @egfr_pathway = qw ( EGFR1Pathway );
+my @histone_related = qw ( HistoneModification_GO0016570 );
+my @genome_stability = qw ( StabilityEntrezQuery );
 
+$gene_families{'Potentially Druggable'} = \@potentially_druggable;
+$gene_families{'Kinase'} = \@kinases;
+$gene_families{'Ion Channel'} = \@ion_channels;
+$gene_families{'Phophatase'} = \@phosphatases;
+$gene_families{'GPCR'} = \@gpcrs;
+$gene_families{'Phospholipase'} = \@phospholipases;
+$gene_families{'Peptidase'} = \@peptidases;
+$gene_families{'Transporter'} = \@transporter;
+$gene_families{'Growth Factor'} = \@growth_factors;
+$gene_families{'Hormone Related'} = \@hormone_related;
+$gene_families{'Cell Surface'} = \@cell_surface;
+$gene_families{'Response To Drug'} = \@response_to_drug;
+$gene_families{'Transcription Factor'} = \@transcription_factors;
+$gene_families{'Cancer Gene'} = \@cancer_genes;
+$gene_families{'Oncogene'} = \@oncogenes;
+$gene_families{'Tumor Suppressors'} = \@tumor_suppressors;
+$gene_families{'DNA Repair'} = \@dna_repair;
+$gene_families{'Cancer Pathway'} = \@cancer_pathway;
+$gene_families{'EGFR Pathway'} = \@egfr_pathway;
+$gene_families{'Histone Related'} = \@histone_related;
+$gene_families{'Genome Stability'} = \@genome_stability;
+
+print Dumper %gene_families;
+
+
+my $p_result = &parsePotentiallyDruggableFiles('-files'=>$files, '-event_types'=>\@event_types);
+ 
 
 
 #Generate a header for the event types output columns
@@ -451,10 +501,52 @@ sub parseKnownDruggableFiles{
 
 
 
+############################################################################################################################
+#Parse annotation files (containing drug gene family information)                                                          #
+############################################################################################################################
+sub parsePotentiallyDruggableFiles{
+  my %args = @_;
+  my $files = $args{'-files'};
+  my @event_types = @{$args{'-event_types'}};
+
+  print BLUE, "\n\nParsing files containing potentially druggable genes data", RESET;
+
+  #Store all results organized by gene and separately by gene family (e.g. kinases, ion channels etc.)
+  my %result;
+  my %genes;
+  my %families;
+
+	#Note that the annotation files contain all qualifying variant events (the associated gene may or may not belong to a gene family of interest)
+  foreach my $patient (keys %{$files}){
+    print BLUE, "\n\t$patient", RESET;
+    foreach my $event_type (@event_types){
+      my $annot_file_path = $files->{$patient}->{$event_type}->{annot_file_path};
+      print BLUE, "\n\t\t$annot_file_path", RESET;
+
+      open (IN, "$annot_file_path") || die "\n\nCould not open annotation file: $annot_file_path\n\n";
+      my $header = 1;
+      my %columns;
+      while(<IN>){
+        chomp($_);
+        my @line = split("\t", $_);
+        if ($header){
+          my $p = 0;
+          foreach my $column (@line){
+            $columns{$column}{position} = $p;
+            $p++;
+          }
+          $header = 0;
+          next();
+        }
+        my $mapped_gene_name = $line[$columns{'mapped_gene_name'}{position}];
+ 
 
 
 
-
+      }
+    }
+  }
+}
 
 
 
