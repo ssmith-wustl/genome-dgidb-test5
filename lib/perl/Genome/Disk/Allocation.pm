@@ -515,10 +515,9 @@ sub _move {
         ($new_volume, $new_volume_lock) = $self->_lock_volume_from_list($kilobytes_requested, @candidate_volumes);
     }
     my $old_allocation_dir = $self->absolute_path;
-    my $base_volume_path = join('/', $new_volume->mount_path, $self->group_subdirectory);
-    my $new_allocation_dir = join('/', $base_volume_path, $self->allocation_path);
+    my $new_allocation_dir = join('/', $new_volume->mount_path, $self->group_subdirectory, $self->allocation_path);
 
-    unless (Genome::Sys->validate_directory_for_read_write_access($base_volume_path)) {
+    unless (Genome::Sys->validate_directory_for_read_write_access($new_allocation_dir)) {
         Genome::Sys->unlock_resource(resource_lock => $new_volume_lock);
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess "Cannot write to target volume, cannot move data!";
