@@ -9,6 +9,7 @@ use File::Spec;
 use File::Basename;
 use Carp;
 use IO::File;
+use LWP::Simple;
 
 our $VERSION = $Genome::VERSION;
 
@@ -532,6 +533,25 @@ sub open_file_for_reading {
 
     # _open_file throws its own exception if it doesn't work
     return $self->_open_file($file, 'r');
+}
+
+sub download_file_to_directory {
+    my ($self, $url, $destination_dir) = @_;
+
+    unless (-d $destination_dir){
+        Carp::croak("You wanted to download $url to $destination_dir but that directory doesn't exist!");
+    }
+$DB::single = 1;
+    my $resp =  getstore($url, $destination_dir . "/" . (split("/", $url))[-1]);
+
+    if($resp =~ /4\d\d/){
+        Carp::croak("You wanted to download $url but it doesn't exist or you don't have access! ($resp)");
+    }
+    if($resp =~/5\d\d/){
+        Carp::croak("You wanted to download $url but there appears to be a problem with the host! ($resp)");
+    }
+
+    return RC_OK eq $resp;
 }
 
 sub open_file_for_writing {
