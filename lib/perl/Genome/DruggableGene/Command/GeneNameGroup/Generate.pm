@@ -1,11 +1,11 @@
-package Genome::DruggableGene::Command::GeneNameReport::GenerateGroups;
+package Genome::DruggableGene::Command::GeneNameGroup::Generate;
 
 use strict;
 use warnings;
 use Genome;
 use List::MoreUtils qw/ uniq /;
 
-class Genome::DruggableGene::Command::GeneNameReport::GenerateGroups {
+class Genome::DruggableGene::Command::GeneNameGroup::Generate{
     is => 'Genome::Command::Base',
     doc => 'Generate a ton of groups to bundle genes with similar alternate names',
 };
