@@ -827,18 +827,23 @@ sub add_detectors_and_filters {
                     $filter->{operation} = $foperation;
                 }
 
-                # add links for properties which every detector has from input_connector
-                my @properties_to_each_operation =  (
+                # add links for properties which every detector or filter has from input_connector
+                my @properties_to_each_filter = (
+                    'alignment_results',
+                    'control_alignment_results',
+                    'pedigree_file_path',
+                );
+
+                # A superset of the above
+                my @properties_to_each_detector =  (
                     'reference_build_id',
                     'aligned_reads_input',
                     'control_aligned_reads_input',
                     'aligned_reads_sample',
                     'control_aligned_reads_sample',
-                    'alignment_results',
-                    'control_alignment_results',
-                    'pedigree_file_path',
+                    @properties_to_each_filter
                 );
-                for my $property ( @properties_to_each_operation) {
+                for my $property ( @properties_to_each_detector) {
                     $workflow_model->add_link(
                         left_operation => $workflow_model->get_input_connector,
                         left_property => $property,
@@ -894,6 +899,15 @@ sub add_detectors_and_filters {
                     push @{$self->{_expected_output_directories}->{$variant_type}}, $filter_output_directory;
 
                     $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{last_operation} = $unique_filter_name;
+
+                    for my $property (@properties_to_each_filter) {
+                        $workflow_model->add_link(
+                            left_operation => $workflow_model->get_input_connector,
+                            left_property => $property,
+                            right_operation => $filter->{operation},
+                            right_property => $property,
+                        );
+                    }
                 }
 
                 # use the hash keys, which are input_connector property names, to add the links to the workflow

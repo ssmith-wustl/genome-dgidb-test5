@@ -64,13 +64,13 @@ class Genome::Model::Tools::DetectVariants2::Result::DetectionBase {
         },
         # new API
         alignment_results => {
-            is => 'Text',
+            is => 'Genome::InstrumentData::AlignmentResult::Merged',
             is_optional => 1,
             is_many => 1,
             doc => 'The path to the aligned reads file',
         },
         control_alignment_results => {
-            is => 'Text',
+            is => 'Genome::InstrumentData::AlignmentResult::Merged',
             is_optional => 1,
             is_many => 1,
             doc => 'The path to the control aligned reads file',
