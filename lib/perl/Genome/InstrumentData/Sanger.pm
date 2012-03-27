@@ -9,6 +9,7 @@ class Genome::InstrumentData::Sanger {
     is => 'Genome::InstrumentData',
     has_constant => [
         sequencing_platform => { value => 'sanger' },
+        read_count => { value => 96, },
     ],
     has_optional => [
         research_project => {

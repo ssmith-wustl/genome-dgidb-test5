@@ -24,6 +24,8 @@ if ($archos !~ /64/) {
 
 use_ok( 'Genome::Model::Tools::Vcf::CreateCrossSampleVcf');
 
+my $joinx_version = "1.3";
+
 my $refbuild_id = 101947881;
 my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-CreateCrossSampleVcf";
 my $region_file = $test_data_directory."/input/feature_list_3.bed.gz";
@@ -41,6 +43,7 @@ my $ccsv_cmd = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->create(
     roi_file => $region_file,
     roi_name => "TEST_ROI_NAME",
     wingspan => 500,
+    joinx_version => $joinx_version,
 );
 
 my $output_file = $test_output_base."/snvs.merged.vcf.gz";
@@ -67,6 +70,7 @@ my $ccsv_no_max_merge_cmd = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->cre
     roi_file => $region_file,
     roi_name => "TEST_ROI_NAME",
     wingspan => 500,
+    joinx_version => $joinx_version,
 );
 
 

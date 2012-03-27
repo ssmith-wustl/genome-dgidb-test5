@@ -689,19 +689,8 @@ sub validate_instrument_data{
     my $self = shift;
     my @tags;
     my @instrument_data = $self->instrument_data;
-    my @instrument_data_solexa = grep{$_->isa('Genome::InstrumentData::Solexa')} @instrument_data;
-    for my $instrument_data (@instrument_data_solexa){
-        unless ($instrument_data->clusters){
-            push @tags, UR::Object::Tag->create(
-                type => 'error',
-                properties => ['instrument_data'],
-                desc => 'no clusters for instrument data (' . $instrument_data->id  . ') assigned to build',
-            );
-        }
-    }
-    my @instrument_data_454 = grep{$_->isa('Genome::InstrumentData::454')}@instrument_data;
-    for my $instrument_data (@instrument_data_454){
-        unless ($instrument_data->total_reads){
+    for my $instrument_data (@instrument_data){
+        unless ($instrument_data->read_count){
             push @tags, UR::Object::Tag->create(
                 type => 'error',
                 properties => ['instrument_data'],

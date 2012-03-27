@@ -255,18 +255,7 @@ sub calculate_reads_attempted {
 
     my $reads_attempted = 0;
     for my $inst_data ( @instrument_data ) { 
-        if ($inst_data->class =~ /Solexa/){
-            $reads_attempted += $inst_data->fwd_clusters;
-            $reads_attempted += $inst_data->rev_clusters;
-        }elsif($inst_data->class =~ /Imported/){
-            $reads_attempted += $inst_data->read_count;
-        } elsif ( $inst_data->class =~ /454/ ) {
-            $reads_attempted += $inst_data->total_reads;
-        } else {
-            Carp::confess( 
-                $self->error_message("Unsupported sequencing platform or inst_data class (".$inst_data->class."). Can't calculate reads attempted.")
-            );
-        }
+        $reads_attempted += $inst_data->read_count;
     }
 
     return $reads_attempted;

@@ -52,24 +52,32 @@ sub post_allocation_initialization {
     return $self->create_subdirectories;
 }
 
-sub validate_for_start_methods {
+sub validate_instrument_data{ # overloaded
     my $self = shift;
-    my @methods = $self->SUPER::validate_for_start_methods;
-    push @methods, 'instrument_data_assigned';
-    return @methods;
-}
 
-sub instrument_data_assigned {
-    my $self = shift;
     my @tags;
     my @instrument_data = $self->instrument_data;
-    unless (@instrument_data) {
+    if ( not @instrument_data ) {
         push @tags, UR::Object::Tag->create(
             type => 'error',
             properties => ['instrument_data'],
-            desc => 'Build has no instrument data',
+            desc => 'No instrument data assigned to this build!',
         );
     }
+
+    my $reads;
+    for my $instrument_data ( @instrument_data ) {
+        $reads += $instrument_data->read_count;
+    }
+
+    if ( not $reads ){
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => [ 'instrument_data' ],
+            desc => 'No reads for  instrument data assigned to build!',
+        );
+    }
+
     return @tags;
 }
 
