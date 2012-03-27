@@ -197,6 +197,9 @@ class Genome::InstrumentData::Solexa {
             where => [ attribute_label => 'clusters' ],
             is_mutable => 1,
         },
+        read_count => {
+            calculate => q| my $reads = $self->clusters; $reads *= 2 if $self->is_paired_end; return $reads; |,
+        },
         analysis_software_version => {
             via => 'attributes',
             to => 'attribute_value',

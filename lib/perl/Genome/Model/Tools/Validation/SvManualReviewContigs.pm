@@ -175,12 +175,19 @@ sub execute {
     #create reference sequence using new contigs (define new reference and track new reference build)
     my $ref_seq_build_id = $self->reference_sequence_build_id;
     my $ref_seq_build = Genome::Model::Build->get($ref_seq_build_id);
+
+    my $ref_model_id = $ref_seq_build->model_id;
+
+    my $version = "500bp_assembled_contigs_sv";
+    #don't overwrite an existing model...
+    $version = checkRefBuildName($sample_id,$version);
+
     my $new_ref_cmd = Genome::Model::Command::Define::ImportedReferenceSequence->create(
         species_name => 'human',
         use_default_sequence_uri => '1',
         derived_from => $ref_seq_build,
         append_to => $ref_seq_build,
-        version => '500bp_assembled_contigs',
+        version => $version,
         fasta_file => $contigs_file,
         prefix => $sample_id,
     );
@@ -203,11 +210,22 @@ sub execute {
     }
 
     #copy tumor and normal validation models to align data to new reference
-    my $new_pp = "dlarson bwa0.5.9 -q 5 indel contig test picard1.42";
-    my $tumor_model = Genome::Model->get($self->tumor_val_model_id) or die "Could not find tumor model with id $self->tumor_val_model_id.\n";
-    my $normal_model = Genome::Model->get($self->normal_val_model_id) or die "Could not find normal model with id $self->normal_val_model_id.\n";
+
+    #make sure these model names aren't taken. If they are, add a digit to the end
     my $new_tumor_model_name = $sample_id . "-Tumor-SV-Validation-ManRevContigs";
     my $new_normal_model_name = $sample_id . "-Normal-SV-Validation-ManRevContigs";
+    
+    $new_tumor_model_name = checkModelName($new_tumor_model_name);
+    $new_normal_model_name = checkModelName($new_normal_model_name);
+
+    print STDERR "creating models $new_normal_model_name and $new_tumor_model_name\n";
+
+
+    #my $new_pp = "dlarson bwa0.5.9 -q 5 indel contig test picard1.42";
+    #my $new_pp = Genome::ProcessingProfile->get("2599983");
+    my $new_pp = 2599983;
+    my $tumor_model = Genome::Model->get($self->tumor_val_model_id) or die "Could not find tumor model with id $self->tumor_val_model_id.\n";
+    my $normal_model = Genome::Model->get($self->normal_val_model_id) or die "Could not find normal model with id $self->normal_val_model_id.\n";
 
     #new tumor model
     my $tumor_copy = Genome::Model::Command::Copy->create(
@@ -215,7 +233,7 @@ sub execute {
         overrides => [
         'name='.$new_tumor_model_name,
         'auto_build_alignments=0',
-        'processing_profile=name='.$new_pp,
+        'processing_profile='.$new_pp,
         'reference_sequence_build='.$new_ref_build_id,
         'annotation_reference_build=',
         'region_of_interest_set_name=',
@@ -233,7 +251,7 @@ sub execute {
         overrides => [
         'name='.$new_normal_model_name,
         'auto_build_alignments=0',
-        'processing_profile=name='.$new_pp,
+        'processing_profile='.$new_pp,
         'reference_sequence_build='.$new_ref_build_id,
         'annotation_reference_build=',
         'region_of_interest_set_name=',
@@ -257,3 +275,64 @@ sub execute {
 
 1;
 
+
+sub checkModelName{
+    my $name = shift;
+
+    my $checkcmd = "genome model list --filter name~" . $name . "% --show id,name --noheader";
+    my $max=-1;
+    open(MODELS,"$checkcmd |") || die "unable to list builds\n";
+    while(<MODELS>){
+        my $line = $_;
+        chomp($line);
+        #if we have models with a suffix already, store the highest suffix
+        if ($line=~/$name-(\d+)/){
+            if($1 > $max){
+                $max = $1;
+            }
+            #else if we have a match at all for this model name
+        } elsif ($line=~/$name/){
+            $max = 0;
+        }
+    }
+    if($max > -1){
+        $max++;
+        $name = $name . "-$max";
+    }
+    return $name;
+}
+
+sub checkRefBuildName{
+    my $sample_id = shift;
+    my $version = shift;
+
+    my $checkcmd = "genome model build list --filter model.name~" . $sample_id . "-human% --show id --noheader";
+
+    my @builds;
+    my $max=-1;
+
+    open(BUILDS,"$checkcmd |") || die "unable to list builds\n";
+    while(<BUILDS>){
+        my $line = $_;
+        chomp($line);
+        push(@builds,Genome::Model::Build->get($line));
+    }
+
+    foreach my $build (@builds){
+        my $v = $build->version;
+        #if we have models with a suffix already, store the highest suffix
+        if ($v=~/$version-(\d+)/){
+            if($1 > $max){
+                $max = $1;
+            }
+            #else if we have a match at all for this model name
+        } elsif ($v=~/$version/){
+            $max = 0;
+        }
+    }
+    if($max > -1){
+        $max++;
+        $version = $version . "-$max";
+    }
+    return $version;
+}

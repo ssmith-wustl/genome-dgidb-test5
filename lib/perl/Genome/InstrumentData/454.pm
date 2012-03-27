@@ -102,7 +102,13 @@ class Genome::InstrumentData::454 {
             where => [ attribute_label => 'index_sequence' ],
             is_mutable => 1,
         },
-        total_reads => {
+        read_count => { # the universal way to get number of reads
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'total_reads' ], # doesn't match ok
+            is_mutable => 1,
+        },
+        total_reads => { # old method
             via => 'attributes',
             to => 'attribute_value',
             where => [ attribute_label => 'total_reads' ],
@@ -120,20 +126,20 @@ class Genome::InstrumentData::454 {
             where => [ attribute_label => 'paired_end' ],
             is_mutable => 1,
         },
-    ],
-    has_optional_transient => [
+        ],
+        has_optional_transient => [
         _fasta_file => { is => 'FilePath', is_mutable => 1, },
         _qual_file => { is => 'FilePath', is_mutable => 1, },
-    ],
-};
+        ],
+    };
 
-BEGIN: {
-    Genome::InstrumentData::Solexa->class;
-    no warnings 'once';
-    *dump_trimmed_fastq_files = \&Genome::InstrumentData::Solexa::dump_trimmed_fastq_files;
-}
+    BEGIN: {
+        Genome::InstrumentData::Solexa->class;
+        no warnings 'once';
+        *dump_trimmed_fastq_files = \&Genome::InstrumentData::Solexa::dump_trimmed_fastq_files;
+    }
 
-sub full_path {
+    sub full_path {
     Carp::confess("Full path is not valid for 454 instrument data");
 }
 

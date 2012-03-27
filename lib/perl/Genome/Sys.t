@@ -43,6 +43,8 @@ ok(! -d $tmp1 . '/db1/2.1', "removed the first database dir $tmp1/db1/2.1") or d
 $ret = Genome::Sys->dbpath('db1','2.1');
 is($ret, $tmp2 . '/db1/2.1', "path is the second db because the new db was removed") or diag $ret;
 
+test_file_download();
+
 change_rollback_removes_symlink_for_create_symlink_and_log_change();
 
 test_sudo_username();
@@ -50,6 +52,12 @@ test_sudo_username();
 test_file_operations();
 
 done_testing();
+
+
+sub test_file_download {
+    ok(Genome::Sys->download_file_to_directory("https://gscweb.gsc.wustl.edu/gscmnt/ams1102/info/test_suite_data/Genome-Sys/downloadme", $tmp), "download of file completed successfully");
+    ok(-e $tmp . "/downloadme", "downloaded file exists on disk");
+}
 
 sub change_rollback_removes_symlink_for_create_symlink_and_log_change {
     my $transaction = UR::Context::Transaction->begin();

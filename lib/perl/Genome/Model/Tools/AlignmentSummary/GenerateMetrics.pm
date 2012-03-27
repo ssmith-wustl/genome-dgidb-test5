@@ -9,7 +9,6 @@ class Genome::Model::Tools::AlignmentSummary::GenerateMetrics {
     is => 'Genome::Model::Tools::AlignmentSummary::Base',
     has_input => [
         alignment_file_path => {
-            is => 'Text',
             doc => 'The aligned file in SAM/BAM format.',
         },
         alignment_file_format => {
@@ -20,7 +19,6 @@ class Genome::Model::Tools::AlignmentSummary::GenerateMetrics {
             is_optional => 1,
         },
         roi_file_path => {
-            is => 'Text',
             doc => 'The sorted file with regions of interest.',
             is_optional => 1,
         },
@@ -110,7 +108,7 @@ sub execute {
         unless(defined($bed_suffix)) {
             die ('Failed to recognize bed_file '. $bed_file .' without bed suffix');
         }
-        $resolved_output_file .= '-'. $bed_basename;
+        $resolved_output_file .= '-'. $bed_basename .'-alignment_summary.tsv';
         $self->output_file($resolved_output_file);
     }
     unless ($self->output_file) {

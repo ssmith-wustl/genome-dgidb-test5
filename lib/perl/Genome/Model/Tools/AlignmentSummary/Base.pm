@@ -61,7 +61,7 @@ sub run_in_bash_env {
 sub parse_metrics_file_into_hashref {
     my ($class,$metrics_file) = @_;
     
-    my $res = YAML::Load($metrics_file);
+    my $res = YAML::LoadFile($metrics_file);
     unless (ref($res) eq 'HASH') {
         die('Failed to parse YAML hash from alignment_summary output: '. $metrics_file);
     }
