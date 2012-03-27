@@ -121,3 +121,6 @@
 [submodule "vendor/hotnet"]
 	path = vendor/hotnet
 	url = git@github.com:genome-vendor/HotNet.git
+[submodule "vendor/statgen"]
+	path = vendor/statgen
+	url = git@github.com:genome-vendor/statgen.git
