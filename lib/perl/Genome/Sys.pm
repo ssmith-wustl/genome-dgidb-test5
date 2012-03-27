@@ -541,7 +541,7 @@ sub download_file_to_directory {
     unless (-d $destination_dir){
         Carp::croak("You wanted to download $url to $destination_dir but that directory doesn't exist!");
     }
-$DB::single = 1;
+
     my $resp =  getstore($url, $destination_dir . "/" . (split("/", $url))[-1]);
 
     if($resp =~ /4\d\d/){
