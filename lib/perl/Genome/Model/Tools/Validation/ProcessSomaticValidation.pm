@@ -582,7 +582,6 @@ sub execute {
           die $self->error_message;
       }
 
-      my $ofh;
       open($ofh,">$indel_file.novel");      
       slashedBedFileToAnnoFile($ofh, $temp_novel_file);
       close($ofh);
