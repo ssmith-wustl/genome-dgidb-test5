@@ -5,6 +5,7 @@
   <xsl:template name="drug_gene_interaction" match="drug_gene_interaction">
     <script type='text/javascript' src='/res/js/pkg/boxy/javascripts/jquery.boxy.js'></script>
     <link rel="stylesheet" href="/res/js/pkg/boxy/stylesheets/boxy.css" type="text/css" />
+    <link rel="stylesheet" href="/res/css/genome_druggablegene_genenamereport_set.css" type="text/css" />
     <script type='text/javascript' src='/res/js/app/genome_model_build_list.js'></script>
     <script class="jsbin" src="http://datatables.net/download/build/jquery.dataTables.nightly.js"></script>
 
