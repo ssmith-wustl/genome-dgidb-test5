@@ -17,15 +17,15 @@ class Genome::DruggableGene::GeneNameGroup {
     ],
     has => [
         name => { is => 'Text' },
-        gene_name_group_bridges => {
+        bridges => {
             is => 'Genome::DruggableGene::GeneNameGroupBridge',
-            reverse_as => 'gene_name_group',
+            reverse_as => 'group',
             is_many => 1,
         },
-        gene_name_reports  => {
+        genes  => {
             is => 'Genome::DruggableGene::GeneNameReport',
-            via => 'gene_name_group_bridges',
-            to => 'gene_name_report',
+            via => 'bridges',
+            to => 'gene',
             is_many => 1,
         },
     ],
@@ -36,8 +36,8 @@ sub consume {
     my $self = shift;
     my @groups = @_;
     for my $group (@groups){
-        for my $bridge($group->gene_name_group_bridges){
-             $self->add_gene_name_group_bridge(gene_id => $bridge->gene_id);
+        for my $bridge($group->bridges){
+             $self->add_bridge(gene_id => $bridge->gene_id);
         }
         $group->delete;
     }

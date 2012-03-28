@@ -56,8 +56,8 @@ class Genome::DruggableGene::GeneNameGroup::View::Solr::Xml {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return join(' ',map{$_->name}$subject->gene_name_reports) .
-                join(' ', map{$_->alternate_names}$subject->gene_name_reports) .
+                return join(' ',map{$_->name}$subject->genes) .
+                join(' ', map{$_->alternate_names}$subject->genes) .
                 ' druggablegene'
             },
         },

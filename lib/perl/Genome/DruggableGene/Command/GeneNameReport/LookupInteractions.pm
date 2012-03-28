@@ -71,7 +71,7 @@ class Genome::DruggableGene::Command::GeneNameReport::LookupInteractions {
 
 sub help_brief { 'Lookup drug-gene interactions by gene identifiers' }
 
-sub help_synopsis { 
+sub help_synopsis {
     "genome druggable-gene gene-name-report lookup-interactions --gene-file ./gene_file.txt --filter 'drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,is_untyped=0,drug.is_antineoplastic=1,gene.is_kinase=0'"
 
 }
@@ -106,9 +106,9 @@ sub execute {
         $self->output($self->error_message('No genes found'));
         return;
     }
-    my ($unmatched_genes, @gene_name_reports) = $self->lookup_gene_identifiers(@gene_identifiers);
-    my ($no_interaction_genes, $filtered_out_interactions, $interactions) = $self->get_interactions(@gene_name_reports);
-    my %grouped_interactions = $self->group_interactions_by_drug_name_report(@$interactions);
+    my ($unmatched_genes, @genes) = $self->lookup_gene_identifiers(@gene_identifiers);
+    my ($no_interaction_genes, $filtered_out_interactions, $interactions) = $self->get_interactions(@genes);
+    my %grouped_interactions = $self->group_interactions_by_drug(@$interactions);
     $self->print_grouped_interactions(%grouped_interactions);
 
     $self->no_match_genes($unmatched_genes);
@@ -123,39 +123,39 @@ sub lookup_gene_identifiers {
     my $self = shift;
     my @gene_identifiers = @_;
 
-    my ($entrez_gene_name_reports, $entrez_gene_name_intermediate_reports, @unmatched_gene_identifiers) = Genome::DruggableGene::GeneNameReport->convert_to_entrez(@gene_identifiers);
-    my %gene_name_reports = $self->_find_gene_name_reports_for_identifiers(@gene_identifiers);
-    $self->identifier_to_genes(\%gene_name_reports);
+    my ($entrez_genes, $entrez_intermediate_genes, @unmatched_gene_identifiers) = Genome::DruggableGene::GeneNameReport->convert_to_entrez(@gene_identifiers);
+    my %genes = $self->_find_genes_for_identifiers(@gene_identifiers);
+    $self->identifier_to_genes(\%genes);
     $self->_create_gene_to_identifiers();
 
     my @complete_genes;
     for my $gene_identifier (@gene_identifiers){
-        my $entrez_gene_name_reports_for_identifier = $entrez_gene_name_reports->{$gene_identifier};
-        push @complete_genes, @$entrez_gene_name_reports_for_identifier if $entrez_gene_name_reports_for_identifier;
-        my $entrez_gene_name_intermediate_reports_for_identifier = $entrez_gene_name_intermediate_reports->{$gene_identifier};
-        push @complete_genes, @$entrez_gene_name_intermediate_reports_for_identifier if $entrez_gene_name_intermediate_reports_for_identifier;
-        my $gene_name_reports_for_identifier = $gene_name_reports{$gene_identifier};
-        push @complete_genes, @$gene_name_reports_for_identifier if $gene_name_reports_for_identifier;
+        my $entrez_genes_for_identifier = $entrez_genes->{$gene_identifier};
+        push @complete_genes, @$entrez_genes_for_identifier if $entrez_genes_for_identifier;
+        my $entrez_intermediate_genes_for_identifier = $entrez_intermediate_genes->{$gene_identifier};
+        push @complete_genes, @$entrez_intermediate_genes_for_identifier if $entrez_intermediate_genes_for_identifier;
+        my $genes_for_identifier = $genes{$gene_identifier};
+        push @complete_genes, @$genes_for_identifier if $genes_for_identifier;
     }
 
     return \@unmatched_gene_identifiers, uniq @complete_genes;
 }
 
-sub _find_gene_name_reports_for_identifiers {
+sub _find_genes_for_identifiers {
     my $self = shift;
     my @gene_identifiers = @_;
     my %results;
 
-    my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReport', 'name', '', @gene_identifiers));
-    my @gene_alternate_name_reports = Genome::DruggableGene::GeneAlternateNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneAlternateNameReport', 'alternate_name', '',  @gene_identifiers));
-    my @ids = map($_->gene_id, @gene_alternate_name_reports);
+    my @genes = Genome::DruggableGene::GeneNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReport', 'name', '', @gene_identifiers));
+    my @gene_alternates = Genome::DruggableGene::GeneAlternateNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneAlternateNameReport', 'alternate_name', '',  @gene_identifiers));
+    my @ids = map($_->gene_id, @gene_alternates);
     @ids = uniq @ids;
     Genome::DruggableGene::GeneNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReport', 'id', '', @ids));
-    push @ids, map($_->id, @gene_name_reports);
+    push @ids, map($_->id, @genes);
     Genome::DruggableGene::GeneAlternateNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneAlternateNameReport', 'gene_id', '', @ids));
     for my $gene_identifier(@gene_identifiers) {
-        my @reports_for_identifier = grep($_->name eq $gene_identifier, @gene_name_reports);
-        my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @gene_alternate_name_reports);
+        my @reports_for_identifier = grep($_->name eq $gene_identifier, @genes);
+        my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @gene_alternates);
         my @report_ids = map($_->gene_id, @associations_for_identifier);
         @reports_for_identifier = (@reports_for_identifier, Genome::DruggableGene::GeneNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReport', 'id', '', @report_ids)));
         @reports_for_identifier = uniq @reports_for_identifier;
@@ -166,9 +166,9 @@ sub _find_gene_name_reports_for_identifiers {
 
 sub get_interactions {
     my $self = shift;
-    my $gene_name_reports = Set::Scalar->new(@_);
+    my $genes = Set::Scalar->new(@_);
 
-    my @gene_ids = map($_->id, @$gene_name_reports);
+    my @gene_ids = map($_->id, @$genes);
     @gene_ids = uniq @gene_ids;
     my $unfiltered_interactions = Set::Scalar->new (
         Genome::DruggableGene::DrugGeneInteractionReport->get(
@@ -177,7 +177,7 @@ sub get_interactions {
     );
 
     my $genes_in_unfiltered_interactions = Set::Scalar->new(map{$_->gene}@$unfiltered_interactions);
-    my $no_interaction_genes = $gene_name_reports - $genes_in_unfiltered_interactions;
+    my $no_interaction_genes = $genes - $genes_in_unfiltered_interactions;
 
     my @drug_ids = map($_->drug_id, @$unfiltered_interactions);
     Genome::DruggableGene::DrugNameReport->get(\@drug_ids);
@@ -195,7 +195,7 @@ sub get_interactions {
     return $no_interaction_genes, $filtered_out_interactions, $interactions;
 }
 
-sub group_interactions_by_drug_name_report {
+sub group_interactions_by_drug{
     my $self = shift;
     my @interactions = @_;
     my %grouped_interactions = ();
@@ -232,7 +232,7 @@ sub print_grouped_interactions{
     }
 
     my @headers = qw/
-    drug_name_report
+    drug
     drug_nomenclature
     drug_primary_name
     drug_alternate_names
@@ -243,7 +243,7 @@ sub print_grouped_interactions{
     drug_source_db_name
     drug_source_db_version
     gene_identifiers
-    gene_name_report
+    gene
     gene_nomenclature
     gene_alternate_names
     gene_source_db_name
@@ -257,7 +257,7 @@ sub print_grouped_interactions{
         $self->output([join("\t", @headers)]);
     }
 
-    my @drug_name_reports = Genome::DruggableGene::DrugNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugNameReport', 'id', '', keys %grouped_interactions));
+    my @drugs = Genome::DruggableGene::DrugNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugNameReport', 'id', '', keys %grouped_interactions));
     for my $drug_id (keys %grouped_interactions){
         for my $interaction (@{$grouped_interactions{$drug_id}}){
             $output_fh->print($self->_build_interaction_line($interaction), "\n");
@@ -297,7 +297,7 @@ sub _build_interaction_line {
 sub _create_entrez_gene_outputs{
     my $self = shift;
     my @gene_identifiers = split(':', shift);
-    my $entrez_gene_name_output = "";
+    my $entrez_gene_output = "";
     my $entrez_gene_synonyms_output = "";
     my $entrez_delimiter = '|';
     my $sub_delimiter = '/';
@@ -308,15 +308,15 @@ sub _create_entrez_gene_outputs{
             for my $entrez_gene (sort {$a->name cmp $b->name} @entrez_genes){
                 my ($entrez_gene_symbol) = sort map($_->alternate_name, grep($_->nomenclature eq 'entrez_gene_symbol', $entrez_gene->gene_alt_names));
                 my @entrez_gene_synonyms = sort map($_->alternate_name, grep($_->nomenclature eq 'entrez_gene_synonym', $entrez_gene->gene_alt_names));
-                $entrez_gene_name_output = $entrez_gene_name_output . ($entrez_gene_name_output ? $entrez_delimiter : '') . $entrez_gene_symbol;
+                $entrez_gene_output = $entrez_gene_output . ($entrez_gene_output ? $entrez_delimiter : '') . $entrez_gene_symbol;
                 $entrez_gene_synonyms_output = $entrez_gene_synonyms_output . ($entrez_gene_synonyms_output ? $entrez_delimiter : '') . join($sub_delimiter, @entrez_gene_synonyms);
             }
         }else{
-            $entrez_gene_name_output = $entrez_gene_name_output . $entrez_delimiter;
+            $entrez_gene_output = $entrez_gene_output . $entrez_delimiter;
             $entrez_gene_synonyms_output = $entrez_gene_synonyms_output . $entrez_delimiter;
         }
     }
-    return ($entrez_gene_name_output, $entrez_gene_synonyms_output);
+    return ($entrez_gene_output, $entrez_gene_synonyms_output);
 }
 
 sub _read_gene_file{
@@ -393,7 +393,7 @@ sub _chunk_in_clause_list{
 
 sub _create_gene_to_identifiers {
     my $self = shift;
-    my %identifier_to_genes = %{$self->identifier_to_genes}; 
+    my %identifier_to_genes = %{$self->identifier_to_genes};
     my %gene_to_identifiers;
     for my $identifier (keys %identifier_to_genes){
         my @genes = @{$identifier_to_genes{$identifier}};

@@ -29,10 +29,10 @@ sub help_detail { help_brief() }
 sub execute {
     my $self = shift;
     for my $gene_identifier ($self->gene_identifiers) {
-        my ($entrez_gene_name_reports, $intermediate_gene_name_reports) = Genome::DruggableGene::GeneNameReport->convert_to_entrez($gene_identifier);
+        my ($entrez_genes, $intermediate_genes) = Genome::DruggableGene::GeneNameReport->convert_to_entrez($gene_identifier);
         my (@entrez, @intermediate);
-        @entrez = @{$entrez_gene_name_reports->{$gene_identifier}} if $entrez_gene_name_reports->{$gene_identifier};
-        @intermediate  = @{$intermediate_gene_name_reports->{$gene_identifier}} if $intermediate_gene_name_reports->{$gene_identifier};
+        @entrez = @{$entrez_genes->{$gene_identifier}} if $entrez_genes->{$gene_identifier};
+        @intermediate  = @{$intermediate_genes->{$gene_identifier}} if $intermediate_genes->{$gene_identifier};
         if(@entrez){
             $self->status_message($gene_identifier . " as entrez is:\n");
             $self->status_message($_->name . "\n") for (@entrez);
