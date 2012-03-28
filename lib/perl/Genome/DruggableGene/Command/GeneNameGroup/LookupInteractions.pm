@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use Genome;
 use List::MoreUtils qw/ uniq /;
-use Set::Scalar;
 
 class Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions {
     is => 'Genome::Command::Base',
@@ -16,12 +15,12 @@ class Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions {
 #            doc => "Output interactions to specified file. Defaults to STDOUT if no file is supplied.",
 #            default => "STDOUT",
 #        },
-#        gene_file => {
-#            is => 'Path',
-#            is_input => 1,
-#            doc => 'Path to a list of gene identifiers',
-#            shell_args_position => 1,
-#        },
+        gene_file => {
+            is => 'Path',
+            is_input => 1,
+            doc => 'Path to a list of gene identifiers',
+            shell_args_position => 1,
+        },
         gene_identifiers => {
             is => 'Text',
             is_many => 1,
@@ -62,6 +61,9 @@ class Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions {
         identifier_to_genes => {
             is => 'HASH',
         },
+        result => {
+            is => 'HASH',
+        },
     ],
 };
 
@@ -91,47 +93,74 @@ EOS
 
 sub execute {
     my $self = shift;
-    my @gene_identifiers;
-    @gene_identifiers = $self->_read_gene_file();
-    @gene_identifiers = $self->gene_identifiers unless @gene_identifiers;
-    unless(@gene_identifiers){
-        $self->error_message('No genes found');
-        return;
-    }
 
-    my ($unmatched_genes, @gene_name_reports, $no_interaction_genes, $filtered_out_interactions, $interactions, %grouped_interactions);
+    #Read in all gene names from file or command options
+    my @gene_identifiers;
+    @gene_identifiers = Genome::Sys->read_file($self->gene_file) if $self->gene_file;
+    push @gene_identifiers, $_ for $self->gene_identifiers;
+    $self->status_message('No genes found') unless @gene_identifiers;
+
+    #Populate a data structure for each name
+    # Maybe the names given were: HUGO_GENE_NAME1, VAGUE_GENE_NAME2, AMBIGUOUS_GENE_NAME3
+    # and we found 1 possible group for each of the first two, and several possible groups for the ambiguous one
+    #$result = {
+    #  HUGO_GENE_NAME1 => {
+    #    group => $DIRECT_GROUP1,
+    #    interactions => [
+    #      $INTERACTION1,
+    #    ],
+    #  },
+    #  VAGUE_GENE_NAME2 => {
+    #    group => $INDIRECT_GROUP2,
+    #    interactions => [
+    #      $INTERACTION2,
+    #      $ANOTHER_INTERACTION2,
+    #    ],
+    #  },
+    #  AMBIGUOUS_GENE_NAME3 => {
+    #    groups => [
+    #      $POSSIBLE_GROUP3,
+    #      $ANOTHER_POSSIBLE_GROUP3,
+    #    ]
+    #  },
+    #}
+    my $result;
     for my $name (@gene_identifiers){
-        my $group = Genome::DruggableGene::GeneNameGroup(name=>$name);#Group generation guarentees no duplicate named groups
-        unless ($group){
+        $name = uc $name;
+
+        #Search for group, directly and indirectly
+        my $group = Genome::DruggableGene::GeneNameGroup->get(name=>$name);#Group generation guarentees no duplicate named groups
+        if($group){
+            $self->status_message("$name has direct group");
+        } else {
             my @alts = Genome::DruggableGene::GeneAlternateNameReport->get(alternate_name=>$name);
-            my %groups;
-            $groups{Genome::DruggableGene::GeneNameGroupBridge(gene_name_report=>$_->gene_name_report)}=1 for (@alts);
-            if(keys %groups > 1){
+            my @groups;
+            push @groups, Genome::DruggableGene::GeneNameGroupBridge->get(gene_id=>$_->gene_id)->group for (@alts);
+            @groups = uniq @groups;
+
+            if(@groups > 1){
                 $self->status_message("$name has multiple groups");
+                $result->{$name}{groups} = \@groups;#Record all the ambiguous groups
+            } elsif(@groups == 1) {
+                ($group) = @groups;
+                $self->status_message("$name has indirect group " . $group->name);
             } else {
-                my ($bridge) = keys %groups;
-                $group = $bridge->gene_name_group;
+                $self->status_message("$name has no groups");
             }
         }
 
-        if($group){
-            my $found_interaction = 0;
-            for my $gene ($group->gene_name_reports){
-                $self->interactions([$self->interactions,$gene->interactions]);
-                $found_interaction = 1;
+        if($group){ #found direct or indirect group
+            $result->{$name}{group} = $group;
+            for my $gene ($group->genes){
+                push @{$result->{$name}{interactions}}, $gene->interactions;
+                map{$self->status_message("$name has interaction " . $_->__display_name__)}$gene->interactions;
             }
-            unless ($found_interaction){
-                $self->no_interaction_genes([$self->no_interaction_genes,$group]);
-            }
-            $self->identifier_to_genes({$self->identifier_to_genes, $name, $group});
-        } else {
-            $self->no_match_genes([$self->no_match_genes,$name]);
         }
     }
     return 1;
 }
 
-sub group_interactions_by_drug_name_report {
+sub group_interactions_by_drug{
     my $self = shift;
     my @interactions = @_;
     my %grouped_interactions = ();
@@ -168,7 +197,7 @@ sub print_grouped_interactions{
     }
 
     my @headers = qw/
-    drug_name_report
+    drug
     drug_nomenclature
     drug_primary_name
     drug_alternate_names
@@ -179,7 +208,7 @@ sub print_grouped_interactions{
     drug_source_db_name
     drug_source_db_version
     gene_identifiers
-    gene_name_report
+    gene
     gene_nomenclature
     gene_alternate_names
     gene_source_db_name
@@ -192,7 +221,7 @@ sub print_grouped_interactions{
         $output_fh->print(join("\t", @headers), "\n");
     }
 
-    my @drug_name_reports = Genome::DruggableGene::DrugNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugNameReport', 'id', '', keys %grouped_interactions));
+    my @drugs = Genome::DruggableGene::DrugNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugNameReport', 'id', '', keys %grouped_interactions));
     for my $drug_id (keys %grouped_interactions){
         for my $interaction (@{$grouped_interactions{$drug_id}}){
             $output_fh->print($self->_build_interaction_line($interaction), "\n");
@@ -231,7 +260,7 @@ sub _build_interaction_line {
 sub _create_entrez_gene_outputs{
     my $self = shift;
     my @gene_identifiers = split(':', shift);
-    my $entrez_gene_name_output = "";
+    my $entrez_gene_output = "";
     my $entrez_gene_synonyms_output = "";
     my $entrez_delimiter = '|';
     my $sub_delimiter = '/';
@@ -242,37 +271,14 @@ sub _create_entrez_gene_outputs{
             for my $entrez_gene (sort {$a->name cmp $b->name} @entrez_genes){
                 my ($entrez_gene_symbol) = sort map($_->alternate_name, grep($_->nomenclature eq 'entrez_gene_symbol', $entrez_gene->gene_alt_names));
                 my @entrez_gene_synonyms = sort map($_->alternate_name, grep($_->nomenclature eq 'entrez_gene_synonym', $entrez_gene->gene_alt_names));
-                $entrez_gene_name_output = $entrez_gene_name_output . ($entrez_gene_name_output ? $entrez_delimiter : '') . $entrez_gene_symbol;
+                $entrez_gene_output = $entrez_gene_output . ($entrez_gene_output ? $entrez_delimiter : '') . $entrez_gene_symbol;
                 $entrez_gene_synonyms_output = $entrez_gene_synonyms_output . ($entrez_gene_synonyms_output ? $entrez_delimiter : '') . join($sub_delimiter, @entrez_gene_synonyms);
             }
         }else{
-            $entrez_gene_name_output = $entrez_gene_name_output . $entrez_delimiter;
+            $entrez_gene_output = $entrez_gene_output . $entrez_delimiter;
             $entrez_gene_synonyms_output = $entrez_gene_synonyms_output . $entrez_delimiter;
         }
     }
-    return ($entrez_gene_name_output, $entrez_gene_synonyms_output);
+    return ($entrez_gene_output, $entrez_gene_synonyms_output);
 }
-
-sub _read_gene_file{
-    my $self = shift;
-    my $gene_file = $self->gene_file || return;
-    my @gene_identifiers;
-
-    my $gene_fh = Genome::Sys->open_file_for_reading($gene_file);
-
-    while (my $gene_identifier = <$gene_fh>){
-        chomp $gene_identifier;
-        push @gene_identifiers, $gene_identifier;
-    }
-
-    $gene_fh->close;
-
-    unless(@gene_identifiers){
-        $self->error_message('No gene identifiers in gene_file ' . $self->gene_file . ', exiting');
-        return;
-    }
-
-    return @gene_identifiers;
-}
-
 1;
