@@ -27,6 +27,11 @@ class Genome::Model::Command::Admin::FailedModelTickets {
             default_value => 1,
             doc => 'Include builds with status Unstartable',
         },
+		ignore_pending_rerun => {
+			is => 'Boolean',
+			default_value => 0,
+			doc => 'Ignore builds which are followed by a later build that is scheduled or running.'
+		}
     ],
 };
 
@@ -93,6 +98,12 @@ sub execute {
         #If the latest build of the model succeeds, ignore those old
         #failing ones that will be cleaned by admin "cleanup-succeeded".
         next if $model->status eq 'Succeeded';
+		
+		if ($self->ignore_pending_rerun) {
+			next if $model->status eq 'Scheduled';
+			next if $model->status eq 'Running';
+		}
+		
         next if $models_and_builds{ $model->id } and $models_and_builds{ $model->id }->id > $build->id;
         $models_and_builds{ $model->id } = $build;
     }
