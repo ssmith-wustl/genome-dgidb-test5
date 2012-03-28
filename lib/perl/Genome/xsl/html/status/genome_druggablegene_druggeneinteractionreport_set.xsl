@@ -36,7 +36,9 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         <!-- details for this DrugGeneInteractionReport -->
         <div class="span_12_box_masonry">
           <div class="box_header span-12 last rounded-top">
-            <div class="box_title"><h3 class="nontyped span-7 last">Drug Gene Interaction</h3></div>
+            <div class="box_title"><h3 class="nontyped span-7 last">
+                <xsl:value-of select="normalize-space(aspect[@name='source_db_name']/value)"/>
+            </h3></div>
             <div class="box_button">
 
             </div>
@@ -45,6 +47,9 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <div class="box_content rounded-bottom span-12 last">
             <table class="name-value">
               <tbody>
+                <tr><td class="name"><a>
+                      Source database citation
+                </a></td></tr>
                 <tr>
                   <td class="name">Drug Name:
                   </td>
@@ -69,8 +74,25 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                     </xsl:call-template>
                   </td>
                 </tr>
+
                 <tr>
-                  <td class="name">Interaction Type:
+                  <td class="name">Source Database Name:
+                  </td>
+                  <td class="value">
+                    <xsl:value-of select="normalize-space(aspect[@name='source_db_name']/value)"/>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="name">Source Database Version:
+                  </td>
+                  <td class="value">
+                    <xsl:value-of select="normalize-space(aspect[@name='source_db_version']/value)"/>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="name">Type:
                   </td>
                   <td class="value">
                     <ul>
@@ -80,6 +102,23 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                     </ul>
                   </td>
                 </tr>
+
+                <tr>
+                  <td class="name">Attributes:
+                  </td>
+                  <td class="value">
+                    <ul>
+                      <xsl:for-each select="aspect[@name='interaction_attributes']/object">
+                        <li>
+                          <xsl:value-of select="normalize-space(aspect[@name='name']/value)"/>
+                          <xsl:text> : </xsl:text>
+                          <xsl:value-of select="normalize-space(aspect[@name='value']/value)"/>
+                        </li>
+                      </xsl:for-each>
+                    </ul>
+                  </td>
+                </tr>
+
               </tbody>
             </table>
           </div>
