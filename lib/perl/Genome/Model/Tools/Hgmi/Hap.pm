@@ -623,9 +623,9 @@ sub get_gene_peps {
     GENE: while (my $seq = $res->next_object()) {
         my $gene_name = $seq->display_name();
         my @feat = $seq->get_SeqFeatures();
-        foreach my $f (@feat) {
+        FEATURE: foreach my $f (@feat) {
             my $display_name = $f->display_name();
-            next GENE if $f->primary_tag ne 'gene';
+            next FEATURE if $f->primary_tag ne 'gene';
             next if $f->has_tag('Dead');
             my $ss;
             $ss = $seq->subseq( $f->start, $f->end );
