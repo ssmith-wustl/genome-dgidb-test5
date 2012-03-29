@@ -175,9 +175,8 @@ sub resolve_taxon {
     if ( $subject->isa('Genome::Taxon') ) { 
         $taxon = $subject;
     }
-    elsif ( $subject->isa('Genome::Sample') ) { 
+    else {
         $taxon = $subject->taxon;
-        $taxon = $subject->source->taxon unless $taxon;
     }
 
     unless ( $taxon ) {
