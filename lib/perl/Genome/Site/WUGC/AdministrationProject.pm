@@ -19,7 +19,8 @@ class Genome::Site::WUGC::AdministrationProject {
         },
         analysis_project_ids => {
             via => 'project_work_orders',
-            to => 'setup_wo_id'
+            to => 'setup_wo_id',
+            is_many => 1,
         },
         analysis_projects => {
             is => 'Genome::Project',
