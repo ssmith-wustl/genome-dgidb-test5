@@ -1,0 +1,6 @@
+genome-sys-snapshot-deps (2012.03.29-1) unstable; urgency=low
+
+  * Initial package to represent all requirements to run the genome.git
+    snapshot on a freshly installed Linux machine.
+
+ -- Genome Institute <gmt@genome.wustl.edu>  Thu, 29 Mar 2012 12:35:00 -0500
