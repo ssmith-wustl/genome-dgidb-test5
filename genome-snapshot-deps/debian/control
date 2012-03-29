@@ -9,8 +9,5 @@ Standards-Version: 3.8.3
 Package: genome-snapshot-deps
 Architecture: all
 Provides: genome
-Depends: ${misc:Depends}, ${perl:Depends}, 
-    genome-snapshot-deps-perl, 
-    genome-snapshot-deps-versioned-external, 
-    genome-snapshot-deps-versioned-internal
+Depends: ${misc:Depends}, ${perl:Depends}, genome-snapshot-deps-perl
 Description: This meta-package installs all dependencies of the current internal TGI software snapshot 
