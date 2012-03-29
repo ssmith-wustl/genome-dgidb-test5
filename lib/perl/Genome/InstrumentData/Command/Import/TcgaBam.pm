@@ -59,19 +59,22 @@ class Genome::InstrumentData::Command::Import::TcgaBam {
             doc => 'The id of the reference sequence the data was aligned against. Versions: 101947881 (NCBI-human-build36), 106942997 (GRCh37-lite-build37).',
         },
         reference_sequence_build => { 
+            is_optional => 1,
             calculate_from => [qw/ reference_sequence_build_id /],
             calculate => q| return Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id); |,
         },
         _model => { is_optional => 1, },
         _inst_data => { is_optional => 1, },
         import_instrument_data_id => { via => '_inst_data', to => 'id', is_optional => 1, },
-        _allocation => { via => '_inst_data', to => 'allocations', },
-        _absolute_path => { via => '_allocation', to => 'absolute_path', },
-        _new_bam => { 
+        _allocation => { via => '_inst_data', to => 'allocations', is_optional => 1, },
+        _absolute_path => { via => '_allocation', to => 'absolute_path', is_optional => 1, },
+        _new_bam => {
+            is_optional => 1,
             calculate_from => [qw/ _absolute_path /], 
             calculate => q| $_absolute_path.'/all_sequences.bam' |,
         },
         _new_md5 => { 
+            is_optional => 1,
             calculate_from => [qw/ _new_bam /], 
             calculate => q| $_new_bam.'.md5' |,
         },
