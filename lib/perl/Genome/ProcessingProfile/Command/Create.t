@@ -110,6 +110,8 @@ $creator = Genome::ProcessingProfile::Command::Create::Tester->create(
 );
 ok($creator, 'create w/ based on');
 ok($creator->execute, 'execute - create new pp w/ based on, but changed roi to UNDEF');
+ok($creator->created_processing_profile, "created processing profile stored on create command");
+isa_ok($creator->created_processing_profile, "Genome::ProcessingProfile::Tester", "newly created processing profile is the correct type");
 
 # w/o changing anything (fails)
 $creator = Genome::ProcessingProfile::Command::Create::Tester->create(
