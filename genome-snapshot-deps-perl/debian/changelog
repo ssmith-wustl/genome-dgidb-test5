@@ -1,4 +1,4 @@
-genome-sys-snapshot-deps (2012.03.29-1) unstable; urgency=low
+genome-snapshot-deps-perl (2012.03.29-1) unstable; urgency=low
 
   * Initial package to represent all requirements to run the genome.git
     snapshot on a freshly installed Linux machine.
