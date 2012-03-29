@@ -103,6 +103,8 @@ sub _execute_build {
     #This will force R to use it own local notion of library paths instead of the /gsc/ versions
     #This should work for R installed on the machine /usr/bin/R  OR  a standalone version of R installed by a local user. e.g. /gscmnt/gc2142/techd/tools/R/R-2.14.0/bin/R
     local $ENV{R_LIBS}='';
+    local $ENV{PATH}="/gscmnt/gc2142/techd/tools/R/R-2.12.1/bin/:$ENV{PATH}";
+    warn("Setting R_LIBS to null and PATH to R interpreter to: /gscmnt/gc2142/techd/tools/R/R-2.12.1/bin/R - CHANGE THIS WHEN R PACKAGING IS FIXED ON THE CLUSTER");
 
     if ($dry_run) {
         $build->status_message("NOT running! I _would_ have run: $cmd");

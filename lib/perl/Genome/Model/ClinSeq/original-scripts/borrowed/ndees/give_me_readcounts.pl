@@ -82,7 +82,7 @@ for my $bam (@bams) {
   my ($type,$bam) = split /:/,$bam;
    
   my $cmd = "bam-readcount -q 1 -l $site_list_for_readcount -f $reference_fasta $bam > $temp_readcount_file";
-  system($cmd);
+  Genome::Sys->shellcmd(cmd => $cmd);
 
   my $statscmd = "$script_dir/miller-bam-readcount-to-stats.noheader.pl $sites $temp_readcount_file |";
   open(STATS,$statscmd) or die "Couldn't open stats command: $!";

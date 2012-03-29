@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #Written by Malachi Griffith
 
 #Take a list of gene names and query pubmed - return the number of abstracts with matches
@@ -9,6 +9,7 @@ use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 use XML::Simple;
+use above 'Genome'; #remove the 'above' when we turn this into a module
 
 my $gene_list = '';
 my $gene_col = '';
@@ -57,7 +58,7 @@ foreach my $gene (sort {$genes{$a}{c} <=> $genes{$b}{c}} keys %genes){
   #print BLUE, "\n\nGene: $gene", RESET;
   my $wget_cmd = "wget \"http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db="."$db"."&term=$term\" -O $xml_file 2>/dev/null";
   #print YELLOW, "\n$wget_cmd", RESET;
-  system($wget_cmd);
+  Genome::Sys->shellcmd(cmd => $wget_cmd);
 
   my $xs1 = XML::Simple->new();
   my $doc = $xs1->XMLin($xml_file);

@@ -1,5 +1,3 @@
-# TODO test this very thoroughly. I'm especially leery about if the pre-backfill AD/BQ and alts match up in order to the post backfill AD/BQ/alts
-# TODO Also implement checks from Dave's email. Check to make sure pileup truly called ref if there was no call from the vcf. If it did not, correct the GT (not 0/0, real call) and mark an error in FT somehow
 package Genome::Model::Tools::Vcf::Backfill;
 
 use strict;

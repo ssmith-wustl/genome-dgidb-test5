@@ -8,6 +8,7 @@ use Genome;
 use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
+use above 'Genome'; # remove 'above' when this is turned into a module
 
 my $lib_dir;
 my $script_dir;
@@ -145,7 +146,7 @@ if ($verbose){
 }else{
   $r_cmd .= " 1>$r_cmd_stdout 2>$r_cmd_stderr";
 }
-system($r_cmd);
+Genome::Sys->shellcmd(cmd => $r_cmd);
 
 
 #Reorganize the output files into sub-directories
@@ -154,11 +155,11 @@ my $isoforms_sub_dir = &createNewDir('-path'=>$working_dir, '-new_dir_name'=>"is
 my $isoforms_merged_sub_dir = &createNewDir('-path'=>$working_dir, '-new_dir_name'=>"isoforms_merged", '-force'=>"yes");
 
 my $mv_cmd1 = "mv $working_dir/genes.fpkm* $genes_sub_dir";
-system($mv_cmd1);
+Genome::Sys->shellcmd(cmd => $mv_cmd1);
 my $mv_cmd2 = "mv $working_dir/isoforms.fpkm* $isoforms_sub_dir";
-system($mv_cmd2);
+Genome::Sys->shellcmd(cmd => $mv_cmd2);
 my $mv_cmd3 = "mv $working_dir/isoforms.merged.fpkm* $isoforms_merged_sub_dir";
-system($mv_cmd3);
+Genome::Sys->shellcmd(cmd => $mv_cmd3);
 
 if ($verbose){print "\n\n";}
 

@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
 use Data::Dumper;
 use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Benchmark;
+use above "Genome"; # remove the 'above' when this is turned into a module
 
 my $usage=<<INFO;
 
@@ -330,12 +331,12 @@ foreach my $name (sort keys %bams){
   #my $split_cmd_r1 = "bzcat $r1_fastq_bz | head -n 400000 | split -l $n_lines -d -a 1 - $data_dir"."R1_";
   my $split_cmd_r1 = "bzcat $r1_fastq_bz | split -l $n_lines -d -a 1 - $data_dir"."R1_";
   print BLUE, "\n\n\tExecuting: $split_cmd_r1", RESET;
-  system ($split_cmd_r1);
+  Genome::Sys->shellcmd(cmd => $split_cmd_r1);
 
   #my $split_cmd_r2 = "bzcat $r2_fastq_bz | head -n 400000 | split -l $n_lines -d -a 1 - $data_dir"."R2_";
   my $split_cmd_r2 = "bzcat $r2_fastq_bz | split -l $n_lines -d -a 1 - $data_dir"."R2_";
   print BLUE, "\n\n\tExecuting: $split_cmd_r2", RESET;
-  system ($split_cmd_r2);
+  Genome::Sys->shellcmd(cmd => $split_cmd_r2);
 
   #Get the list of files created ... rename and compress them
   my $ls_cmd = "ls $data_dir"."R*";
@@ -350,7 +351,7 @@ foreach my $name (sort keys %bams){
       my $new_file = "$base_path"."s_"."$lane$sublane"."_"."$read"."_sequence.txt";
       my $mv_cmd = "mv -f $old_file $new_file";
       print BLUE, "\n\n\t$mv_cmd", RESET;
-      system ($mv_cmd);
+      Genome::Sys->shellcmd(cmd => $mv_cmd);
 
       my $cmd_bzip = "$bzip_bin -f $new_file";
       if ($p){

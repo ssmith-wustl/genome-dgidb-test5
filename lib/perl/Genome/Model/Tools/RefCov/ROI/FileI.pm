@@ -55,7 +55,7 @@ sub create {
 
 sub next_region {
     my $self = shift;
-    if ($self->load_all) {
+    if ($self->load_all || $self->region_index_substring ) {
         unless ($self->_all_regions) {
             my $regions = $self->all_regions;
             $self->_all_regions($regions);
@@ -90,17 +90,28 @@ sub overlaps_regions {
     my ($chr,$start,$stop) = @_;
     my $start_substr = substr($start, 0, $self->region_index_substring) || 0;
     my $stop_substr = substr($stop, 0, $self->region_index_substring) || 0;
+
+    my %overlapping_regions;
     for (my $position_key = $start_substr; $position_key <= $stop_substr; $position_key++) {
         my $region_key = $chr .':'. $position_key;
         if ($self->{indexed_regions}->{$region_key}) {
             my @region_list = split(/\n/, $self->{indexed_regions}->{$region_key});
             foreach my $region (@region_list) {
                 (my $region_start, my $region_stop) = split(/\t/, $region);
-                if(($start >= $region_start && $start <= $region_stop) || ($stop >= $region_start && $stop <= $region_stop)) {
-                    return 1;
+                # This determines overlap, and it identifies reads that contain a region
+                if ( ($start >= $region_start && $start <= $region_stop) ||
+                         ($stop >= $region_start && $stop <= $region_stop) ||
+                             # A read that spans the region
+                             ($start < $region_start && $stop > $region_stop)
+                         ) {
+                    $overlapping_regions{$region} = 1;
                 }
             }
         }
+    }
+    my @overlapping_regions = keys %overlapping_regions;
+    if (@overlapping_regions) {
+        return \@overlapping_regions;
     }
     return 0;
 }

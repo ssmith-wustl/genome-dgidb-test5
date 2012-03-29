@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #Written by Malachi Griffith
 
 #Before using this script, make sure the version of Ensembl you wish to use has been imported (both the mysql database and the corresponding mysql API)
@@ -32,6 +32,7 @@ use Getopt::Long;
 use Benchmark;
 use Term::ANSIColor qw(:constants);
 use File::Basename;
+use above 'Genome'; # remove 'above' when this is turned into a module
 
 my $ensembl_version = '';
 my $reference_build_dir = '';

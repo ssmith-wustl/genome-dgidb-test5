@@ -74,7 +74,7 @@ my $usage=<<INFO;
   Specify *one* of the following as input (each model/build should be a ClinSeq model/build)
   --build_ids                Comma separated list of specific build IDs
   --model_ids                Comma separated list of specific model IDs
-  --model_group_id           A singe genome model group ID
+  --model_group_id           A single genome model group ID
 
   Combines Cufflinks expression results from a group of Clinseq models into a single report:
   --target_file_name         The files to be joined across multiple ClinSeq models

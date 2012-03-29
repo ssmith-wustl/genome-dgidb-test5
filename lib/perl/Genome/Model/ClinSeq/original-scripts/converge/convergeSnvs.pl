@@ -42,7 +42,7 @@ my $usage=<<INFO;
   Specify *one* of the following as input (each model/build should be a ClinSeq model)
   --build_ids            Comma separated list of specific build IDs
   --model_ids            Comma separated list of specific model IDs
-  --model_group_id       A singe genome model group ID
+  --model_group_id       A single genome model group ID
 
   Combines SNV results from a group of Clinseq models into a single report:
   --outdir               Path to directory for output files
@@ -335,7 +335,7 @@ foreach my $model_id (sort keys %model_list){
     $bam_rc_cmd .= "  1>/dev/null 2>/dev/null";
   }
   print BLUE, "\n\t$bam_rc_cmd", RESET;
-  system ($bam_rc_cmd);
+  Genome::Sys->shellcmd(cmd => $bam_rc_cmd);
 }
 
 #Now parse the read counts files and build a hash of SNVs and their variant allele frequencies (tumor and exome) for each subject

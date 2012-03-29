@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #Written by Malachi Griffith
 
 #Input files
@@ -13,7 +13,7 @@ use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 use File::Basename;
-use Cwd 'abs_path';
+use above 'Genome';
 
 my $script_dir;
 my $lib_dir;
@@ -128,7 +128,7 @@ if ($verbose){
 }else{
   $r_cmd .= " 1>$r_cmd_stdout 2>$r_cmd_stderr";
 }
-system($r_cmd);
+Genome::Sys->shellcmd(cmd => $r_cmd);
 
 #Annotate all gene entries in the output file with a cytoband label using the coordinates in the ideogram data file, and the coordinates of the gene
 
@@ -182,7 +182,7 @@ foreach my $results_file (@results_files){
 
     #Overwrite the old file with the new file
     my $mv_cmd = "mv $new_cnv_results_file $results_file";
-    system($mv_cmd);
+    Genome::Sys->shellcmd(cmd => $mv_cmd);
 
   }else{
     print YELLOW, "\n\nCNV results file not found - not possible to annotate with Cytoband info\n\n", RESET;
