@@ -468,9 +468,9 @@ sub importSNVs{
     my $cp_cmd1 = "cp $effects_dir$t1_hq_annotated $new_annotated_file";
     my $cp_cmd2 = "cp $effects_dir$t1_hq_annotated_top $new_annotated_top_file";
     if ($verbose){print YELLOW, "\n\n$cp_cmd1", RESET;}
-    system ($cp_cmd1);
+    Genome::Sys->shellcmd(cmd => $cp_cmd1);
     if ($verbose){print YELLOW, "\n\n$cp_cmd2", RESET;}
-    system ($cp_cmd2);
+    Genome::Sys->shellcmd(cmd => $cp_cmd2);
 
     #Define headers in a variant file
     my @input_headers = qw (chr start stop ref_base var_base var_type gene_name transcript_id species transcript_source transcript_version strand transcript_status var_effect_type coding_pos aa_change score domains1 domains2 unk_1 unk_2);
@@ -631,7 +631,7 @@ sub identifyCnvGenes{
     my $new_dir = "$cnv_dir"."CNView_"."$symbol_list_name"."/";
     unless (-e $new_dir && -d $new_dir){
       my $cnview_cmd = "$cnview_script  --reference_build=$reference_build_name  --cnv_file=$cnv_data_file  --working_dir=$cnv_dir  --sample_name=$common_name  --gene_targets_file=$gene_targets_file  --name='$symbol_list_name'  --force=1";
-      system ($cnview_cmd);
+      Genome::Sys->shellcmd(cmd => $cnview_cmd);
     }
 
     #Store the gene amplification/deletion results files for the full Ensembl gene list so that these file can be annotated
@@ -639,16 +639,16 @@ sub identifyCnvGenes{
       #Copy these files to the top CNV dir
       my $cnv_path1 = "$new_dir"."CNView_"."$symbol_list_name".".tsv";
       my $cnv_path2 = "$cnv_dir"."cnv."."$symbol_list_name".".tsv";
-      system("cp $cnv_path1 $cnv_path2");
+      Genome::Sys->shellcmd(cmd => "cp $cnv_path1 $cnv_path2");
       my $cnv_amp_path1 = "$new_dir"."CNView_"."$symbol_list_name".".amp.tsv";
       my $cnv_amp_path2 = "$cnv_dir"."cnv."."$symbol_list_name".".amp.tsv";
-      system("cp $cnv_amp_path1 $cnv_amp_path2");
+      Genome::Sys->shellcmd(cmd => "cp $cnv_amp_path1 $cnv_amp_path2");
       my $cnv_del_path1 = "$new_dir"."CNView_"."$symbol_list_name".".del.tsv";
       my $cnv_del_path2 = "$cnv_dir"."cnv."."$symbol_list_name".".del.tsv";
-      system("cp $cnv_del_path1 $cnv_del_path2");
+      Genome::Sys->shellcmd(cmd => "cp $cnv_del_path1 $cnv_del_path2");
       my $cnv_ampdel_path1 = "$new_dir"."CNView_"."$symbol_list_name".".ampdel.tsv";
       my $cnv_ampdel_path2 = "$cnv_dir"."cnv."."$symbol_list_name".".ampdel.tsv";
-      system("cp $cnv_ampdel_path1 $cnv_ampdel_path2");
+      Genome::Sys->shellcmd(cmd => "cp $cnv_ampdel_path1 $cnv_ampdel_path2");
       $out_paths->{'wgs'}->{'cnv'}->{'path'} = $cnv_path2;
       $out_paths->{'wgs'}->{'cnv_amp'}->{'path'} = $cnv_amp_path2;
       $out_paths->{'wgs'}->{'cnv_del'}->{'path'} = $cnv_del_path2;
@@ -681,7 +681,7 @@ sub runRnaSeqCufflinksAbsolute{
     my $absolute_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'cufflinks_absolute', '-silent'=>1);
     my $outliers_cmd = "$outlier_genes_absolute_script  --cufflinks_dir=$data_paths->{$label}->{expression}  --ensembl_version=$ensembl_version  --working_dir=$absolute_rnaseq_dir  --verbose=$verbose";
     if ($verbose){print YELLOW, "\n\n$outliers_cmd\n\n", RESET;}
-    system($outliers_cmd);
+    Genome::Sys->shellcmd(cmd => $outliers_cmd);
   }
   #Store the file paths for later processing
   my @subdirs = qw (genes isoforms isoforms_merged);
@@ -725,7 +725,7 @@ sub runRnaSeqTophatJunctionsAbsolute{
     my $absolute_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'tophat_junctions_absolute', '-silent'=>1);
     my $tophat_qc_splice_cmd = "$tophat_alignment_summary_script  --reference_fasta_file=$data_paths->{$label}->{reference_fasta_path}  --tophat_alignment_dir=$data_paths->{$label}->{alignments}  --reference_annotations_dir=$reference_annotations_ucsc_dir  --working_dir=$results_dir  --verbose=$verbose";
     if ($verbose){print YELLOW, "\n\n$tophat_qc_splice_cmd\n\n", RESET;}
-    system($tophat_qc_splice_cmd);
+    Genome::Sys->shellcmd(cmd => $tophat_qc_splice_cmd);
   }
 
   #Store the file paths for later processing
@@ -827,7 +827,7 @@ sub annotateGeneFiles{
       #Replace the original file with the new file
       my $mv_cmd = "mv $new_path $path";
       if ($verbose){print YELLOW, "\n\t\t $mv_cmd", RESET;}
-      system ($mv_cmd);
+      Genome::Sys->shellcmd(cmd => $mv_cmd);
     }
   }
   return();
@@ -885,7 +885,7 @@ sub drugDbIntersections{
         }else{
           my $cmd = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=$drugbank_interactions_dir/DrugBank_WashU_INTERACTIONS.filtered."."$filter".".tsv  --name_col_2=12 > $out";
           if ($verbose){print YELLOW, "\n\t$cmd", RESET;}
-          system ("$cmd");
+          Genome::Sys->shellcmd(cmd => "$cmd");
         }
       }
     }
@@ -946,16 +946,16 @@ sub runSnvBamReadCounts{
         #Summarize the BAM readcounts results for candidate variants - produce descriptive statistics, figures etc.
         if ($verbose){print YELLOW, "\n\n$rc_summary_cmd", RESET;}
         mkdir($output_stats_dir);
-        system($rc_summary_cmd);
+        Genome::Sys->shellcmd(cmd => $rc_summary_cmd);
       }
     }else{
       #First get the read counts for the current file of SNVs (from WGS, Exome, or WGS+Exome)
       if ($verbose){print YELLOW, "\n\n$bam_rc_cmd", RESET;}
-      system($bam_rc_cmd);
+      Genome::Sys->shellcmd(cmd => $bam_rc_cmd);
       #Summarize the BAM readcounts results for candidate variants - produce descriptive statistics, figures etc.
       if ($verbose){print YELLOW, "\n\n$rc_summary_cmd", RESET;}
       mkdir($output_stats_dir);
-      system($rc_summary_cmd);
+      Genome::Sys->shellcmd(cmd => $rc_summary_cmd);
     }
   }
 
@@ -989,7 +989,7 @@ sub runSingleGenomeCnvPlot{
     }else{
       my $cp_cmd = "cp $pdf_path $output_pdf_path";
       if ($verbose){print YELLOW, "\n\t$cp_cmd", RESET;}
-      system($cp_cmd);
+      Genome::Sys->shellcmd(cmd => $cp_cmd);
     }
   }else{
     #The .pdf file was not found.  Presumably this is an older somatic variation build that did not include this step. Generate it now
@@ -1004,7 +1004,7 @@ sub runSingleGenomeCnvPlot{
       }else{
         $single_bam_cnv_plot_cmd .= " 1>$cn_stdout 2>$cn_stderr";
       }
-      system($single_bam_cnv_plot_cmd);
+      Genome::Sys->shellcmd(cmd => $single_bam_cnv_plot_cmd);
     }
   }
 

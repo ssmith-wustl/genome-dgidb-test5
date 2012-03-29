@@ -249,15 +249,15 @@ close(GENE_OUT);
 #Run the drug-gene interaction script on the output file just created
 my $dgi_cmd = "$script_dir"."summary/identifyDruggableGenes.pl  --candidates_file=$snvs_compact_outfile_genelevel --name_col_1=2  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.4.tsv  --name_col_2=12 > $snvs_compact_outfile_genelevel_dgi_antineo";
 print YELLOW, "\n\n$dgi_cmd", RESET;
-system($dgi_cmd);
+Genome::Sys->shellcmd(cmd => $dgi_cmd);
 
 $dgi_cmd = "$script_dir"."summary/identifyDruggableGenes.pl  --candidates_file=$snvs_compact_outfile_genelevel --name_col_1=2  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.5.tsv  --name_col_2=12 > $snvs_compact_outfile_genelevel_dgi_inhibitor";
 print YELLOW, "\n\n$dgi_cmd", RESET;
-system($dgi_cmd);
+Genome::Sys->shellcmd(cmd => $dgi_cmd);
 
 $dgi_cmd = "$script_dir"."summary/identifyDruggableGenes.pl  --candidates_file=$snvs_compact_outfile_genelevel --name_col_1=2  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.6.tsv  --name_col_2=12 > $snvs_compact_outfile_genelevel_dgi_kinase";
 print YELLOW, "\n\n$dgi_cmd", RESET;
-system($dgi_cmd);
+Genome::Sys->shellcmd(cmd => $dgi_cmd);
 
 #Parse the antineoplastic gene hits to allow filtering of the file below?
 open (DRUGGABLE, "$snvs_compact_outfile_genelevel_dgi_antineo") || die "\n\nCould not open file: $snvs_compact_outfile_genelevel_dgi_antineo\n\n";

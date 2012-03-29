@@ -91,19 +91,19 @@ my $tier2_snv_file = $somatic_effects_dir . "snvs.hq.novel.tier2.v2.bed";
 my $tier3_snv_file = $somatic_effects_dir . "snvs.hq.novel.tier3.v2.bed";
 my $cp_cmd = "cp $tier1_snv_file $tier2_snv_file $tier3_snv_file $working_dir";
 if ($verbose){print YELLOW, "\n\n$cp_cmd", RESET;}
-system($cp_cmd);
+Genome::Sys->shellcmd(cmd => $cp_cmd);
 
 
 #Step 2 - put them together in one file:
 my $cat_cmd = "cat $working_dir"."snvs* > $working_dir"."allsnvs.hq.novel.tier123.v2.bed";
 if ($verbose){print YELLOW, "\n\n$cat_cmd", RESET;}
-system($cat_cmd);
+Genome::Sys->shellcmd(cmd => $cat_cmd);
 
 #Step 3 - take it out of bed format to be fed into bam-readcounts:
 my $adapted_file ="$working_dir"."allsnvs.hq.novel.tier123.v2.bed.adapted";
 my $awk_cmd = "awk \'{OFS=\"\\t\";FS=\"\\t\";}{print \$1,\$3,\$3,\$4}\' $working_dir"."allsnvs.hq.novel.tier123.v2.bed | sed \'s/\\//\\t/g\' > $adapted_file";
 if ($verbose){print YELLOW, "\n\n$awk_cmd", RESET;}
-system($awk_cmd);
+Genome::Sys->shellcmd(cmd => $awk_cmd);
 
 
 #Step 4 - run bam readcounts and assess the particular reads for the reference and variant and print out details about the numbers of reads and the percentages for multiple bam files:
@@ -112,7 +112,7 @@ my $normal_bam = $data_paths{normal_bam};
 my $readcounts_outfile = "$adapted_file".".readcounts";
 my $read_counts_cmd = "$script_dir"."borrowed/ndees/give_me_readcounts.pl  --sites_file=$adapted_file --bam_list=\"Tumor:$tumor_bam,Normal:$normal_bam\" --reference_fasta=$data_paths{reference_fasta} --output_file=$readcounts_outfile";
 if ($verbose){print YELLOW, "\n\n$read_counts_cmd", RESET;}
-system($read_counts_cmd);
+Genome::Sys->shellcmd(cmd => $read_counts_cmd);
 
 
 #Step 5 - create a varscan-format file from these outputs:
@@ -120,7 +120,7 @@ system($read_counts_cmd);
 my $readcounts_varscan_file = "$readcounts_outfile".".varscan";
 my $varscan_format_cmd = "$script_dir"."borrowed/kkanchi/create_pseudo_varscan.pl $adapted_file $readcounts_outfile > $readcounts_varscan_file";
 if ($verbose){print YELLOW, "\n\n$varscan_format_cmd", RESET;}
-system($varscan_format_cmd);
+Genome::Sys->shellcmd(cmd => $varscan_format_cmd);
 
 
 #TODO: Replace steps 3-5 above by using the following script:
@@ -139,9 +139,9 @@ system($varscan_format_cmd);
 #Make a copy of the cnvs.hq file
 $cp_cmd = "cp $data_paths{cnvs_hq} $working_dir";
 if ($verbose){print YELLOW, "\n\n$cp_cmd", RESET;}
-system($cp_cmd);
+Genome::Sys->shellcmd(cmd => $cp_cmd);
 my $chmod_cmd = "chmod 664 $working_dir"."cnvs.hq";
-system ($chmod_cmd);
+Genome::Sys->shellcmd(cmd => $chmod_cmd);
 
 my $centromere_file;
 my $gap_file;
@@ -158,7 +158,7 @@ if ($data_paths{display_name} =~ /NCBI\-human\-build36/){
 my $cnvhmm_file = "$working_dir"."cnaseq.cnvhmm";
 my $cnaseg_cmd = "gmt copy-number cna-seg --copy-number-file=$data_paths{cnvs_hq}  --min-markers=4  --detect-somatic  --centromere-file=$centromere_file  --gap-file=$gap_file  --output-file=$cnvhmm_file";
 if ($verbose){print YELLOW, "\n\n$cnaseg_cmd", RESET;}
-system($cnaseg_cmd);
+Genome::Sys->shellcmd(cmd => $cnaseg_cmd);
 
 
 #Step 7 - then, put the cna-seg and varscan-format snv file together in this clonality tool:
@@ -170,7 +170,7 @@ my $r_script_file = "$working_dir"."clonality.R";
 my $uc_common_name = uc($common_name);
 my $clonality_cmd = "gmt validation clonality-plot  --cnvhmm-file=$cnvhmm_file  --output-image=$output_image_file  --r-script-output-file=$r_script_file  --varscan-file=$readcounts_varscan_file  --analysis-type=wgs  --sample-id='$uc_common_name'";
 if ($verbose){print YELLOW, "\n\n$clonality_cmd\n", RESET;}
-system($clonality_cmd);
+Genome::Sys->shellcmd(cmd => $clonality_cmd);
 
 #Keep the files that were needed to run the cna-seg and clonality plot steps so that someone can rerun with different parameters 
 #Delete intermediate files though?

@@ -335,7 +335,7 @@ foreach my $model_id (sort keys %model_list){
     $bam_rc_cmd .= "  1>/dev/null 2>/dev/null";
   }
   print BLUE, "\n\t$bam_rc_cmd", RESET;
-  system ($bam_rc_cmd);
+  Genome::Sys->shellcmd(cmd => $bam_rc_cmd);
 }
 
 #Now parse the read counts files and build a hash of SNVs and their variant allele frequencies (tumor and exome) for each subject
