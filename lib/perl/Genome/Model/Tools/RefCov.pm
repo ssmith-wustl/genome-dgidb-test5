@@ -27,7 +27,7 @@ my $DEFAULT_NORMALIZE_WITH_FORMULA = 0;
 my $DEFAULT_MINIMUM_MAPPING_QUALITY = 0;
 my $DEFAULT_MINIMUM_BASE_QUALITY = 0;
 my $DEFAULT_MINIMUM_DEPTH = 1;
-my $DEFAULT_WINGSPAN = 0;
+#my $DEFAULT_WINGSPAN = 0;
 my $DEFAULT_RELATIVE_COVERAGE_BINS = [500,500,1000,1000,1000,1000,5000,5000,5000];
 
 # Memory/CPU Parameters
@@ -84,11 +84,9 @@ class Genome::Model::Tools::RefCov {
     is => ['Command'],
     has_input => [
         alignment_file_path => {
-            is => 'String',
             doc => 'The path to the alignment file path.',
         },
         roi_file_path => {
-            is => 'String',
             doc => 'The format of the region-of-interest file.',
         },
         alignment_file_format => {
@@ -120,7 +118,6 @@ class Genome::Model::Tools::RefCov {
         wingspan => {
             is => 'Integer',
             doc => 'A base pair wingspan value to add +/- of the input regions',
-            default_value => $DEFAULT_WINGSPAN,
             is_optional => 1,
         },
         min_base_quality => {
@@ -496,10 +493,11 @@ sub _load_roi {
     my $format = $self->roi_file_format;
     my $subclass = ucfirst($format);
     my $class = 'Genome::Model::Tools::RefCov::ROI::'. $subclass;
-    my $regions = $class->create(
-        file => $self->roi_file_path,
-        wingspan => $self->wingspan,
-    );
+    my %roi_params = (file => $self->roi_file_path);
+    if (defined($self->wingspan)) {
+        $roi_params{wingspan} = $self->wingspan;
+    }
+    my $regions = $class->create(%roi_params);
     unless ($regions) {
         die('Failed to load '. $self->roi_file_format .' regions-of-interest file '. $self->roi_file_path );
     }

@@ -148,7 +148,7 @@ sub _resolve_instrument_data_from_sample_default_genotype_id {
 sub _resolve_instrument_data_from_library {
     my ($self, $sample) = @_;
 
-    my $library = Genome::Library->get(name => $sample->name.'-microarraylib');
+    my ($library) = sort {$b->id <=> $a->id} Genome::Library->get(name => $sample->name.'-microarraylib');
     if ( not $library ) {
         $self->error_message('Failed to get microarry library for sample: '.$sample->__display_name__);
         return;
