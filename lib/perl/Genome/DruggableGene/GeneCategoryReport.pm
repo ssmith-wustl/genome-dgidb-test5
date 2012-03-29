@@ -16,7 +16,7 @@ class Genome::DruggableGene::GeneCategoryReport {
     ],
     has => [
         gene_id => { is => 'Text', column_name => 'gene_name_report_id'},
-        gene_name_report => {
+        gene => {
             is => 'Genome::DruggableGene::GeneNameReport',
             id_by => 'gene_id',
             constraint_name => 'gene_name_report_category_association_gene_name_report_id_fkey',
@@ -28,7 +28,7 @@ class Genome::DruggableGene::GeneCategoryReport {
             is_optional => 1,
         },
     ],
-    doc => 'Claim regarding a categorization for a gene name', 
+    doc => 'Claim regarding a categorization for a gene name',
 };
 
 1;

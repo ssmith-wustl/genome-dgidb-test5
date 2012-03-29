@@ -20,7 +20,7 @@ my $tmp_dir = File::Temp::tempdir('BioSamtools-CoverageStatsV2-'.Genome::Sys->us
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/RefCov';
 
-my $bam_file = $data_dir .'/test.bam';
+my $bam_file = $data_dir .'/test_calmd.bam';
 my $regions_file = $data_dir .'/test_regions.bed';
 my $genome_file = $data_dir .'/test.genome';
 

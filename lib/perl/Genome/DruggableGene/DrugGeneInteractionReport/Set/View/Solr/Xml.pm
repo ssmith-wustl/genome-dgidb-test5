@@ -24,7 +24,7 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Solr::Xml {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return '/view/genome/druggable-gene/drug-gene-interaction-report/set/status.html?drug_name_report_name=' . ($subject->members)[0]->drug_name_report_name() . '&gene_name_report_name=' . ($subject->members)[0]->gene_name_report_name();
+                return '/view/genome/druggable-gene/drug-gene-interaction-report/set/status.html?drug_name=' . ($subject->members)[0]->drug_name() . '&gene_name=' . ($subject->members)[0]->gene_name();
             },
         },
         display_label1 => {
@@ -55,8 +55,8 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Solr::Xml {
             calculate_from => ['subject'],
             calculate => q{
                 join(' ',($subject->members)[0]->interaction_types) .
-                ' ' .  ($subject->members)[0]->drug_name_report_name .
-                ' ' .  ($subject->members)[0]->gene_name_report_name .
+                ' ' .  ($subject->members)[0]->drug_name .
+                ' ' .  ($subject->members)[0]->gene_name .
                 ' druggablegene'
             },
         },

@@ -121,6 +121,9 @@
 [submodule "vendor/hotnet"]
 	path = vendor/hotnet
 	url = git@github.com:genome-vendor/HotNet.git
+[submodule "vendor/File-lockf"]
+	path = vendor/File-lockf
+	url = http://github.com/genome-vendor/File-Lockf.git
 [submodule "vendor/statgen"]
 	path = vendor/statgen
 	url = git@github.com:genome-vendor/statgen.git

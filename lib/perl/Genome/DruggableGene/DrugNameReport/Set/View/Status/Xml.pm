@@ -34,6 +34,15 @@ class Genome::DruggableGene::DrugNameReport::Set::View::Status::Xml {
                                 'nomenclature',
                             ],
                         },
+                        {
+                            name => 'drug_categories',
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            aspects => [
+                                'category_name',
+                                'category_value',
+                            ],
+                        },
                     ],
                 },
                 'name',

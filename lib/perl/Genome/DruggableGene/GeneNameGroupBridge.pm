@@ -12,15 +12,15 @@ class Genome::DruggableGene::GeneNameGroupBridge {
     data_source => 'Genome::DataSource::Main',
 
     id_by => [
-        gene_name_group_id => { is => 'Text'},
+        group_id => { is => 'Text', column_name => 'gene_name_group_id'},
         gene_id => { is => 'Text', column_name => 'gene_name_report_id'},
     ],
     has => [
-        gene_name_group => {
+        group => {
             is => 'Genome::DruggableGene::GeneNameGroup',
-            id_by => 'gene_name_group_id',
+            id_by => 'group_id',
         },
-        gene_name_report => {
+        gene => {
             is => 'Genome::DruggableGene::GeneNameReport',
             id_by => 'gene_id',
         },

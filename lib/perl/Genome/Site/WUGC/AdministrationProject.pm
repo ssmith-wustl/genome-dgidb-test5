@@ -11,7 +11,21 @@ class Genome::Site::WUGC::AdministrationProject {
     has => [
         creation_event_id => { is => 'Number', column_name => 'CREATION_EVENT_ID' },
         priority => { is => 'Text', column_name => 'PRIORITY' },
-        project_name => { is => 'Text', column_name => 'PROJECT_NAME' }
+        project_name => { is => 'Text', column_name => 'PROJECT_NAME', doc => 'LIMS project_name' },
+        project_work_orders => {
+            is => 'Genome::Site::WUGC::ProjectWorkOrder',
+            reverse_as => 'administration_project',
+            is_many => 1,
+        },
+        analysis_project_ids => {
+            via => 'project_work_orders',
+            to => 'setup_wo_id'
+        },
+        analysis_projects => {
+            is => 'Genome::Project',
+            is_many => 1,
+            id_by => 'analysis_project_ids'
+        }
     ],
     has_optional => [
         parent_project_id => { is => 'Number', column_name => 'PARENT_PROJECT_ID' },
