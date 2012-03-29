@@ -133,3 +133,6 @@
 [submodule "vendor/MGLtools"]
 	path = vendor/MGLtools
 	url = git@github.com:genome-vendor/MGLtools.git
+[submodule "vendor/savant"]
+	path = vendor/savant
+	url = git://github.com/genome-vendor/savant.git
