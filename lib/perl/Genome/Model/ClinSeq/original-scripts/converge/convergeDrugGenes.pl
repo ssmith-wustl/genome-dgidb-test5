@@ -74,6 +74,7 @@ unless (($build_ids || $model_ids || $model_group_id) && $filter_name && $outdir
 $outdir = &checkDir('-dir'=>$outdir, '-clear'=>"no");
 my $known_gene_drug_table = $outdir . "KnownGeneDrugTable.tsv";
 my $known_interaction_table = $outdir . "KnownInteractionTable.tsv";
+my $gene_family_table = $outdir . "GeneFamilyTable.tsv";
 
 #Get the models/builds
 if ($verbose){print BLUE, "\n\nGet genome models/builds for supplied list", RESET;}
@@ -109,6 +110,7 @@ my $k_i = $k_result->{'interactions'}; #Known druggable gene interactions
 #Define potentially druggable families
 #TODO: Do not hard code these groupings of gene list names here.  Either do all of this using DGIdb
 #Or at least define the meta groups in the same location as where the gene lists are stored and load them here.
+#Then load the same list when ClinSeq is actually launched...  We will need both the gene lists and the gene-family lists (each with human readable names)
 my %gene_families;
 my @potentially_druggable = qw ( Druggable_RussLampel );
 my @kinases = qw ( Kinases KinasesGO ProteinKinaseEntrezQuery LipidKinaseActivity_GO0001727 ProteinSerineThreonineKinaseActivity_GO0004674 ProteinTyrosineKinaseActivity_GO0004713 TyrosineKinaseEntrezQuery );
@@ -119,7 +121,7 @@ my @phospholipases = qw ( PhospholipaseActivity_GO0004620 );
 my @peptidases = qw ( PeptidaseInhibitorActivity_GO0030414 );
 my @transporter = qw ( TransporterActivity_GO0005215 IonChannelActivity_GO0005216 );
 my @growth_factors = qw ( GrowthFactorActivity_GO0008083 );
-my @hormone_related = qw ( HormoneActivity_GO000517 NuclearHormoneReceptor_GO0004879 );
+my @hormone_related = qw ( HormoneActivity_GO0005179 NuclearHormoneReceptor_GO0004879 );
 my @cell_surface = qw ( CellSurface_GO0009986 ExternalSideOfPlasmaMembrane_GO0009897  );
 my @response_to_drug = qw ( DrugMetabolism_GO0017144 TransporterActivity_GO0005215 ResponseToDrug_GO0042493 );
 my @transcription_factors = qw ( TfcatTransFactors FactorBookTransFactors TranscriptionFactorBinding_GO0008134 TranscriptionFactorComplex_GO0005667 );
@@ -132,33 +134,53 @@ my @egfr_pathway = qw ( EGFR1Pathway );
 my @histone_related = qw ( HistoneModification_GO0016570 );
 my @genome_stability = qw ( StabilityEntrezQuery );
 
-$gene_families{'Potentially Druggable'} = \@potentially_druggable;
-$gene_families{'Kinase'} = \@kinases;
-$gene_families{'Ion Channel'} = \@ion_channels;
-$gene_families{'Phophatase'} = \@phosphatases;
-$gene_families{'GPCR'} = \@gpcrs;
-$gene_families{'Phospholipase'} = \@phospholipases;
-$gene_families{'Peptidase'} = \@peptidases;
-$gene_families{'Transporter'} = \@transporter;
-$gene_families{'Growth Factor'} = \@growth_factors;
-$gene_families{'Hormone Related'} = \@hormone_related;
-$gene_families{'Cell Surface'} = \@cell_surface;
-$gene_families{'Response To Drug'} = \@response_to_drug;
-$gene_families{'Transcription Factor'} = \@transcription_factors;
-$gene_families{'Cancer Gene'} = \@cancer_genes;
-$gene_families{'Oncogene'} = \@oncogenes;
-$gene_families{'Tumor Suppressors'} = \@tumor_suppressors;
-$gene_families{'DNA Repair'} = \@dna_repair;
-$gene_families{'Cancer Pathway'} = \@cancer_pathway;
-$gene_families{'EGFR Pathway'} = \@egfr_pathway;
-$gene_families{'Histone Related'} = \@histone_related;
-$gene_families{'Genome Stability'} = \@genome_stability;
+$gene_families{'Potentially Druggable'}{list} = \@potentially_druggable;
+$gene_families{'Potentially Druggable'}{order} = 1;
+$gene_families{'Kinase'}{list} = \@kinases;
+$gene_families{'Kinase'}{order} = 2;
+$gene_families{'Ion Channel'}{list} = \@ion_channels;
+$gene_families{'Ion Channel'}{order} = 3;
+$gene_families{'Phophatase'}{list} = \@phosphatases;
+$gene_families{'Phophatase'}{order} = 4;
+$gene_families{'GPCR'}{list} = \@gpcrs;
+$gene_families{'GPCR'}{order} = 5;
+$gene_families{'Phospholipase'}{list} = \@phospholipases;
+$gene_families{'Phospholipase'}{order} = 6;
+$gene_families{'Peptidase'}{list} = \@peptidases;
+$gene_families{'Peptidase'}{order} = 7;
+$gene_families{'Transporter'}{list} = \@transporter;
+$gene_families{'Transporter'}{order} = 8;
+$gene_families{'Growth Factor'}{list} = \@growth_factors;
+$gene_families{'Growth Factor'}{order} = 9;
+$gene_families{'Hormone Related'}{list} = \@hormone_related;
+$gene_families{'Hormone Related'}{order} = 10;
+$gene_families{'Cell Surface'}{list} = \@cell_surface;
+$gene_families{'Cell Surface'}{order} = 11;
+$gene_families{'Response To Drug'}{list} = \@response_to_drug;
+$gene_families{'Response To Drug'}{order} = 12;
+$gene_families{'Transcription Factor'}{list} = \@transcription_factors;
+$gene_families{'Transcription Factor'}{order} = 13;
+$gene_families{'Cancer Gene'}{list} = \@cancer_genes;
+$gene_families{'Cancer Gene'}{order} = 14;
+$gene_families{'Oncogene'}{list} = \@oncogenes;
+$gene_families{'Oncogene'}{order} = 15;
+$gene_families{'Tumor Suppressors'}{list} = \@tumor_suppressors;
+$gene_families{'Tumor Suppressors'}{order} = 16;
+$gene_families{'DNA Repair'}{list} = \@dna_repair;
+$gene_families{'DNA Repair'}{order} = 17;
+$gene_families{'Cancer Pathway'}{list} = \@cancer_pathway;
+$gene_families{'Cancer Pathway'}{order} = 18;
+$gene_families{'EGFR Pathway'}{list} = \@egfr_pathway;
+$gene_families{'EGFR Pathway'}{order} = 19;
+$gene_families{'Histone Related'}{list} = \@histone_related;
+$gene_families{'Histone Related'}{order} = 20;
+$gene_families{'Genome Stability'}{list} = \@genome_stability;
+$gene_families{'Genome Stability'}{order} = 21;
 
-print Dumper %gene_families;
-
-
-my $p_result = &parsePotentiallyDruggableFiles('-files'=>$files, '-event_types'=>\@event_types);
- 
+my $p_result = &parsePotentiallyDruggableFiles('-files'=>$files, '-event_types'=>\@event_types, '-gene_families'=>\%gene_families);
+my $p_gf = $p_result->{'gene_fams'}; #Potentially druggable gene families
+my $p_g = $p_result->{'genes'};      #Potentially druggable genes
+#print Dumper $p_result; 
 
 
 #Generate a header for the event types output columns
@@ -173,7 +195,7 @@ my $et_header_s = join("\t", @et_header);
 #A.) Generate Gene -> patient events <- known drugs table (all drugs that target that gene)
 print BLUE, "\n\nWriting (gene -> patient events <- known drugs) table to: $known_gene_drug_table", RESET;
 open (OUT, ">$known_gene_drug_table") || die "\n\nCould not open output file: $known_gene_drug_table\n\n";
-print OUT "gene\tgene_name\tgrand_patient_count\tgrand_patient_list\tdrug_count\tdrug_list\t$et_header_s\n";
+print OUT "gene\tgrand_patient_count\tgrand_patient_list\tdrug_count\tdrug_list\t$et_header_s\n";
 foreach my $gene (sort keys %{$k_g}){
 	my $gene_name = $k_g->{$gene}->{gene_name};
 	my $grand_patient_list = $k_g->{$gene}->{grand_list};
@@ -203,7 +225,7 @@ foreach my $gene (sort keys %{$k_g}){
 		}
 	}
 	my $et_values_s = join("\t", @et_values);
-	print OUT "$gene\t$gene_name\t$grand_patient_count\t$grand_patient_list_s\t$drug_count\t$drug_list_s\t$et_values_s\n";
+	print OUT "$gene\t$grand_patient_count\t$grand_patient_list_s\t$drug_count\t$drug_list_s\t$et_values_s\n";
 }
 close(OUT);
 
@@ -211,7 +233,7 @@ close(OUT);
 #B.) Generate Interaction -> patient events <- known drug table (only the one drug of the interaction)
 print BLUE, "\n\nWriting (interaction -> patient events <- known drug) table to: $known_interaction_table", RESET;
 open (OUT, ">$known_interaction_table") || die "\n\nCould not open output file: $known_interaction_table\n\n";
-print OUT "gene\tgene_name\tgrand_patient_count\tgrand_patient_list\tdrug_count\tdrug_list\t$et_header_s\n";
+print OUT "gene\tgrand_patient_count\tgrand_patient_list\tdrug_count\tdrug_list\t$et_header_s\n";
 foreach my $interaction (sort keys %{$k_i}){
   my $mapped_gene_name = $k_i->{$interaction}->{mapped_gene_name};
 	my $gene_name = $k_i->{$interaction}->{gene_name};
@@ -238,16 +260,82 @@ foreach my $interaction (sort keys %{$k_i}){
 		}
 	}
 	my $et_values_s = join("\t", @et_values);
-	print OUT "$mapped_gene_name\t$gene_name\t$grand_patient_count\t$grand_patient_list_s\t1\t$drug_list_s\t$et_values_s\n";
+	print OUT "$mapped_gene_name\t$grand_patient_count\t$grand_patient_list_s\t1\t$drug_list_s\t$et_values_s\n";
 }
 close(OUT);
 
 
+#C.) Generate Gene Family -> patient events (either patient counts or hits) <- Gene Family Members (those that are actually affected)
+@et_header = ();
+foreach my $et (@event_types){
+	push(@et_header, "$et"."_sample_count");
+	push(@et_header, "$et"."_sample_list");
+	push(@et_header, "$et"."_gene_count");
+	push(@et_header, "$et"."_gene_list");
+	push(@et_header, "$et"."_hit_count");
+}
+$et_header_s = join("\t", @et_header);
+
+print BLUE, "\n\nWriting (gene family -> patient events <- gene family member) table to: $gene_family_table", RESET;
+open (OUT, ">$gene_family_table") || die "\n\nCould not open output file: $gene_family_table\n\n";
+print OUT "gene_family\tgrand_patient_count\tgrand_patient_list\tgrand_gene_count\tgrand_gene_list\tgrand_hit_count\t$et_header_s\n";
+foreach my $family (sort {$gene_families{$a}->{order} <=> $gene_families{$b}->{order}} keys %gene_families){
+  my %patient_list = %{$p_gf->{$family}->{grand_list}->{patient_list}};
+  my @grand_patient_list = keys %patient_list;
+	my @tmp = sort { substr($a, &lengthOfAlpha($a)) <=> substr($b, &lengthOfAlpha($b)) } @grand_patient_list;
+  my $grand_patient_list_s = join (",", @tmp);
+	my $grand_patient_count = scalar(@grand_patient_list);
+
+  my %gene_list = %{$p_gf->{$family}->{grand_list}->{gene_list}};
+  my @grand_gene_list = keys %gene_list;
+  @tmp = sort @grand_gene_list;
+  my $grand_gene_list_s = join (",", @tmp);
+	my $grand_gene_count = scalar(@grand_gene_list);
+
+  my $grand_hit_count = 0;
+  foreach my $g (keys %gene_list){
+    $grand_hit_count += $gene_list{$g};
+  }
+
+	my @et_values;
+	foreach my $et (@event_types){
+		if (defined($p_gf->{$family}->{$et})){
+			my %patients = %{$p_gf->{$family}->{$et}->{patient_list}};
+			my @patient_list = keys %patients;
+			my @tmp = sort { substr($a, &lengthOfAlpha($a)) <=> substr($b, &lengthOfAlpha($b)) } @patient_list;;
+      my $patient_list_s = join (",", @tmp);
+			my $patient_count = scalar(@patient_list);
+			push(@et_values, $patient_count);
+			push(@et_values, $patient_list_s);
+
+			my %genes = %{$p_gf->{$family}->{$et}->{gene_list}};
+			my @gene_list = keys %genes;
+      @tmp = sort @gene_list;
+      my $gene_list_s = join (",", @tmp);
+			my $gene_count = scalar(@gene_list);
+			push(@et_values, $gene_count);
+			push(@et_values, $gene_list_s);
+
+      my $hit_count = 0;
+      foreach my $g (keys %genes){
+        $hit_count += $genes{$g};
+      }
+      push(@et_values, $hit_count);
+		}else{
+			push(@et_values, 0);
+      push(@et_values, "NA");
+			push(@et_values, 0);
+      push(@et_values, "NA");
+			push(@et_values, 0);
+		}
+	}
+	my $et_values_s = join("\t", @et_values);
+  print OUT "$family\t$grand_patient_count\t$grand_patient_list_s\t$grand_gene_count\t$grand_gene_list_s\t$grand_hit_count\t$et_values_s\n";
+
+}
 
 
-
-
-
+close(OUT);
 
 
 print "\n\n";
@@ -508,13 +596,14 @@ sub parsePotentiallyDruggableFiles{
   my %args = @_;
   my $files = $args{'-files'};
   my @event_types = @{$args{'-event_types'}};
+  my $families = $args{'-gene_families'};
 
   print BLUE, "\n\nParsing files containing potentially druggable genes data", RESET;
 
   #Store all results organized by gene and separately by gene family (e.g. kinases, ion channels etc.)
   my %result;
   my %genes;
-  my %families;
+  my %gene_fams;
 
 	#Note that the annotation files contain all qualifying variant events (the associated gene may or may not belong to a gene family of interest)
   foreach my $patient (keys %{$files}){
@@ -536,16 +625,72 @@ sub parsePotentiallyDruggableFiles{
             $p++;
           }
           $header = 0;
+
+          #Check for columns of data needed for the specified gene families.  Throw warning every time a requested column is missing
+          foreach my $family (sort {$families->{$a}->{order} <=> $families->{$b}->{order}} keys %{$families}){
+            my @list = @{$families->{$family}->{list}};
+            foreach my $member (@list){
+              unless($columns{$member}){
+                print YELLOW, "\n\nCould not find column for gene family: $family, member: $member", RESET;
+              }
+            }
+          }
           next();
         }
         my $mapped_gene_name = $line[$columns{'mapped_gene_name'}{position}];
  
+        #Go through each gene family and aggregate patient by event type
+        foreach my $family (sort {$families->{$a}->{order} <=> $families->{$b}->{order}} keys %{$families}){
+          my @list = @{$families->{$family}->{list}};
+          foreach my $family_member (@list){
+            #Skip undefined family member values
+            unless ($columns{$family_member}){next();}
+            #Get the value, for this patient, and this event type, and this gene family member (e.g. does this patient have an SNV in this gene that is a kinase)
+            #If the value is 0, skip
+            my $value = $line[$columns{$family_member}{position}];
+            unless ($value){next();}
+            
+            if (defined($gene_fams{$family}{$event_type})){
+              my $patients = $gene_fams{$family}{$event_type}{patient_list};
+              $patients->{$patient}++;
+              my $genes = $gene_fams{$family}{$event_type}{gene_list};
+              $genes->{$mapped_gene_name}++;
+            }else{
+              my %patients;
+              $patients{$patient} = 1;
+              $gene_fams{$family}{$event_type}{patient_list} = \%patients;
+              my %genes;
+              $genes{$mapped_gene_name} = 1;
+              $gene_fams{$family}{$event_type}{gene_list} = \%genes;
+            }
+
+            #Create or update the grand list of patients with ANY events hitting this gene
+            if (defined($gene_fams{$family}{grand_list})){
+              my $patients = $gene_fams{$family}{grand_list}{patient_list};
+              $patients->{$patient}++;
+              my $genes = $gene_fams{$family}{grand_list}{gene_list};
+              $genes->{$mapped_gene_name}++;
+            }else{
+              my %patients;
+              $patients{$patient} = 1;
+              $gene_fams{$family}{grand_list}{patient_list} = \%patients;
+              my %genes;
+              $genes{$mapped_gene_name} = 1;
+              $gene_fams{$family}{grand_list}{gene_list} = \%genes;
+            }
 
 
 
+
+          }
+        }
       }
     }
   }
+
+  $result{genes} = \%genes;
+  $result{gene_fams} = \%gene_fams;
+  return(\%result);
 }
 
 
