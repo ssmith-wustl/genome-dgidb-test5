@@ -30,6 +30,7 @@ my $i = Genome::InstrumentData::Imported->create(
     original_data_path => $temp_directory,
     import_format => 'sanger fastq',
     sequencing_platform => 'solexa',
+    read_count => 1,
 );
 ok($i, "made instrument data for the sample");
 

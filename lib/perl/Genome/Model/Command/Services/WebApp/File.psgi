@@ -40,6 +40,12 @@ sub dispatch_request {
         my @filter;
         for($params->{'filter'}){
             push @filter, 'drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_types!:potentiator/na' if /default/;
+            push @filter, 'drug.is_approved=1,drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_attributes.name=is_known_action,interaction_attributes.value=yes,is_potentiator=0' if /1/;
+            push @filter, 'drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_attributes.name=is_known_action,interaction_attributes.value=yes,is_potentiator=0' if /2/;
+            push @filter, 'drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,(is_untyped=0 or is_known_action=1)' if /3/;
+            push @filter, 'drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,is_inhibitor=1,(is_untyped=0 or is_known_action=1)' if /4/;
+            push @filter, 'drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,gene.is_kinase=1,(is_untyped=0 or is_known_action=1)' if /5/;
+            push @filter, 'drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,drug.is_antineoplastic=1,(is_untyped=0 or is_known_action=1)' if /6/;
         }
 
         my @sources;

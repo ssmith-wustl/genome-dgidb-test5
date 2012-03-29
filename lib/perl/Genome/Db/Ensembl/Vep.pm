@@ -257,6 +257,8 @@ sub execute {
 
         $format = "ensembl";
         $input_file = $tmpfile;
+        
+        close(OUTFILE);
     }
 
     my $script_path = $VEP_SCRIPT_PATH.$self->{version}.".pl";

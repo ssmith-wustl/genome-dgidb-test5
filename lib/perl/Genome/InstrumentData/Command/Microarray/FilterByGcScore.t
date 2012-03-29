@@ -16,6 +16,8 @@ ok(!$filter, 'create failed w/ invalid min');
 
 $filter = Genome::InstrumentData::Command::Microarray::FilterByGcScore->create(min => 0.7);
 ok($filter, 'create filter');
+ok($filter->filter({gc_score => undef}), 'did not filter undef');
+ok($filter->filter({gc_score => -1}), 'did not filter -1');
 ok($filter->filter({gc_score => .71}), 'did not filter .71');
 ok($filter->filter({gc_score => .70}), 'did not filter .70');
 ok(!$filter->filter({gc_score => .69}), 'filtered .69');

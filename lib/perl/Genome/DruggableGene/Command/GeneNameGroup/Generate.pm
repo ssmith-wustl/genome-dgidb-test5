@@ -1,11 +1,11 @@
-package Genome::DruggableGene::Command::GeneNameReport::GenerateGroups;
+package Genome::DruggableGene::Command::GeneNameGroup::Generate;
 
 use strict;
 use warnings;
 use Genome;
 use List::MoreUtils qw/ uniq /;
 
-class Genome::DruggableGene::Command::GeneNameReport::GenerateGroups {
+class Genome::DruggableGene::Command::GeneNameGroup::Generate{
     is => 'Genome::Command::Base',
     doc => 'Generate a ton of groups to bundle genes with similar alternate names',
 };
@@ -50,19 +50,19 @@ sub create_groups {
     print "Putting " . scalar(keys(%{$alt_to_entrez})) . " entrez gene symbol hugo names into groups\n";
     for my $alt (keys %{$alt_to_entrez}) {
         $progress_counter++;
-        my @genes = map{$_->gene_name_report} @{$alt_to_entrez->{$alt}};
+        my @genes = map{$_->gene} @{$alt_to_entrez->{$alt}};
 
         my $group = Genome::DruggableGene::GeneNameGroup->get(name => $alt);
         if($group){ #hugo name group already exists
             for my $gene (@genes){#make sure each gene is already in this group
                 Genome::DruggableGene::GeneNameGroupBridge->create(
                     gene_id => $gene->id,
-                    gene_name_group_id => $group->id
+                    gene_id => $group->id
                 ) if not Genome::DruggableGene::GeneNameGroupBridge->get(gene_id => $gene->id);
             }
         }else{
             $group = Genome::DruggableGene::GeneNameGroup->create(name => $alt);
-            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $_->id, gene_name_group_id => $group->id) for @genes;
+            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $_->id, gene_id => $group->id) for @genes;
         }
         print "$progress_counter : created new group for $alt\n" if rand() < .001;
     }
@@ -90,11 +90,11 @@ sub add_members {
         for my $alt($gene->alternate_names){
             $direct_groups{$alt}++ if Genome::DruggableGene::GeneNameGroup->get(name=>$alt);
 
-            my @alt_genes = map{$_->gene_name_report} @{$alt_to_other->{$alt}};
+            my @alt_genes = map{$_->gene} @{$alt_to_other->{$alt}};
             for my $alt_gene (@alt_genes){
                 #Get the group if it exists and add it to our list of indirectly found groups
                 my $bridge = Genome::DruggableGene::GeneNameGroupBridge->get(gene_id => $alt_gene->id);
-                $indirect_groups{$bridge->gene_name_group->name}++ if $bridge;
+                $indirect_groups{$bridge->gene->name}++ if $bridge;
             }
         }
 
@@ -102,7 +102,7 @@ sub add_members {
         if(scalar keys %direct_groups == 1){
             my ($group_name) = keys %direct_groups;
             my $group_id = Genome::DruggableGene::GeneNameGroup->get(name=>$group_name)->id;
-            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $gene->id, gene_name_group_id => $group_id);
+            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $gene->id, gene_id => $group_id);
             print "$progress_counter : added $gene_name to $group_name directly\n" if rand() < .001;
             next;
         }
@@ -110,7 +110,7 @@ sub add_members {
         if(scalar keys %direct_groups == 0 and scalar keys %indirect_groups == 1){
             my ($group_name) = keys %indirect_groups;
             my $group_id = Genome::DruggableGene::GeneNameGroup->get(name=>$group_name)->id;
-            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $gene->id, gene_name_group_id => $group_id);
+            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $gene->id, gene_id => $group_id);
             print "$progress_counter : added $gene_name to $group_name indirectly\n" if rand() < .001;
             next;
         }

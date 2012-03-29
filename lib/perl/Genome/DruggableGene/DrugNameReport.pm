@@ -25,23 +25,23 @@ class Genome::DruggableGene::DrugNameReport {
         },
         drug_alt_names => {
             is => 'Genome::DruggableGene::DrugAlternateNameReport',
-            reverse_as => 'drug_name_report',
+            reverse_as => 'drug',
             is_many => 1,
         },
         drug_categories => {
             is => 'Genome::DruggableGene::DrugCategoryReport',
-            reverse_as => 'drug_name_report',
+            reverse_as => 'drug',
             is_many => 1,
         },
         interactions => {
             is => 'Genome::DruggableGene::DrugGeneInteractionReport',
-            reverse_as => 'drug_name_report',
+            reverse_as => 'drug',
             is_many => 1,
         },
         genes => {
             is => 'Genome::DruggableGene::GeneNameReport',
             via => 'interactions',
-            to => 'gene_name_report',
+            to => 'gene',
             is_many => 1,
         },
         citation => {

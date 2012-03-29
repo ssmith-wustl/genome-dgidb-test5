@@ -50,6 +50,15 @@ EOS
 sub execute {
     my $self = shift;
 
+    my $jar_path = $self->picard_path .'/CollectMultipleMetrics.jar';
+    unless (-e $jar_path) {
+        if ($self->use_version < 1.40) {
+            die('Please use Picard version 1.40 or greater.');
+        } else {
+            die('Missing jar file: '. $jar_path);
+        }
+    }
+
     my $cmd = $self->picard_path .'/CollectMultipleMetrics.jar net.sf.picard.analysis.CollectMultipleMetrics';
     $cmd   .= ' OUTPUT='. $self->output_basename  .' INPUT='. $self->input_file;
     if (defined($self->stop_after)) {

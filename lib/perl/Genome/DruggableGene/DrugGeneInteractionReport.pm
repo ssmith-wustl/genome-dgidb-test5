@@ -107,8 +107,8 @@ if ($INC{"Genome/Search.pm"}) {
 sub add_to_search_index_queue {
     my $self = shift;
     my $set = Genome::DruggableGene::DrugGeneInteractionReport->define_set(
-        drug_name_report_name => $self->drug_name_report_name,
-        gene_name_report_name => $self->gene_name_report_name,
+        drug_name => $self->drug->name,
+        gene_name => $self->gene->name,
     );
     Genome::Search::Queue->create(
         subject_id => $set->id,

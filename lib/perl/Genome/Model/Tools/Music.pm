@@ -2,8 +2,8 @@ package Genome::Model::Tools::Music;
 use strict;
 use warnings;
 use Genome;
-#our $VERSION = '0.02';
-our $VERSION = 'latest';
+our $VERSION = '0.03';
+#our $VERSION = 'latest';
 
 class Genome::Model::Tools::Music {
     is => ['Command::Tree'],

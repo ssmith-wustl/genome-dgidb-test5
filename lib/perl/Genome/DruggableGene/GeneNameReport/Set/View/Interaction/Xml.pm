@@ -101,11 +101,11 @@ sub get_interactions_node {
         $gene->addChild($doc->createAttribute('key', 'gene_name'));
         $gene->addChild($doc->createTextNode($interaction->gene_name));
         $item->addChild($gene);
-        my $bridge = Genome::DruggableGene::GeneNameGroupBridge->get(gene_name_report=>Genome::DruggableGene::GeneNameReport->get(name=>$interaction->gene_name));
+        my $bridge = Genome::DruggableGene::GeneNameGroupBridge->get(gene=>Genome::DruggableGene::GeneNameReport->get(name=>$interaction->gene_name));
         if($bridge){
             my $group = $doc->createElement('group');
             $group->addChild($doc->createTextNode(
-                    $bridge->gene_name_group->name
+                    $bridge->group->name
                 ));
             $item->addChild($group);
         }
@@ -129,27 +129,54 @@ sub get_interactions_node {
 
     return $interactions;
 }
-
 sub get_filtered_out_interactions_node {
     my $self = shift;
     my $doc = $self->_xml_doc;
-    my $filtered_out_interactions= $doc->createElement("filtered_out_interactions");
+    my $interactions= $doc->createElement("filtered_out_interactions");
 
-    for my $filtered_out_interaction ($self->filtered_out_interactions){
+    for my $interaction ($self->filtered_out_interactions){
         my $item = $doc->createElement('item');
-        my $line = $filtered_out_interaction->__display_name__;
+        $interactions->addChild($item);
+        my $drug = $doc->createElement('drug');
+        $drug->addChild($doc->createAttribute('key', 'drug_name'));
+        $drug->addChild($doc->createTextNode($interaction->drug_name));
+        $item->addChild($drug);
+        my $human_readable_drug_name = $doc->createElement('human_readable_drug_name');
+        $human_readable_drug_name->addChild($doc->createTextNode($interaction->drug->human_readable_name));
+        $item->addChild($human_readable_drug_name);
+        my $human_readable_gene_name = $doc->createElement('human_readable_gene_name');
+        $human_readable_gene_name->addChild($doc->createTextNode($interaction->gene->human_readable_name));
+        $item->addChild($human_readable_gene_name);
+        my $gene = $doc->createElement('gene');
+        $gene->addChild($doc->createAttribute('key', 'gene_name'));
+        $gene->addChild($doc->createTextNode($interaction->gene_name));
+        $item->addChild($gene);
+        my $bridge = Genome::DruggableGene::GeneNameGroupBridge->get(gene=>Genome::DruggableGene::GeneNameReport->get(name=>$interaction->gene_name));
+        if($bridge){
+            my $group = $doc->createElement('group');
+            $group->addChild($doc->createTextNode(
+                    $bridge->group->name
+                ));
+            $item->addChild($group);
+        }
+        my $interaction_types = $doc->createElement('interaction_type');
+        $interaction_types->addChild($doc->createTextNode(join(', ', $interaction->interaction_types)));
+        $item->addChild($interaction_types);
+        my $identifier = $doc->createElement('identifier');
+        $item->addChild($identifier);
+
+        my @identifiers;
         IDENTIFIER: while (my ($identifier, $genes) = each %{$self->identifier_to_genes}){
             for my $identified_gene (@$genes){
-                if($identified_gene == $filtered_out_interaction->gene){
-                    $line .= ' ( ' . $identifier . ' ) ';
+                if($identified_gene == $interaction->gene){
+                    push @identifiers, $identifier;
                     next IDENTIFIER;
                 }
             }
         }
-        $item->addChild($doc->createTextNode($line));
-        $filtered_out_interactions->addChild($item);
+        $identifier->addChild($doc->createTextNode(join(', ', @identifiers)));
     }
 
-    return $filtered_out_interactions;
+    return $interactions;
 }
 1;
