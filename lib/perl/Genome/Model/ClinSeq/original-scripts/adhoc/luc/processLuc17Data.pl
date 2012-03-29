@@ -106,7 +106,7 @@ while(<IN>){
   $infiles{$c}{readcounts_path_hg19} = $readcounts_files_dir_hg19 . $new_file_name;
   my $cp_cmd = "cp $infiles{$c}{original_path} $infiles{$c}{new_path}";
   print YELLOW, "\n\t$cp_cmd", RESET;
-  system($cp_cmd);
+  Genome::Sys->shellcmd(cmd => $cp_cmd);
 
 }
 close(IN);
@@ -155,7 +155,7 @@ close(OUT);
 print BLUE, "\n\nRunning liftOver", RESET;
 my $liftover_cmd = "liftOver $distinct_coords_file_hg18 $chain_file $distinct_coords_file_hg19 $distinct_coords_file_unmapped";
 print YELLOW, "\n\t$liftover_cmd\n", RESET;
-system($liftover_cmd);
+Genome::Sys->shellcmd(cmd => $liftover_cmd);
 
 #Parse the liftover BED file to get the converted hg19 coords
 my %coords_hg19;
@@ -411,7 +411,7 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
     }else{
       #System call to ClinSeq GetBamReadCounts tool
       #print YELLOW, "\n\t$wgs_readcounts_cmd", RESET;
-      #system($wgs_readcounts_cmd);
+      #Genome::Sys->shellcmd(cmd => $wgs_readcounts_cmd);
 
       #Or call directly using a Genome API call...
       Genome::Model::ClinSeq::Command::GetBamReadCounts->execute('positions_file'=>$hg18_path, 'data_paths_file'=>$wgs_data_paths_file, 'output_file'=>$readcounts_path_hg18, 'no_fasta_check'=>1);
@@ -433,7 +433,7 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
       print YELLOW, "\n\t\tFile already exists - skipping", RESET;
     }else{
       #print YELLOW, "\n\t$rnaseq_readcounts_cmd", RESET;
-      #system($rnaseq_readcounts_cmd);
+      #Genome::Sys->shellcmd(cmd => $rnaseq_readcounts_cmd);
 
       #Or call directly using a Genome API call...
       Genome::Model::ClinSeq::Command::GetBamReadCounts->execute('positions_file'=>$hg19_path, 'data_paths_file'=>$rnaseq_data_paths_file, 'output_file'=>$readcounts_path_hg19, 'no_fasta_check'=>1);
@@ -579,7 +579,7 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
       print BLUE, "\n\t\tGetting RNAseq expression matrix files", RESET;
       #print YELLOW, "\n\t$rnaseq_data_cmd", RESET;
       mkdir($rnaseq_results_dir);
-      system($rnaseq_data_cmd);
+      Genome::Sys->shellcmd(cmd => $rnaseq_data_cmd);
       $infiles{$c}{rnaseq_expression_matrix} = "$rnaseq_results_dir"."isoforms_merged/isoforms.merged.fpkm.expsort.tsv";
     }
   }
@@ -601,7 +601,7 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
       print BLUE, "\n\t\tGenerating figures and statistics for the RNAseq to WGS variant allele frequency comparisons", RESET;
       print YELLOW, "\n\t$summary_cmd", RESET;
       mkdir($summary_dir);
-      system($summary_cmd);
+      Genome::Sys->shellcmd(cmd => $summary_cmd);
       $infiles{$c}{vaf_summary_dir} = $summary_dir;
     }
   }
@@ -748,7 +748,7 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
     mkdir($tophat_summary_dir);
     my $summary_cmd = "/gscmnt/sata206/techd/git/genome/lib/perl/Genome/Model/ClinSeq/original-scripts/qc/tophatAlignmentSummary.pl  --reference_fasta_file='/gscmnt/sata420/info/model_data/2857786885/build102671028/all_sequences.fa'  --reference_annotations_dir='/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/'  --working_dir=$tophat_summary_dir  --tophat_alignment_dir='$rnaseq_alignments_dir'  --verbose=1";
     print YELLOW, "\n\t$summary_cmd", RESET;
-    system($summary_cmd);
+    Genome::Sys->shellcmd(cmd => $summary_cmd);
   }
 }
 

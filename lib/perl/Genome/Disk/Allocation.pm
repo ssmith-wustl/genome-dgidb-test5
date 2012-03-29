@@ -1,5 +1,4 @@
-#!/usr/local/bin/perl
-
+#!/usr/bin/perl
 
 package Genome::Disk::Allocation;
 
@@ -107,17 +106,8 @@ our @APIPE_DISK_GROUPS = qw/
     systems_benchmarking
 /;
 our $CREATE_DUMMY_VOLUMES_FOR_TESTING = 1;
-my $MAX_VOLUMES = 5;
-my $MINIMUM_ALLOCATION_SIZE = 0;
-my $MAX_ATTEMPTS_TO_LOCK_VOLUME = 30;
+our $MAX_VOLUMES = 5;
 my @PATHS_TO_REMOVE; # Keeps track of paths created when no commit is on
-my @REQUIRED_PARAMETERS = qw/
-    disk_group_name
-    allocation_path
-    kilobytes_requested
-    owner_class_name
-    owner_id
-/;
 
 sub allocate { return shift->create(@_); }
 sub create {
@@ -170,14 +160,28 @@ sub move {
 
 sub archive {
     my ($class, %params) = @_;
-    confess "Archive not implemented!";
+    unless (Genome::Sys->current_user_has_role('archive')) {
+        confess "Only users with role 'archive' can archive allocations!";
+    }
     return $class->_execute_system_command('_archive', %params);
 }
 
 sub unarchive {
     my ($class, %params) = @_;
-    confess "Unarchive not implemented!";
+    unless (Genome::Sys->current_user_has_role('archive')) {
+        confess "Only users with role 'archive' can unarchive allocations!";
+    }
     return $class->_execute_system_command('_unarchive', %params);
+}
+
+sub is_archived {
+    my $self = shift;
+    return $self->volume->is_archive;
+}
+
+sub archive_path {
+    my $self = shift;
+    return join('/', $self->absolute_path, 'archive.tar');
 }
 
 sub _create {
@@ -186,7 +190,7 @@ sub _create {
 
     # Make sure that required parameters are provided
     my @missing_params;
-    for my $param (@REQUIRED_PARAMETERS) {
+    for my $param (qw/ disk_group_name allocation_path kilobytes_requested owner_class_name owner_id /) {
         unless (exists $params{$param} and defined $params{$param}) {
             push @missing_params, $param;
         }
@@ -453,6 +457,7 @@ sub _move {
     my $kilobytes_requested = delete $params{kilobytes_requested};
     my $group_name = delete $params{disk_group_name};
     my $new_mount_path = delete $params{target_mount_path};
+    my $pattern = delete $params{pattern};
     if (%params) {
         confess "Extra parameters given to allocation move method: " . join(',', sort keys %params);
     }
@@ -482,7 +487,7 @@ sub _move {
             confess "Target volume $new_mount_path matches current mount path, cannot move!";
         }
 
-        $new_volume_lock = Genome::Volume->get_lock($new_mount_path);
+        $new_volume_lock = Genome::Disk::Volume->get_lock($new_mount_path);
         unless ($new_volume_lock) {
             confess "Could not get lock for volume $new_mount_path";
         }
@@ -499,6 +504,22 @@ sub _move {
             exclude => [$self->mount_path],
         );
         ($new_volume, $new_volume_lock) = $self->_lock_volume_from_list($kilobytes_requested, @candidate_volumes);
+    }
+
+    my $old_allocation_dir = $self->absolute_path;
+    my $new_allocation_dir = join('/', $new_volume->mount_path, $self->group_subdirectory, $self->allocation_path);
+
+    # Create target directory and check for errors. This is especially relevant for archiving, since archive volumes
+    # are only mounted on a few hosts and it's expected that directory creation will fail on all other hosts.
+    my $create_dir_rv = eval { Genome::Sys->create_directory($new_allocation_dir) };
+    if (!$create_dir_rv or $@ or !(-d $new_allocation_dir)) {
+        Genome::Sys->unlock_resource(resource_lock => $new_volume_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+
+        my $error = $@;
+        my $msg = "Failed to create directory $new_allocation_dir";
+        $msg .= ", reason: $error" if $error;
+        confess $msg;
     }
 
     $self->status_message("Moving allocation " . $self->id . " from volume " . $old_volume->mount_path . " to a new volume");
@@ -518,11 +539,16 @@ sub _move {
     );
 
     # Now copy data to the new location
-    my $old_allocation_dir = $self->absolute_path;
-    my $new_allocation_dir = join('/', $new_volume->mount_path, $self->group_subdirectory, $self->allocation_path);
     $self->status_message("Copying data from $old_allocation_dir to $new_allocation_dir");
     push @PATHS_TO_REMOVE, $new_allocation_dir; # If the process dies while copying, need to clean up the new directory
-    unless (dircopy($old_allocation_dir, $new_allocation_dir)) {
+    my $copy_rv = eval { 
+        Genome::Sys->rsync_directory(
+            source_directory => $old_allocation_dir,
+            target_directory => $new_allocation_dir,
+            file_pattern => $pattern,
+        )
+    };
+    unless ($copy_rv) {
         Genome::Sys->remove_directory_tree($new_allocation_dir) if -d $new_allocation_dir;
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess 'Could not copy allocation ' . $self->id . " from $old_allocation_dir to $new_allocation_dir : $!";
@@ -557,6 +583,76 @@ sub _move {
     }
     $old_volume->unallocated_kb($old_volume->unallocated_kb + $original_allocation_size);
     $self->_create_observer($self->_unlock_closure($old_volume_lock));
+    return 1;
+}
+
+sub _archive {
+    my ($class, %params) = @_;
+    my $id = delete $params{allocation_id};
+    if (%params) {
+        confess "Extra parameters given to allocation move method: " . join(',', sort keys %params);
+    }
+
+    my $mode = $class->_retrieve_mode;
+    my $self = Genome::Disk::Allocation->$mode($id);
+    unless ($self) {
+        confess "Found no allocation with ID $id";
+    }
+
+    my $tar_rv = Genome::Sys->tar(
+        tar_path => $self->archive_path,
+        input_directory => $self->absolute_path,
+    );
+    unless ($tar_rv) {
+        confess "Could not create tarball for allocation contents!";
+    }
+
+    my $tar_file = File::Basename::basename($self->archive_path);
+    my $rv = $self->_move(
+        allocation_id => $id,
+        target_mount_path => $self->volume->archive_mount_path,
+        kilobytes_requested => $self->kilobytes_requested,
+        pattern => $tar_file,
+    );
+    unless ($rv) {
+        confess "Could not archive allocation " . $self->id . ", failed to move it from " .
+            $self->mount_path . " to " . $self->volume->archive_mount_path;
+    }
+    
+    return 1;
+}
+
+sub _unarchive {
+    my ($class, %params) = @_;
+    my $id = delete $params{allocation_id};
+    if (%params) {
+        confess "Extra parameters given to allocation unarchive method: " . join(',', sort keys %params);
+    }
+
+    my $mode = $class->_retrieve_mode;
+    my $self = Genome::Disk::Allocation->$mode($id);
+    unless ($self) {
+        confess "Found no allocation with ID $id";
+    }
+
+    my $rv = $self->_move(
+        allocation_id => $self->id,
+        target_mount_path => $self->volume->active_mount_path,
+        kilobytes_requested => $self->kilobytes_requested,
+    );
+    unless ($rv) {
+        confess "Could not unarchive allocation " . $self->id . ", failed to move it from " .
+            $self->volume->archive_mount_path . " to " . $self->volume->active_mount_path;
+    }
+
+    my $untar_rv = Genome::Sys->untar(
+        tar_path => $self->archive_path,
+        target_directory => $self->absolute_path,
+        delete_tar => 1,
+    );
+    unless ($untar_rv) {
+        confess "Could not untar tarball at " . $self->absolute_path;
+    }
     return 1;
 }
 
@@ -703,7 +799,6 @@ sub _create_directory_closure {
         my $dir = eval{ Genome::Sys->create_directory($path) };
         if (defined $dir and -d $dir) {
             chmod(02775, $dir);
-            print STDERR "Created allocation directory at $path\n";
         }
         else {
             print STDERR "Could not create allocation directcory at $path!\n";
@@ -764,7 +859,6 @@ sub _verify_no_child_allocations {
 sub _check_kb_requested {
     my ($class, $kb) = @_;
     return 0 unless defined $kb;
-    return 0 if $kb < $MINIMUM_ALLOCATION_SIZE;
     return 1;
 }
 
@@ -816,9 +910,10 @@ sub _lock_volume_from_list {
     my $volume;
     my $volume_lock;
     my $attempts = 0;
+    my $max_attempts = 30;
     while (1) {
-        if ($attempts++ > $MAX_ATTEMPTS_TO_LOCK_VOLUME) {
-            confess "Could not lock a volume after $MAX_ATTEMPTS_TO_LOCK_VOLUME attempts, giving up";
+        if ($attempts++ > $max_attempts) {
+            confess "Could not lock a volume after $max_attempts attempts, giving up";
         }
 
         # Pick a random volume from the list of candidates and try to lock it

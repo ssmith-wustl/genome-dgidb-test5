@@ -7,18 +7,34 @@
         <br />
         <textarea name='genes'/>
         <br />
-        Exclusively Use Sources:<br />
-        <input type="checkbox" name="ttd" value='1' />TTD<br />
-        <input type="checkbox" name="db" value='1' />Drug Bank<br />
+        Exclusively Use Sources, leave unchecked to not limit sources:<br />
+        <input type="checkbox" name="ttd" value='1' checked='true'/><a href='http://bidd.nus.edu.sg/group/ttd/ttd.asp'>TTD</a><br />
+        <input type="checkbox" name="db" value='1' checked='true'/><a href='http://www.drugbank.ca/'>Drug Bank</a><br />
         <br />
         Filters: <br />
         <input type='radio' name='filter' value='default' checked='true'/>Drug is not (withdrawn or nutraceutical) and interaction is not (potentiator or na)<br />
+        <br />
+        <input type='radio' name='filter' value='1'/>drug.is_approved=1, drug.is_withdrawn=0, drug.is_nutraceutical=0, interaction_attributes.name=is_known_action, interaction_attributes.value=yes, is_potentiator=0<br />
+        <br />
+        <input type='radio' name='filter' value='2'/>drug.is_withdrawn=0, drug.is_nutraceutical=0, interaction_attributes.name=is_known_action, interaction_attributes.value=yes, is_potentiator=0<br />
+        <br />
+        <input type='radio' name='filter' value='3'/>drug.is_withdrawn=0, drug.is_nutraceutical=0, is_potentiator=0, (is_untyped=0 or is_known_action=1)<br />
+        <br />
+        <input type='radio' name='filter' value='4'/>drug.is_withdrawn=0, drug.is_nutraceutical=0, is_potentiator=0, is_inhibitor=1, (is_untyped=0 or is_known_action=1)<br />
+        <br />
+        <input type='radio' name='filter' value='5'/>drug.is_withdrawn=0, drug.is_nutraceutical=0, is_potentiator=0, gene.is_kinase=1, (is_untyped=0 or is_known_action=1)<br />
+        <br />
+        <input type='radio' name='filter' value='6'/>drug.is_withdrawn=0, drug.is_nutraceutical=0, is_potentiator=0, drug.is_antineoplastic=1, (is_untyped=0 or is_known_action=1)<br />
+        <br />
         <input type='radio' name='filter' value='none'/>none<br />
         <br />
         Output Format: <br />
         <input type='radio' name='return' value='html' checked='true'/>HTML<br />
         <input type='radio' name='return' value='tsv' />TSV<br />
         <input type='radio' name='return' value='xml' />XML<br />
+        <br />
         <button id='submit-button'>Find Drug Interactions</button>
+        <br />
+        <br />
     </form>
 </div>

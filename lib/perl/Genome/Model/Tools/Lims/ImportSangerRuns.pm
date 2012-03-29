@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 
+require Compress::Zlib;
 use Regexp::Common;
 
 class Genome::Model::Tools::Lims::ImportSangerRuns {

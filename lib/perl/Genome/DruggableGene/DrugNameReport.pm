@@ -25,23 +25,23 @@ class Genome::DruggableGene::DrugNameReport {
         },
         drug_alt_names => {
             is => 'Genome::DruggableGene::DrugAlternateNameReport',
-            reverse_as => 'drug_name_report',
+            reverse_as => 'drug',
             is_many => 1,
         },
         drug_categories => {
             is => 'Genome::DruggableGene::DrugCategoryReport',
-            reverse_as => 'drug_name_report',
+            reverse_as => 'drug',
             is_many => 1,
         },
         interactions => {
             is => 'Genome::DruggableGene::DrugGeneInteractionReport',
-            reverse_as => 'drug_name_report',
+            reverse_as => 'drug',
             is_many => 1,
         },
         genes => {
             is => 'Genome::DruggableGene::GeneNameReport',
             via => 'interactions',
-            to => 'gene_name_report',
+            to => 'gene',
             is_many => 1,
         },
         citation => {
@@ -125,6 +125,15 @@ sub original_data_source_url {
     }
 
     return $url;
+}
+
+sub human_readable_name {
+    my $self = shift;
+    #Pick a name that is likely human readable
+    my ($name) =  map{$_->alternate_name}grep{$_->nomenclature eq 'TTD_primary_drug_name' or $_->nomenclature eq 'Primary DrugBank drug name'} $self->drug_alt_names;
+    ($name) =  map{$_->alternate_name} $self->drug_alt_names unless $name;
+    $name = $self->name unless $name;
+    return $name;
 }
 
 1;

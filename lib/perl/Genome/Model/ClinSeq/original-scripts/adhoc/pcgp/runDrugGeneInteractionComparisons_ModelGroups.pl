@@ -158,7 +158,7 @@ foreach my $group_name (sort keys %mg_list){
     #Make a copy of the SNV anno file to a subdir in the working dir
     my $new_file = $snv_subdir . "$sample_name"."_"."$snv_anno_file_name";
     my $cp_cmd = "cp $snv_anno_file $new_file";
-    system($cp_cmd);
+    Genome::Sys->shellcmd(cmd => $cp_cmd);
 
     #Grab the SNV records - transcript level and collapse multiple transcript records to one record per SNV position
     open (SNV_IN, "$snv_anno_file") || die "\n\nCould not open SNV input file: $snv_anno_file\n\n";
@@ -276,7 +276,6 @@ foreach my $group_name (sort keys %mg_list){
         my %group_names;
         $group_names{$group_name} = 1;
         $master_genes{$gene_name}{group_names} = \%group_names;
-
       }
     }
   }
@@ -338,15 +337,15 @@ close(GENE_OUT);
 #Run the drug-gene interaction script on the output file just created
 my $dgi_cmd = "$script_dir"."summary/identifyDruggableGenes.pl  --candidates_file=$snvs_compact_outfile_genelevel --name_col_1=2  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.4.tsv  --name_col_2=12 > $snvs_compact_outfile_genelevel_dgi_antineo";
 print YELLOW, "\n\n$dgi_cmd", RESET;
-system($dgi_cmd);
+Genome::Sys->shellcmd(cmd => $dgi_cmd);
 
 $dgi_cmd = "$script_dir"."summary/identifyDruggableGenes.pl  --candidates_file=$snvs_compact_outfile_genelevel --name_col_1=2  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.5.tsv  --name_col_2=12 > $snvs_compact_outfile_genelevel_dgi_inhibitor";
 print YELLOW, "\n\n$dgi_cmd", RESET;
-system($dgi_cmd);
+Genome::Sys->shellcmd(cmd => $dgi_cmd);
 
 $dgi_cmd = "$script_dir"."summary/identifyDruggableGenes.pl  --candidates_file=$snvs_compact_outfile_genelevel --name_col_1=2  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.6.tsv  --name_col_2=12 > $snvs_compact_outfile_genelevel_dgi_kinase";
 print YELLOW, "\n\n$dgi_cmd", RESET;
-system($dgi_cmd);
+Genome::Sys->shellcmd(cmd => $dgi_cmd);
 
 #Parse the antineoplastic gene hits to allow filtering of the file below?
 open (DRUGGABLE, "$snvs_compact_outfile_genelevel_dgi_antineo") || die "\n\nCould not open file: $snvs_compact_outfile_genelevel_dgi_antineo\n\n";

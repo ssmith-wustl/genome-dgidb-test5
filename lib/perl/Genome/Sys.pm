@@ -9,14 +9,12 @@ use File::Spec;
 use File::Basename;
 use Carp;
 use IO::File;
+use LWP::Simple;
 
 our $VERSION = $Genome::VERSION;
 
 class Genome::Sys {};
 
-#####
-# API for accessing software and data by version
-#####
 sub dbpath {
     my ($class, $name, $version) = @_;
     unless ($version) {
@@ -75,6 +73,7 @@ sub swpath {
 #####
 # Temp file management
 #####
+
 sub _temp_directory_prefix {
     my $self = shift;
     my $base = join("_", map { lc($_) } split('::',$self->class));
@@ -182,6 +181,135 @@ sub create_temp_directory {
 #####
 # Basic filesystem operations
 #####
+
+sub tar {
+    my ($class, %params) = @_;
+    my $tar_path = delete $params{tar_path};
+    my $input_directory = delete $params{input_directory};
+    my $input_pattern = delete $params{input_pattern};
+    $input_pattern = '*' unless defined $input_pattern;
+
+    if (%params) {
+        Carp::confess "Extra parameters given to tar method: " . join(', ', sort keys %params);
+    }
+
+    unless ($tar_path) {
+        Carp::confess "Not given path at which tar should be created!";
+    }
+    if (-e $tar_path) {
+        Carp::confess "File exists at $tar_path, refusing to overwrite with new tarball!";
+    }
+
+    unless ($input_directory) {
+        Carp::confess "Not given directory containing input files!";
+    }
+    unless (-d $input_directory) {
+        Carp::confess "No input directory found at $input_directory";
+    }
+
+    my $current_directory = getcwd;
+    unless (chdir $input_directory) {
+        Carp::confess "Could not change directory to $input_directory";
+    }
+
+    if (Genome::Sys->directory_is_empty($input_directory)) {
+        Carp::confess "Cannot create tarball for empty directory $input_directory!";
+    }
+
+    my $cmd = "tar -cf $tar_path $input_pattern";
+    my $rv = Genome::Sys->shellcmd(
+        cmd => $cmd,
+    );
+    unless ($rv) {
+        Carp::confess "Could not create tar file at $tar_path containing files in " .
+            "$input_directory matching pattern $input_pattern";
+    }
+
+    unless (chdir $current_directory) {
+        Carp::confess "Could not change directory back to $current_directory";
+    }
+    return 1;
+}
+
+sub untar {
+    my ($class, %params) = @_;
+    my $tar_path = delete $params{tar_path};
+    my $target_directory = delete $params{target_directory};
+    my $delete_tar = delete $params{delete_tar};
+
+    if (%params) {
+        Carp::confess "Extra parameters given to untar method: " . join(', ', sort keys %params);
+    }
+    unless ($tar_path) {
+        Carp::confess "Not given path to tar file to be untarred!";
+    }
+    unless (-e $tar_path) {
+        Carp::confess "No file found at $tar_path!";
+    }
+    $target_directory = getcwd unless $target_directory;
+    $delete_tar = 0 unless defined $delete_tar;
+
+    my $current_directory = getcwd;
+    unless (chdir $target_directory) {
+        Carp::confess "Could not change directory to $target_directory";
+    }
+
+    my $rv = Genome::Sys->shellcmd(
+        cmd => "tar -xf $tar_path",
+    );
+    unless ($rv) {
+        Carp::confess "Could not untar $tar_path into $target_directory";
+    }
+
+    unless (chdir $current_directory) {
+        Carp::confess "Could not change directory back to $current_directory";
+    }
+
+    if ($delete_tar) {
+        unlink $tar_path;
+    }
+
+    return 1;
+}
+
+sub directory_is_empty {
+    my ($class, $directory) = @_;
+    my @files = glob("$directory/*");
+    if (@files) {
+        return 0;
+    }
+    return 1;
+}
+
+sub rsync_directory {
+    my ($class, %params) = @_;
+    my $source_dir = delete $params{source_directory};
+    my $target_dir = delete $params{target_directory};
+    my $pattern = delete $params{file_pattern};
+
+    unless ($source_dir) {
+        Carp::confess "Not given directory to copy from!";
+    }
+    unless (-d $source_dir) {
+        Carp::confess "No directory found at $source_dir";
+    }
+    unless ($target_dir) {
+        Carp::confess "Not given directory to copy to!";
+    }
+    unless (-d $target_dir) {
+        Genome::Sys->create_directory($target_dir);
+    }
+    $pattern = '' unless $pattern;
+
+    my $source = join('/', $source_dir, $pattern);
+    my $rv = Genome::Sys->shellcmd(
+        cmd => "rsync -rlHpgt $source $target_dir",
+    );
+    unless ($rv) {
+        confess "Could not copy data matching pattern $source to $target_dir";
+    }
+    return 1;
+}
 
 sub line_count {
     my ($self, $path) = @_;
@@ -352,6 +480,25 @@ sub open_file_for_reading {
     return $self->_open_file($file, 'r');
 }
 
+sub download_file_to_directory {
+    my ($self, $url, $destination_dir) = @_;
+
+    unless (-d $destination_dir){
+        Carp::croak("You wanted to download $url to $destination_dir but that directory doesn't exist!");
+    }
+
+    my $resp =  getstore($url, $destination_dir . "/" . (split("/", $url))[-1]);
+
+    if($resp =~ /4\d\d/){
+        Carp::croak("You wanted to download $url but it doesn't exist or you don't have access! ($resp)");
+    }
+    if($resp =~/5\d\d/){
+        Carp::croak("You wanted to download $url but there appears to be a problem with the host! ($resp)");
+    }
+
+    return RC_OK eq $resp;
+}
+
 sub open_file_for_writing {
     my ($self, $file) = @_;
 
@@ -442,9 +589,14 @@ sub sudo_username {
 
 sub current_user_is_admin {
     my $class = shift;
+    return Genome::Sys->current_user_has_role('admin');
+}
+
+sub current_user_has_role {
+    my ($class, $role_name) = @_;
     my $user = Genome::Sys::User->get(username => $class->username);
     return 0 unless $user;
-    return $user->has_role_by_name('admin');
+    return $user->has_role_by_name($role_name);
 }
 
 sub cmd_output_who_dash_m {

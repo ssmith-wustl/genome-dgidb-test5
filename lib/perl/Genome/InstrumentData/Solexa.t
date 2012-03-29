@@ -7,11 +7,8 @@ use Test::More;
 
 use above 'Genome';
 
-BEGIN {
-    use_ok('Genome::InstrumentData::Solexa');
-}
-my $pe1 = Genome::InstrumentData::Solexa->get(2776188659);
-ok(!$pe1,'Paired End Read 1 not found for lane');
+use_ok('Genome::InstrumentData::Solexa') or die;
+
 my $pe2 = Genome::InstrumentData::Solexa->get(2862658358);
 isa_ok($pe2,'Genome::InstrumentData::Solexa');
 is($pe2->is_paired_end,1,'Paired End status found for lane');
@@ -23,6 +20,7 @@ is($pe2->total_bases_read('forward-only'),51200, 'forward only total_bases_read 
 is($pe2->total_bases_read('reverse-only'),51200, 'reverse only total_bases_read on paired end instrument data');
 is($pe2->total_bases_read('forward-only') + $pe2->total_bases_read('reverse-only'), $pe2->total_bases_read,
    'forward and reverse pairs add up to total bases');
+is($pe2->read_count, 1024, 'read count');
 
 done_testing();
 exit;

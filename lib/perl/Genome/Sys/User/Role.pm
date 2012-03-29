@@ -8,8 +8,8 @@ use Carp;
 
 class Genome::Sys::User::Role {
     id_generator => '-uuid',
-    table_name => 'subject.role',
-    data_source => 'Genome::DataSource::Main',
+    table_name => 'GENOME_SYS_USER_ROLE',
+    data_source => 'Genome::DataSource::GMSchema',
     id_by => [
         id => { is => 'Text' },
     ],

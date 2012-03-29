@@ -27,7 +27,7 @@ class Genome::Model::Tools::Varscan::LohSegments {
         min_freq_for_het     => { is => 'Text', doc => "Minimum variant allele frequency in normal to consider a heterozygote" , is_optional => 0, is_input => 1, default => 40},
         max_freq_for_het     => { is => 'Text', doc => "Maximum variant allele frequency in normal to consider a heterozygote" , is_optional => 0, is_input => 1, default => 60},
         output_basename  => { is => 'Number', doc => "Basename for creating output files", is_optional => 1, is_input => 1, default_value => '0.07'},
-
+        varscan_cn_basename  => { is => 'Number', doc => "Basename used for VarScan copy number calling, if plotting these is desired", is_optional => 1, is_input => 1},
     ],
     has_param => [
         lsf_resource => { value => 'select[tmp>1000] rusage[tmp=1000]'},
@@ -80,7 +80,7 @@ sub execute {                               # replace with real execution logic.
     open(OUTFILE, ">$output_basename.infile");
     print OUTFILE "chrom\tposition\tnfreq\ttfreq\tstatus\n";
 
-    open(SEGMENTS, ">$output_basename.segments");
+    open(SEGMENTS, ">$output_basename.rawsegments");
     print SEGMENTS "chrom\tchr_start\tchr_stop\tnum_snps\tone\n";
 
     my $input = new FileHandle ($self->variant_file);
@@ -116,6 +116,16 @@ sub execute {                               # replace with real execution logic.
             if($normal_cov >= $self->min_coverage && $tumor_cov >= $self->min_coverage && $nfreq >= $min_freq_for_het && $nfreq <= $max_freq_for_het)
             {
                 $stats{'num_het'}++;
+                ## New logic for segmentation ##
+                if($status eq "LOH")
+                {
+                    $status = 1;
+                }
+                else
+                {
+                    $status = 0;
+                }
+
                 print OUTFILE join("\t", $chrom, $pos, $nfreq, $tfreq, $status) . "\n";
                 
                 ## If the call was LOH ##
@@ -189,6 +199,7 @@ sub execute {                               # replace with real execution logic.
     close(OUTFILE);
     close(SEGMENTS);
 
+
     ## Open HTML File ##
     open(INDEX, ">$output_basename.index.html") or die "Can't open outfile: $!\n";
     print INDEX "<HTML><BODY><TABLE CELLSPACING=0 CELLPADDING=5 BORDER=0 WIDTH=\"100%\">\n";
@@ -197,8 +208,11 @@ sub execute {                               # replace with real execution logic.
 
     open(OUTFILE, ">$output_basename.R") or die "Can't open outfile: $!\n";
     print OUTFILE "snp <- read.table(\"$output_basename.infile\", header=TRUE)\n";
-    print OUTFILE "lohsegs <- read.table(\"$output_basename.segments\", header=TRUE)\n";
+    print OUTFILE "lohsegs <- read.table(\"$output_basename.rawsegments\", header=TRUE)\n";
     print OUTFILE "minus1 <- snp\$pos - snp\$pos - 1\n";
+
+    my @cbs_files = ();
+    my $cbs_fileCounter = 0;
 
     for(my $chrCounter = 1; $chrCounter <= 24; $chrCounter++)
     {
@@ -207,16 +221,29 @@ sub execute {                               # replace with real execution logic.
         $chrom = "Y" if($chrCounter == 24);
 
         my $outfile = $output_basename . ".$chrom.png";
+        my $outfile_seg = $output_basename . ".$chrom.LOH.seg";
         my $outfile_dist = $output_basename . ".$chrom.dist.png";
+
+        ## Save name of file ##
+        $cbs_files[$cbs_fileCounter] = $outfile_seg;
+        $cbs_fileCounter++;
         
         print OUTFILE qq{
 png("$outfile", height=300, width=800)
 maxpos <- max(snp\$pos[snp\$chrom=="$chrom"])
+library(DNAcopy)
+CNA.object <- CNA(snp\$status[snp\$chrom=="$chrom"], snp\$chrom[snp\$chrom=="$chrom"], snp\$position[snp\$chrom=="$chrom"], data.type="binary", sampleid=c("Chromosome $chrom"))
+segment.CNA.object <- segment(CNA.object)
+write.table(segment.CNA.object\$output, file="$outfile_seg")
+pvalue.segment.CNA.object <- segment.CNA.object\$output
+detach(package:DNAcopy)
 par(mar=c(4,4,2,2))
 plot(snp\$pos[snp\$chrom=="$chrom"], snp\$nfreq[snp\$chrom=="$chrom"], pch=19, cex=0.25, ylim=c(0,100), xlim=c(1,maxpos), xlab="Position on chr$chrom", ylab="Variant Allele Freq", col="blue")
 points(snp\$pos[snp\$chrom=="$chrom"], snp\$tfreq[snp\$chrom=="$chrom"], pch=19, cex=0.25, ylim=c(0,100), col="green")
 segments(lohsegs\$chr_start[lohsegs\$chrom=="$chrom"], lohsegs\$one[lohsegs\$chrom=="$chrom"], lohsegs\$chr_stop[lohsegs\$chrom=="$chrom"], lohsegs\$one[lohsegs\$chrom=="$chrom"], col="red")
-points(snp\$pos[snp\$chrom=="$chrom" & snp\$status=="LOH"], minus1[snp\$chrom=="$chrom" & snp\$status=="LOH"], pch=19, cex=0.5, ylim=c(0,100), col="red")
+segments(pvalue.segment.CNA.object\$loc.start[pvalue.segment.CNA.object\$seg.mean>0.10], pvalue.segment.CNA.object\$seg.mean[pvalue.segment.CNA.object\$seg.mean>0.10] * 100, pvalue.segment.CNA.object\$loc.end[pvalue.segment.CNA.object\$seg.mean>0.10], pvalue.segment.CNA.object\$seg.mean[pvalue.segment.CNA.object\$seg.mean>0.10] * 100, col="red", lwd=2)
+hetDiff <- abs(snp\$nfreq - snp\$tfreq)
+points(snp\$pos[snp\$chrom=="$chrom" & snp\$status=="1"], minus1[snp\$chrom=="$chrom" & snp\$status=="1"], pch=19, cex=0.5, ylim=c(0,100), col="red")
 dev.off()
 png("$outfile_dist", height=300, width=800)
 par(mar=c(4,4,2,2))
@@ -229,6 +256,9 @@ lines(prop.table(freqDistTumor), col="green", type="l")
 dev.off()
 };
 
+#points(snp\$pos[snp\$chrom=="$chrom" & snp\$status=="1"], hetDiff[snp\$chrom=="$chrom" & snp\$status=="1"], pch=19, cex=0.5, ylim=c(0,100), col="red")
+
+
         ## Get Image filename ##
         my @temp = split(/\//, $outfile);
         my $numdirs = @temp;
@@ -238,8 +268,18 @@ dev.off()
         $numdirs = @temp2;
         my $image_filename_dist = $temp2[$numdirs - 1];
 
+        if($self->varscan_cn_basename)
+        {
+            my $copy_number_filename = $self->varscan_cn_basename . ".$chrom.jpg";
+            
+            print INDEX "<TD style=\"border: 1px solid black; text-align: center\"><strong>CHROMOSOME $chrom</strong><BR><A HREF=\"$copy_number_filename\"><IMG SRC=\"$copy_number_filename\" HEIGHT=240 WIDTH=320 BORDER=0></A><BR><A HREF=\"$image_filename\"><IMG SRC=\"$image_filename\" HEIGHT=240 WIDTH=320 BORDER=0></A><BR><A HREF=\"$image_filename_dist\"><IMG SRC=\"$image_filename_dist\" HEIGHT=240 WIDTH=320 BORDER=0></A></TD>\n";            
+        }
+        else
+        {
+            print INDEX "<TD style=\"border: 1px solid black; text-align: center\"><strong>CHROMOSOME $chrom</strong><BR><A HREF=\"$image_filename\"><IMG SRC=\"$image_filename\" HEIGHT=240 WIDTH=320 BORDER=0></A><BR><A HREF=\"$image_filename_dist\"><IMG SRC=\"$image_filename_dist\" HEIGHT=240 WIDTH=320 BORDER=0></A></TD>\n";            
+        }
 
-        print INDEX "<TD><A HREF=\"$image_filename\"><IMG SRC=\"$image_filename\" HEIGHT=240 WIDTH=320 BORDER=0></A><BR><A HREF=\"$image_filename_dist\"><IMG SRC=\"$image_filename_dist\" HEIGHT=240 WIDTH=320 BORDER=0></A></TD>\n";
+
         $num_printed_in_column++;
 
         if($num_printed_in_column >= 4)
@@ -252,11 +292,25 @@ dev.off()
     
     close(OUTFILE);
 
+
     system("R --no-save < $output_basename.R");
 
     print INDEX "</TR></TABLE></BODY></HTML>\n";
     close(INDEX);
-
+    
+    ## Open File for CBS-loh segments ##
+    open(LOHSEG, ">$output_basename.segments.cbs") or die "Can't open outfile: $!\n";
+    print LOHSEG "chrom\tchr_start\tchr_stop\tnum_markers\tseg_mean\n";
+    foreach my $cbs_file (@cbs_files)
+    {
+        if(-e $cbs_file)
+        {
+            my $segments = parse_segmented_loh($cbs_file);
+            print LOHSEG "$segments\n";
+        }
+    }
+    
+    close(LOHSEG);
 
     return 1;
 }
@@ -268,9 +322,34 @@ dev.off()
 #
 ################################################################################################
 
-sub process_loh_region
+sub parse_segmented_loh
 {
-    
+	my $FileName = shift(@_);
+
+        my $segments = "";
+
+	my $input = new FileHandle ($FileName);
+	my $lineCounter = 0;
+	
+	while (<$input>)
+	{
+		chomp;
+		my $line = $_;
+		$lineCounter++;		
+
+                $line =~ s/\"//g;
+                
+                if($lineCounter > 1)
+                {
+        		my ($id, $name, $chrom, $start, $stop, $num_mark, $seg_mean) = split(/\s+/, $line);
+                        $segments .= "\n" if($segments);
+                        $segments .= join("\t", $chrom, $start, $stop, $num_mark, $seg_mean);
+                }
+	}
+	
+	close($input);	
+
+        return($segments);
 }
 
 1;

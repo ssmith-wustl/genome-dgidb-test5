@@ -579,7 +579,7 @@ sub start {
 
     # Regardless of how this goes, build requested should be unset. And we also want to know what software was used.
     $self->model->build_requested(0);
-    $self->software_revision($self->snapshot_revision) unless $self->software_revision;
+    $self->software_revision(Genome::Sys->snapshot_revision) unless $self->software_revision;
 
     eval {
         # Validate build for start and collect tags that represent problems.
@@ -689,19 +689,8 @@ sub validate_instrument_data{
     my $self = shift;
     my @tags;
     my @instrument_data = $self->instrument_data;
-    my @instrument_data_solexa = grep{$_->isa('Genome::InstrumentData::Solexa')} @instrument_data;
-    for my $instrument_data (@instrument_data_solexa){
-        unless ($instrument_data->clusters){
-            push @tags, UR::Object::Tag->create(
-                type => 'error',
-                properties => ['instrument_data'],
-                desc => 'no clusters for instrument data (' . $instrument_data->id  . ') assigned to build',
-            );
-        }
-    }
-    my @instrument_data_454 = grep{$_->isa('Genome::InstrumentData::454')}@instrument_data;
-    for my $instrument_data (@instrument_data_454){
-        unless ($instrument_data->total_reads){
+    for my $instrument_data (@instrument_data){
+        unless ($instrument_data->read_count){
             push @tags, UR::Object::Tag->create(
                 type => 'error',
                 properties => ['instrument_data'],
@@ -1983,56 +1972,6 @@ sub diff_metrics {
     }
 
     return %diffs;
-}
-
-sub snapshot_revision {
-    my $self = shift;
-
-    # Previously we just used UR::Util::used_libs_perl5lib_prefix but this did not
-    # "detect" a software revision when using code from PERL5LIB or compile-time
-    # lib paths. Since it is common for developers to run just Genome from a Git
-    # checkout we really want to record what versions of UR, Genome, and Workflow
-    # were used.
-
-    my @orig_inc = @INC;
-    my @libs = ($INC{'UR.pm'}, $INC{'Genome.pm'}, $INC{'Workflow.pm'});
-    die $self->error_message('Did not find all three modules loaded (UR, Workflow, and Genome).') unless @libs == 3;
-
-    # assemble list of "important" libs
-    @libs = map { File::Basename::dirname($_) } @libs;
-    push @libs, UR::Util->used_libs;
-
-    # remove trailing slashes
-    map { $_ =~ s/\/+$// } (@libs, @orig_inc);
-
-    @libs = $self->_uniq(@libs);
-
-    # preserve the list order as appeared @INC
-    my @inc;
-    for my $inc (@orig_inc) {
-        push @inc, grep { $inc eq $_ } @libs;
-    }
-
-    @inc = $self->_uniq(@inc);
-
-    # if the only path is like /gsc/scripts/opt/genome/snapshots/genome-1213/lib/perl then just call it genome-1213
-    # /gsc/scripts/opt/genome/snapshots/genome-1213/lib/perl -> genome-1213
-    # /gsc/scripts/opt/genome/snapshots/custom/genome-foo/lib/perl -> custom/genome-foo
-    if (@inc == 1 and $inc[0] =~ /^\/gsc\/scripts\/opt\/genome\/snapshots\//) {
-        $inc[0] =~ s/^\/gsc\/scripts\/opt\/genome\/snapshots\///;
-        $inc[0] =~ s/\/lib\/perl$//;
-    }
-
-    return join(':', @inc);
-}
-
-
-sub _uniq {
-    my $self = shift;
-    my @list = @_;
-    my %seen = ();
-    my @unique = grep { ! $seen{$_} ++ } @list;
-    return @unique;
 }
 
 sub input_differences_from_model {

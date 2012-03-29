@@ -185,7 +185,7 @@ data[,"read_count_log2"] = log2(data[,"read_count"]+1)
 pdf("TranscriptJunctionReadCounts_Log2_Hist.pdf")
 print({
 	ylabel = paste("Frequency (n = ", nonzero_count, " detected transcripts)", sep="")
-	m <- ggplot(data, aes(x=read_count_log2)); m + geom_histogram(aes(y = ..density.., fill= ..count..)) + geom_density() + opts(title="Distribution of exon junction read counts - Transcript level") + xlab("Gene Junction Read Count (log2)") + ylab(ylabel)
+	m <- ggplot(data, aes(x=read_count_log2)); m + geom_histogram(aes(y = ..density.., fill= ..count..)) + geom_density() + opts(title="Distribution of exon junction read counts - Transcript level") + xlab("Transcript Junction Read Count (log2)") + ylab(ylabel)
 })
 dev.off()
 

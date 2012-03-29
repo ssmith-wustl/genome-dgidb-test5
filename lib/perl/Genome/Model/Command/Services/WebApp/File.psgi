@@ -37,25 +37,32 @@ sub dispatch_request {
         chomp @gene_names;
         @gene_names = grep{/[\w\d]/}@gene_names;
         @gene_names = map{uc $_}@gene_names;
-        my $filter;
+        my @filter;
         for($params->{'filter'}){
-            $filter = 'drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_types!:potentiator/na' if /default/;
-            $filter = '' if /none/;
+            push @filter, 'drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_types!:potentiator/na' if /default/;
+            push @filter, 'drug.is_approved=1,drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_attributes.name=is_known_action,interaction_attributes.value=yes,is_potentiator=0' if /1/;
+            push @filter, 'drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_attributes.name=is_known_action,interaction_attributes.value=yes,is_potentiator=0' if /2/;
+            push @filter, 'drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,(is_untyped=0 or is_known_action=1)' if /3/;
+            push @filter, 'drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,is_inhibitor=1,(is_untyped=0 or is_known_action=1)' if /4/;
+            push @filter, 'drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,gene.is_kinase=1,(is_untyped=0 or is_known_action=1)' if /5/;
+            push @filter, 'drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,drug.is_antineoplastic=1,(is_untyped=0 or is_known_action=1)' if /6/;
         }
 
         my @sources;
         push @sources, 'TTD' if $params->{'ttd'};
         push @sources, 'DrugBank' if $params->{'db'};
         if(@sources){
-            $filter .= ',gene.source_db_name';
+            my $filter;
+            $filter .= 'source_db_name';
             $filter .= '=' if @sources == 1;
             $filter .= ':' if @sources > 1;#if we have multiple sources, we need to use : with / delimited list for boolean expr syntax
             $filter .= join '/', @sources;
+            push @filter, $filter;
         }
 
         my $command = Genome::DruggableGene::Command::GeneNameReport::LookupInteractions->execute(
             gene_identifiers => \@gene_names,
-            filter => $filter,
+            filter => join(',',@filter),
         );
         my %params = (
             no_match_genes => [$command->no_match_genes],

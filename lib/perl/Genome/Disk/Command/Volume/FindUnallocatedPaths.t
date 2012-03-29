@@ -11,7 +11,7 @@ use warnings;
 use above "Genome";
 use Test::More;
 
-use_ok('Genome::Disk::Command::Allocation::FindUnallocatedPaths') or die;
+use_ok('Genome::Disk::Command::Volume::FindUnallocatedPaths') or die;
 
 # TODO Need to refactor alloation slightly so this test can use the test volume
 # creation code. For now, this test is pretty basic.

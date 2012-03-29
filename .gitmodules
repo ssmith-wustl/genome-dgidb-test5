@@ -112,3 +112,27 @@
 [submodule "tgi-etc"]
 	path = tgi-etc
 	url = ssh://git/srv/git/genome-tgi-etc.git
+[submodule "vendor/pindel"]
+	path = vendor/pindel
+	url = git@github.com:genome-vendor/pindel.git
+[submodule "vendor/dendrix"]
+	path = vendor/dendrix
+	url = git@github.com:genome-vendor/Dendrix.git
+[submodule "vendor/hotnet"]
+	path = vendor/hotnet
+	url = git@github.com:genome-vendor/HotNet.git
+[submodule "vendor/File-lockf"]
+	path = vendor/File-lockf
+	url = http://github.com/genome-vendor/File-Lockf.git
+[submodule "vendor/statgen"]
+	path = vendor/statgen
+	url = git@github.com:genome-vendor/statgen.git
+[submodule "vendor/tophat-fusion"]
+    path = vendor/tophat-fusion
+    url = git@github.com:genome-vendor/tophat-fusion.git
+[submodule "vendor/MGLtools"]
+	path = vendor/MGLtools
+	url = git@github.com:genome-vendor/MGLtools.git
+[submodule "vendor/savant"]
+	path = vendor/savant
+	url = git://github.com/genome-vendor/savant.git

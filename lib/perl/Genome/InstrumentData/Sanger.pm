@@ -9,6 +9,7 @@ class Genome::InstrumentData::Sanger {
     is => 'Genome::InstrumentData',
     has_constant => [
         sequencing_platform => { value => 'sanger' },
+        read_count => { calculate => q|return 96;|,},
     ],
     has_optional => [
         research_project => {
@@ -40,7 +41,7 @@ sub dump_to_file_system {
 
     my $rv = eval { 
         Genome::Sys->shellcmd(
-            cmd => 'gmt lims import-sanger-run '.$self->id,
+            cmd => 'gmt lims import-sanger-runs '.$self->id,
         );
     };
     return 1 if $rv;

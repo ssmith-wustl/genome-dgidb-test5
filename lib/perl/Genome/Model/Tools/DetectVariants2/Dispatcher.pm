@@ -298,6 +298,9 @@ sub _detect_variants {
     $input->{control_aligned_reads_input} = $self->control_aligned_reads_input;
     $input->{aligned_reads_sample} = $self->aligned_reads_sample;
     $input->{control_aligned_reads_sample} = $self->control_aligned_reads_sample;
+    $input->{alignment_results} = \@alignment_results;
+    $input->{control_alignment_results} = \@control_alignment_results;
+    $input->{pedigree_file_path} = $self->pedigree_file_path;
 
     $self->_dump_workflow($workflow);
     $self->_dump_dv_cmd;
@@ -341,6 +344,7 @@ sub _dump_dv_cmd {
     $cmd .=     " --control-aligned-reads-input ".$self->control_aligned_reads_input if $self->control_aligned_reads_input;
     $cmd .=     " --aligned-reads-sample ".$self->aligned_reads_sample if $self->aligned_reads_sample;
     $cmd .=     " --control-aligned-reads-sample ".$self->control_aligned_reads_sample if $self->control_aligned_reads_sample;
+    $cmd .=     " --pedigree_file_path ".$self->pedigree_file_path if $self->pedigree_file_path;
     
     for my $var ('snv','sv','indel'){
         my $strat = $var."_detection_strategy";
@@ -512,9 +516,12 @@ sub generate_workflow {
             'reference_build_id',
             'aligned_reads_input',
             'control_aligned_reads_input',
+            'alignment_results',
+            'control_alignment_results',
             'aligned_reads_sample',
             'control_aligned_reads_sample',
             'output_directory',
+            'pedigree_file_path',
         ],
         output_properties => [
             @output_properties
@@ -827,6 +834,9 @@ sub add_detectors_and_filters {
                     'control_aligned_reads_input',
                     'aligned_reads_sample',
                     'control_aligned_reads_sample',
+                    'alignment_results',
+                    'control_alignment_results',
+                    'pedigree_file_path',
                 );
                 for my $property ( @properties_to_each_operation) {
                     $workflow_model->add_link(
@@ -1001,14 +1011,21 @@ sub _promote_staged_data {
             my $file = $self->$output_accessor;
             my $output_file = basename($file);
             my $output = "$output_dir/$output_file";
-            Genome::Sys->create_symlink($file,$output);
-            if($variant_type =~ m/snv/){
-                my $vcf_link = dirname($file)."/snvs.vcf.gz";
-                my $link_target = $output_dir."/snvs.vcf.gz";
+            if (-e $file) {
+                Genome::Sys->create_symlink($file,$output);
+            }
+
+            # This may or may not exist, depending on the variant type
+            my $vcf_link = dirname($file)."/$variant_type" . "s.vcf.gz";
+            if(-e $vcf_link){
+                my $source;
                 if(-l $vcf_link){
-                    my $source = readlink($vcf_link);
-                    Genome::Sys->create_symlink($source, $link_target);
+                    $source = readlink($vcf_link);
+                } else {
+                    $source = $vcf_link;
                 }
+                my $link_target = $output_dir."/$variant_type" . "s.vcf.gz";
+                Genome::Sys->create_symlink($source, $link_target);
             }
 
             # FIXME refactor this when we refactor versioning. This is pretty awful.
@@ -1020,7 +1037,7 @@ sub _promote_staged_data {
 
                 # Sometimes the .bed file exists already. Sometimes the v2.bed exists already. Make whatever two links do not exist.
                 for my $link_target ($unversioned_output, $v1_output, $v2_output) {
-                    unless (-e $link_target) {
+                    if ( (-e $output) && !(-e $link_target) ) {
                         Genome::Sys->create_symlink($output, $link_target);
                     }
                 }
@@ -1058,12 +1075,12 @@ sub set_output_files {
                 $self->error_message("No ".$variant_type." output directory. Workflow returned: ".Data::Dumper::Dumper($result));
                 die $self->error_message;
             }
-            my $hq_output_dir = $self->output_directory."/".$relative_path; #FIXME complications arise here when we have just a single column file... or other stuff. May just need to drop the version, too?
+            my $hq_output_dir = $self->output_directory."/".$relative_path;
             my $hq_file;
             if ($variant_type eq 'sv' || $variant_type eq 'cnv'){
                 $hq_file = $variant_type."s.hq";
             }else{
-                $hq_file = $variant_type."s.hq.bed";
+                $hq_file = $variant_type."s.hq.bed"; # FIXME this will not be true for polymutt or other detectors that output only vcf
             }
             my $file;
             if(-l $hq_output_dir."/".$hq_file){
@@ -1107,6 +1124,22 @@ sub _generate_standard_files {
 
             unless(keys %results) {
                 $self->error_message('Could not find any results for ' . $variant_type);
+            }
+
+            # Only do an LQ union if there are lq bed files involved (polymutt has no bed files)
+            my $found_lq_bed = 0;
+            for my $result_id (keys %results) {
+                my $sr = Genome::Model::Tools::DetectVariants2::Result::Base->get($result_id);
+                my $snv_lq_bed = $sr->path("snvs.lq.bed");
+                my $indel_lq_bed = $sr->path("indels.lq.bed");
+                if (-e $snv_lq_bed or -e $indel_lq_bed) {
+                    $found_lq_bed = 1;
+                }
+            }
+
+            unless ($found_lq_bed) {
+                $self->status_message("Found no lq.bed files to union. Skipping LqUnion.");
+                return 1;
             }
 
             my $lq_result = Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion->get_or_create(

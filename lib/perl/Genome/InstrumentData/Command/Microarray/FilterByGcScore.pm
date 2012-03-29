@@ -34,12 +34,14 @@ sub create {
     return $self;
 }
 
-sub filter {
+sub filter { # does this variant PASS the filter?
     my ($self, $variant) = @_;
 
-    return if defined $variant->{gc_score} and $variant->{gc_score} < $self->min; 
+    return 1 if not defined $variant->{gc_score}; # do not filter if not defiend
+    return 1 if $variant->{gc_score} == -1; # do not filter if -1 => this means no score
+    return 1 if $variant->{gc_score} >= $self->min; # do not filter if greater than the min
 
-    return 1;
+    return; # filter!
 }
 
 1;

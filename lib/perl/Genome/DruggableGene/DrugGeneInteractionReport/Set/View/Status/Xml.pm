@@ -20,7 +20,18 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Status::Xml {
                     aspects => [
                         'drug_name',
                         'gene_name',
-                        'interaction_types'
+                        'interaction_types',
+                        'source_db_name',
+                        'source_db_version',
+                        {
+                            name => 'interaction_attributes',
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            aspects => [
+                                'name',
+                                'value',
+                            ],
+                        },
                     ],
                },
             ],

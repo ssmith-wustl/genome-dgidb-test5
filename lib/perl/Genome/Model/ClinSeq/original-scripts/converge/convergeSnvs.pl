@@ -10,22 +10,41 @@ use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 use Genome;
 
+my $lib_dir;
+my $script_dir;
+use Cwd 'abs_path';
+BEGIN{
+  if (abs_path($0) =~ /(.*\/)(.*\/).*\.pl/){
+    $lib_dir = $1;
+    $script_dir = $1.$2;
+  }
+}
+use lib $lib_dir;
+use ClinSeq qw(:all);
+use converge::Converge qw(:all);
+
 #Required
-my $model_group = '';
+my $build_ids = '';
+my $model_ids = '';
+my $model_group_id = '';
 my $outdir = '';
 my $label = '';
 my $verbose = 0;
 my $test = 0;
 
-GetOptions ('model_group=s'=>\$model_group, 'outdir=s'=>\$outdir, 'label=s'=>\$label, 'verbose=i'=>\$verbose, 'test=i'=>\$test);
+GetOptions ('build_ids=s'=>\$build_ids, 'model_ids=s'=>\$model_ids, 'model_group_id=s'=>\$model_group_id, 'outdir=s'=>\$outdir, 'label=s'=>\$label, 'verbose=i'=>\$verbose, 'test=i'=>\$test);
 
 my $usage=<<INFO;
   Example usage: 
   
-  convergeSnvs.pl  --model_group='25307'  --outdir=/gscmnt/sata132/techd/mgriffit/braf_resistance/recurrence_snv_results/  --label='BRAF'  --verbose=1
+  convergeSnvs.pl  --model_group_id='25307'  --outdir=/gscmnt/sata132/techd/mgriffit/braf_resistance/recurrence_snv_results/  --label='BRAF'  --verbose=1
+
+  Specify *one* of the following as input (each model/build should be a ClinSeq model)
+  --build_ids            Comma separated list of specific build IDs
+  --model_ids            Comma separated list of specific model IDs
+  --model_group_id       A single genome model group ID
 
   Combines SNV results from a group of Clinseq models into a single report:
-  --model_group          Specifies a genome model group ID - Each model should be a clinseq model
   --outdir               Path to directory for output files
   --label                Label to apply to output files as a prefix
   --verbose              More descriptive stdout messages
@@ -33,7 +52,7 @@ my $usage=<<INFO;
 
 INFO
 
-unless ($model_group && $outdir && $label){
+unless (($build_ids || $model_ids || $model_group_id) && $outdir && $label){
   print RED, "\n\nRequired parameter missing", RESET;
   print GREEN, "\n\n$usage", RESET;
   exit(1);
@@ -64,19 +83,27 @@ my $mutation_status_file_matrix_wgs = "$outdir"."$label"."_WGS_SNV_MutationStatu
 my $vaf_file_matrix_exome = "$outdir"."$label"."_Exome_SNV_VAFs_Matrix.tsv";
 my $mutation_status_file_matrix_exome = "$outdir"."$label"."_Exome_SNV_MutationStatus_Matrix.tsv";
 
-#genome/lib/perl/Genome/ModelGroup.pm
+#Get the models/builds
+my $models_builds;
+if ($build_ids){
+  my @build_ids = split(",", $build_ids);
+  unless(scalar(@build_ids) > 0){
+    print RED, "\n\nCould not parse build_ids list: $build_ids", RESET;
+  }
+  $models_builds = &getModelsBuilds('-builds'=>\@build_ids, '-verbose'=>$verbose);
+}elsif($model_ids){
+  my @model_ids = split(",", $model_ids);
+  unless(scalar(@model_ids) > 0){
+    print RED, "\n\nCould not parse model_ids list: $model_ids", RESET;
+  }
+  $models_builds = &getModelsBuilds('-models'=>\@model_ids, '-verbose'=>$verbose);
+}elsif($model_group_id){
+  $models_builds = &getModelsBuilds('-model_group_id'=>$model_group_id, '-verbose'=>$verbose);
+}
 
-#Get model group object
-my $mg = Genome::ModelGroup->get("id"=>$model_group);
+my @models = @{$models_builds->{models}};
+my @builds = @{$models_builds->{builds}};
 
-#Get display name of the model group
-my $display_name = $mg->__display_name__;
-
-#Get subjects (e.g. samples) associated with each model of the model-group
-my @subjects = $mg->subjects;
-
-#Get the members of the model-group, i.e. the models
-my @models = $mg->models;
 my $model_count = scalar(@models);
 
 my %snvs;
@@ -130,7 +157,7 @@ foreach my $m (@models){
     $exome_sample_list{$final_name} = 1;
   }
 
-  #Store model objects and value for later
+  #Store model objects and values for later
   $model_list{$model_id}{model_name} = $model_name;
   $model_list{$model_id}{data_directory} = $data_directory;
   $model_list{$model_id}{patient} = $patient;
@@ -308,7 +335,7 @@ foreach my $model_id (sort keys %model_list){
     $bam_rc_cmd .= "  1>/dev/null 2>/dev/null";
   }
   print BLUE, "\n\t$bam_rc_cmd", RESET;
-  system ($bam_rc_cmd);
+  Genome::Sys->shellcmd(cmd => $bam_rc_cmd);
 }
 
 #Now parse the read counts files and build a hash of SNVs and their variant allele frequencies (tumor and exome) for each subject

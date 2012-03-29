@@ -22,7 +22,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     </xsl:variable>
 
     <xsl:call-template name="view_header">
-      <xsl:with-param name="label_name" select="'Gene Name Group:'" />
+      <xsl:with-param name="label_name" select="'Gene'" />
       <xsl:with-param name="display_name" select='$header_name'/>
       <xsl:with-param name="icon" select="'genome_genename_32'" />
     </xsl:call-template>
@@ -49,7 +49,9 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
     <div class="span_12_box_masonry">
       <div class="box_header span-12 last rounded-top">
-        <div class="box_title"><h3 class="genome_genenamegroup_16 span-7 last">Gene Name</h3></div>
+        <div class="box_title"><h3 class="genome_genenamegroup_16 span-7 last">
+            <xsl:value-of select="normalize-space(aspect[@name='source_db_name']/value)"/>
+        </h3></div>
       </div>
 
       <div class="box_content rounded-bottom span-12 last">
@@ -57,14 +59,15 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <tbody>
 
             <tr>
-              <td class="name">Name:
+              <td class="name">Source Name and Link:
               </td>
               <td class="value">
-                <xsl:choose>
-                  <xsl:when test="string(normalize-space(aspect[@name='name']/value))">
-                    <xsl:value-of select="normalize-space(aspect[@name='name']/value)"/>
-                  </xsl:when>
-                </xsl:choose>
+                <a>
+                  <xsl:attribute name="href">
+                    <xsl:value-of select="normalize-space(aspect[@name='original_data_source_url']/value)"/>
+                  </xsl:attribute>
+                  <xsl:value-of select="normalize-space(aspect[@name='name']/value)"/>
+                </a>
               </td>
             </tr>
 
@@ -72,11 +75,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <td class="name">Nomenclature:
               </td>
               <td class="value">
-                <xsl:choose>
-                  <xsl:when test="string(normalize-space(aspect[@name='nomenclature']/value))">
-                    <xsl:value-of select="normalize-space(aspect[@name='nomenclature']/value)"/>
-                  </xsl:when>
-                </xsl:choose>
+                <xsl:value-of select="normalize-space(aspect[@name='nomenclature']/value)"/>
               </td>
             </tr>
 
@@ -84,11 +83,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <td class="name">Source Database Name:
               </td>
               <td class="value">
-                <xsl:choose>
-                  <xsl:when test="string(normalize-space(aspect[@name='source_db_name']/value))">
-                    <xsl:value-of select="normalize-space(aspect[@name='source_db_name']/value)"/>
-                  </xsl:when>
-                </xsl:choose>
+                <xsl:value-of select="normalize-space(aspect[@name='source_db_name']/value)"/>
               </td>
             </tr>
 
@@ -96,32 +91,9 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <td class="name">Source Database Version:
               </td>
               <td class="value">
-                <xsl:choose>
-                  <xsl:when test="string(normalize-space(aspect[@name='source_db_version']/value))">
-                    <xsl:value-of select="normalize-space(aspect[@name='source_db_version']/value)"/>
-                  </xsl:when>
-                </xsl:choose>
+                <xsl:value-of select="normalize-space(aspect[@name='source_db_version']/value)"/>
               </td>
             </tr>
-
-            <tr>
-              <td class="name">Source URL:
-              </td>
-              <td class="value">
-                <xsl:choose>
-                  <xsl:when test="string(normalize-space(aspect[@name='original_data_source_url']/value))">
-                    <a>
-                      <xsl:attribute name="href">
-                        <xsl:value-of select="normalize-space(aspect[@name='original_data_source_url']/value)"/>
-                      </xsl:attribute>
-                      <xsl:value-of select="substring(normalize-space(aspect[@name='original_data_source_url']/value),8,40)"/>
-                      ...
-                    </a>
-                  </xsl:when>
-                </xsl:choose>
-              </td>
-            </tr>
-
 
             <tr>
               <td class="name">Alternate Names:

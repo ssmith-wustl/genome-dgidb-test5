@@ -52,7 +52,7 @@
                     <xsl:for-each select="aspect[@name='params']/object">
                       <tr>
                         <td class="name"><xsl:value-of select="normalize-space(aspect[@name='name'])"/>:</td>
-                        <td class="value"><xsl:value-of select="aspect[@name='value']"/></td>
+                        <td class="value"><xsl:value-of select="aspect[@name='_value_scalar_or_object']/value"/></td>
                       </tr>
                     </xsl:for-each>
                   </xsl:if>

@@ -58,6 +58,11 @@ class Genome::Model::Tools::Vcf::CreateCrossSampleVcf {
             is_optional => 1,
             doc => 'Setting this prevents the check for identical processing profiles on all inputs',
         },
+        joinx_version => {
+            is => 'Text',
+            doc => 'Joinx version to use in all joinx operations',
+            default => '1.3',
+        },
     ],
     has_transient_optional => [
         _num_inputs => {
@@ -145,6 +150,7 @@ sub execute {
     my $reference_sequence_build = $builds[0]->reference_sequence_build;
     my %inputs;
 
+    $inputs{joinx_version} = $self->joinx_version;
     $inputs{output_directory} = $output_directory;
     $inputs{final_output} = $output_directory."/".$var_type.".merged.vcf.gz";
     $inputs{merged_vcf} = $inputs{final_output};
@@ -296,6 +302,7 @@ sub _region_limit_inputs {
     my $var_type = $self->variant_type;
     my $accessor = "get_".$var_type."_vcf";
     my %inputs;
+    $inputs{joinx_version} = $self->joinx_version;
 
     $inputs{region_bed_file} = $self->roi_file;
     $inputs{roi_name} = $self->roi_name;
@@ -323,6 +330,7 @@ sub _region_limit_inputs {
             "region_bed_file",
             "roi_name",
             "wingspan",
+            "joinx_version",
             @inputs,
         ],
         output_properties => [
@@ -448,6 +456,7 @@ sub _generate_workflow {
             'merged_vcf',
             'use_bgzip',
             'reference_sequence_path',
+            "joinx_version",
             @inputs,
         ],
         output_properties => [
@@ -543,6 +552,14 @@ sub _add_position_merge {
         right_property => "output_file",
     );
 
+    # Add a version param
+    $workflow->add_link(
+        left_operation => $workflow->get_input_connector,
+        left_property => "joinx_version",
+        right_operation => $merge_operation,
+        right_property => "use_version",
+    );
+
     #link other input properties to merge operation
 
     my $input_property = defined($op_number) ? "input_files_".$op_number : "input_files";
@@ -602,6 +619,14 @@ sub _merge_position_merges {
     my $merge_operation = $workflow->add_operation(
         name => "Final Union of Positions to Backfill",
         operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::VcfMergeForBackfill"),
+    );
+
+    # Add a version param
+    $workflow->add_link(
+        left_operation => $workflow->get_input_connector,
+        left_property => "joinx_version",
+        right_operation => $merge_operation,
+        right_property => "use_version",
     );
 
     #link the merged_positions_bed input to the output_file param
@@ -830,6 +855,14 @@ sub _add_final_merge {
         operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::VcfMerge"),
     );
 
+    # Add a version param
+    $workflow->add_link(
+        left_operation => $workflow->get_input_connector,
+        left_property => "joinx_version",
+        right_operation => $merge_operation,
+        right_property => "use_version",
+    );
+
     #link the merged_positions_bed input to the output_file param
     $workflow->add_link(
         left_operation => $workflow->get_input_connector,
@@ -897,6 +930,14 @@ sub _merge_vcf_merges {
     my $merge_operation = $workflow->add_operation(
         name => "final_vcf_merge",
         operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::VcfMerge"),
+    );
+
+    # Add a version param
+    $workflow->add_link(
+        left_operation => $workflow->get_input_connector,
+        left_property => "joinx_version",
+        right_operation => $merge_operation,
+        right_property => "use_version",
     );
 
     #link the is_many vcf_files property of the converge operation 

@@ -24,6 +24,7 @@ use warnings;
 use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
+use above 'Genome'; #remove the 'above' when we turn this into a module
 
 my $script_dir;
 use Cwd 'abs_path';
@@ -102,17 +103,17 @@ my @gene_annotation_sets = qw (ALL Ensembl);
 #Make a copy of the junctions file and alignment stats file
 my $cp_cmd1 = "cp $tophat_junctions_bed_file $new_tophat_junctions_bed_file";
 if ($verbose){ print YELLOW, "\n\n$cp_cmd1", RESET; }
-system($cp_cmd1);
+Genome::Sys->shellcmd(cmd => $cp_cmd1);
 
 my $cp_cmd2 = "cp $tophat_stats_file $working_dir";
 if ($verbose){ print YELLOW, "\n\n$cp_cmd2", RESET; }
-system($cp_cmd2);
+Genome::Sys->shellcmd(cmd => $cp_cmd2);
 
 
 #Convert observed junctions.bed to an observed .junc file
 my $bed_to_junc_cmd = "cat $new_tophat_junctions_bed_file | "."$script_dir"."misc/bed2junc.pl > $tophat_junctions_junc_file";
 if ($verbose){ print YELLOW, "\n\n$bed_to_junc_cmd", RESET; }
-system($bed_to_junc_cmd);
+Genome::Sys->shellcmd(cmd => $bed_to_junc_cmd);
 
 
 #Go through the .junc file and infer the splice site of each observed junction
@@ -145,7 +146,7 @@ foreach my $gene_name_type (@gene_name_type){
   foreach my $gene_annotation_set (@gene_annotation_sets){
     my $cmd = "$script_dir/rnaseq/annotateObservedJunctions.pl  --obs_junction_file=$tophat_junctions_anno_file  --bedtools_bin_dir='/gsc/bin/'  --working_dir=$working_dir  --gene_annotation_dir=$reference_annotations_dir  --gene_annotation_set='$gene_annotation_set'  --gene_name_type='$gene_name_type'  --verbose=$verbose";
     if ($verbose){ print YELLOW, "\n\n$cmd", RESET };
-    system($cmd);
+    Genome::Sys->shellcmd(cmd => $cmd);
   }
 }
 
@@ -186,7 +187,7 @@ if ($verbose){
 }else{
   $r_cmd .= " 1>$r_cmd_stdout 2>$r_cmd_stderr";
 }
-system($r_cmd);
+Genome::Sys->shellcmd(cmd => $r_cmd);
 
 
 #Get some basic info from the Tophat stats file and append to the existing Stats.tsv file

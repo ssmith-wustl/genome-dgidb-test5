@@ -16,7 +16,7 @@ class Genome::DruggableGene::DrugAlternateNameReport {
     ],
     has => [
         drug_id => { is => 'Text', column_name => 'drug_name_report_id'},
-        drug_name_report => {
+        drug => {
             is => 'Genome::DruggableGene::DrugNameReport',
             id_by => 'drug_id',
             constraint_name => 'drug_name_report_association_drug_name_report_id_fkey',

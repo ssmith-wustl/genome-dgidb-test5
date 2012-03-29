@@ -40,6 +40,10 @@
 #- Automate identification of WGS, Exome and RNAseq datasets that have completed sequencing and are ready for ClinSeq analysis
 #- Create methods to extract and parse the complete ClinicalTrials.gov database
 #- Create methods to extract fastq files from BAM and trim reads for certain downstream analyses (defuse, ALEXA-seq, etc.)
+#- Summary of TopHat RNA-seq alignment results
+#  - Summarize read mapping, known vs. novel junctions, proportion of reads mapping across junctions, proportion of MT mapping reads
+#- RNA-seq variant validation
+#  - BAM read counts ... WGS, Exome, RNA
 
 #TODO / FEATURE WISH LIST
 #- Summary stats.
@@ -54,19 +58,21 @@
 #    - i.e. what is the mutation rate per megabase: total tier 1, non-synonymous tier1, synonymous tier 1, total all tiers, etc
 
 
+#- Generate loliplot images for all SNVs to visualize the position of each variant
+#  - Create a paired plot that shows the loliplot for data for patients that have been aggregated across projects
 #- Create vcf formatted version of all SNVs combined, then tier 1,2,3 individually
 #- Get all BAM read counts for all SNVs for convenience in downstream analysis (WGS, Exome & RNAseq) (Tumor and Normal)
 #  - Create a grand list of all SNV coords from WGS and Exome, note whether each came from WGS, Exome or BOTH, Tier, read counts from all BAMs
 #- CNV amplified / deleted + over-expressed / under-expressed
 #- WGS vs. Exome Venn Diagrams : For SNVs & Indels
 #- Mutated and expressed vs. not expressed summary
-#- RNA-seq variant validation
-#  - BAM read counts ... WGS, Exome, RNA
 #  - Cufflinks expression.  FPKM + percentile
 #  - Assess RNA-seq BAM read counts for Tier 2,3 SNVs.  High values might indicate an erroneous classification as Tier 2,3.  In theory RNA-seq should only cover Tier 1 ... 
 #- RNA-seq outlier analysis
 #  - Differential / relative comparisons to other samples / tumors of the same type
 #- SVs.  Annotation strategies, validation, filtering
+#  - Run pairoscope on all predicted gene fusions from SV files
+
 #- RNA-seq gene fusions
 #  - Tophat fusion, Chimera scan
 #- Previously discovered variants
@@ -82,12 +88,14 @@
 #  - Overlap of observed mutations with the NHLBI Exome Sequencing Project - Exome variant server
 #  - Overlap of observed mutations with TGI recurrent sites
 #  - Run snpEff on all variants
-#  - Run the Ensembl variant effect predictor on all variants
+#  - Run the Ensembl variant effect predictor (VEP) on all variants
+#  - Run regulatory annotation on Tier2 variants using: gmt annotate regulatory-features
 #- Summarize gene annotation results (i.e. for each gene list, each gene is marked as Kinase, RTK, trancription factor, etc.)
 #  - Summarize for each event list, how many genes belong to each catergory
+#  - Converge results to gene-level for SNVs, InDels, CNVs (amps and dels), SVs, RNA-seq
+#    - Similar code to what is already being done for converging of drug gene results across multiple patients
 
-#- Summary of TopHat RNA-seq alignment results
-#  - Summarize read mapping, known vs. novel junctions, proportion of reads mapping across junctions, proportion of MT mapping reads
+
 #- Druggable genes analysis
 #  - 
 #  - Are there any mutations that are in a kinase where that kinase itself is not druggable but:

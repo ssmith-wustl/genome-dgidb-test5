@@ -160,23 +160,23 @@ sub execute {
             #check SNVs
             if(($vars[0] =~ /^\w$/) && ($vars[1] =~ /^\w$/)){
                 unless ($F[1] == $F[2]){
-                    die ("ERROR: ensembl format is 1-based. this line appears to be 1-based\n$line\n");
+                    die ("Ensembl variant format is 1-based. This line doesn't appear valid:\n$line\n");
                 }
             }
             #indel insertion
             elsif(($vars[0] =~ /^-$/) && ($vars[1] =~ /\w+/)){
                 unless ($F[1] == $F[2]+1){
-                    die ("ERROR: This line doesn't appear to be a valid ensembl format indel:\n$line\n");
+                    die ("This insertion is not in valid Ensembl format:\n$line\n");
                 }
             }
             #indel deletion
-            elsif(($vars[0] =~ /\w+/) && ($vars[0] =~ /^-$/)){
-                unless ($F[1]+length($F[2])-1 == $F[1]){
-                    die ("ERROR: This line doesn't appear to be a valid ensembl format indel\n$line\n");
+            elsif(($vars[0] =~ /\w+/) && ($vars[1] =~ /^-$/)){
+                unless ($F[1]+length($vars[0])-1 == $F[2]){
+                    die ("This deletion is not in valid Ensembl format:\n$line\n");
                 }
             }
             else{
-                die ("ERROR: This line doesn't appear to be a valid ensembl format indel\n$line\n");
+                die ("This variant is not in valid Ensembl format:\n$line\n");
             }
         }
         close($inFh);
@@ -229,14 +229,14 @@ sub execute {
             #check SNVs
             if(($vars[0] =~ /^\w$/) && ($vars[1] =~ /^\w$/)){
                 unless ($F[1] == $F[2]-1){
-                    die ("ERROR: bed format is 0-based. This line is not:\n$line\n");
+                    die ("BED variant format is 0-based. This line doesn't appear valid:\n$line\n");
                 }
                 $F[1]++;
             }
             #indel insertion
             elsif(($vars[0] =~ /^-$/) && ($vars[1] =~ /\w+/)){
                 unless ($F[1] == $F[2]){
-                    die ("ERROR: bed format is 0-based. this line is not:\n$line\n");
+                    die ("This insertion is not in valid BED format:\n$line\n");
                 }
                 #increment the start position
                 $F[1]++;
@@ -244,19 +244,21 @@ sub execute {
             #indel deletion
             elsif(($vars[0] =~ /\w+/) && ($vars[1] =~ /^-$/)){
                 unless ($F[1]+length($vars[0]) == $F[2]){
-                    die ("ERROR: bed format is 0-based. this line is not:\n$line\n");
+                    die ("This deletion is not in valid BED format:\n$line\n");
                 }
                 #increment the start position
                 $F[1]++;
             }
             else {
-                die ("This line is not a valid bed line:\n$line\n");
+                die ("This variant is not in valid BED format:\n$line\n");
             }
             print OUTFILE join("\t",(@F[0..2],join("/",@vars),"+",@suffix)) . "\n";
         }
 
         $format = "ensembl";
         $input_file = $tmpfile;
+        
+        close(OUTFILE);
     }
 
     my $script_path = $VEP_SCRIPT_PATH.$self->{version}.".pl";
@@ -306,7 +308,6 @@ sub execute {
     my $password_param = defined $ENV{GENOME_DB_ENSEMBL_PASS} ? "--password ".$ENV{GENOME_DB_ENSEMBL_PASS} : "";
     my $port_param = defined $ENV{GENOME_DB_ENSEMBL_PORT} ? "--port ".$ENV{GENOME_DB_ENSEMBL_PORT} : "";
 
-
     my $cmd = "PERL5LIB=$ENSEMBL_API_PATH/ensembl-variation/modules:$ENSEMBL_API_PATH/ensembl/modules:$ENSEMBL_API_PATH/ensembl-functgenomics/modules:\$PERL5LIB perl $script_path $string_args $bool_args $host_param $user_param $password_param $port_param";
 
     print STDERR $cmd . "\n";
@@ -321,4 +322,3 @@ sub execute {
 }
 
 1;
-

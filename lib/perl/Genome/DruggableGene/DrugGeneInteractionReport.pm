@@ -90,7 +90,7 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
 
 sub __display_name__ {
     my $self = shift;
-    return $self->drug_name. ' as ' .  join(' and ',$self->interaction_types) .  ' for ' . $self->gene_name;
+    return $self->drug->human_readable_name. ' as ' .  join(' and ',$self->interaction_types) .  ' for ' . $self->gene->human_readable_name;
 }
 
 if ($INC{"Genome/Search.pm"}) {
@@ -107,8 +107,8 @@ if ($INC{"Genome/Search.pm"}) {
 sub add_to_search_index_queue {
     my $self = shift;
     my $set = Genome::DruggableGene::DrugGeneInteractionReport->define_set(
-        drug_name_report_name => $self->drug_name_report_name,
-        gene_name_report_name => $self->gene_name_report_name,
+        drug_name => $self->drug->name,
+        gene_name => $self->gene->name,
     );
     Genome::Search::Queue->create(
         subject_id => $set->id,

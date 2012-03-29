@@ -24,6 +24,7 @@ use Term::ANSIColor qw(:constants);
 use File::Basename;
 use IO::File;
 use Benchmark;
+use above 'Genome'; #remove the 'above' when we turn this into a module
 
 my $script_dir;
 use Cwd 'abs_path';
@@ -432,7 +433,7 @@ sub annotateSkippingBT{
 
   my $bed_cmd1 = "$bedtools_bin_dir"."intersectBed -a $temp_known_exons -b $temp_obs_junctions -f 1.0 -s -wa -wb | cut -f 10 | sort | uniq -c > $temp_result";
   if ($verbose) { print BLUE, "\n\t$bed_cmd1", RESET; }
-  system($bed_cmd1);
+  Genome::Sys->shellcmd(cmd => $bed_cmd1);
   open (COUNTS, "$temp_result") || die "\n\nCould not open temp results file: $temp_result\n\n";
   while(<COUNTS>){
     chomp($_);
@@ -471,7 +472,7 @@ sub annotateSkippingBT{
 
   my $bed_cmd2 = "$bedtools_bin_dir"."intersectBed -a $temp_known_donors -b $temp_obs_junctions -f 1.0 -s -wa -wb | cut -f 10 | sort | uniq -c > $temp_result";
   if ($verbose){ print BLUE, "\n\t$bed_cmd2", RESET; }
-  system($bed_cmd2);
+  Genome::Sys->shellcmd(cmd => $bed_cmd2);
   open (COUNTS, "$temp_result") || die "\n\nCould not open temp results file: $temp_result\n\n";
   while(<COUNTS>){
     chomp($_);
@@ -510,7 +511,7 @@ sub annotateSkippingBT{
 
   my $bed_cmd3 = "$bedtools_bin_dir"."intersectBed -a $temp_known_acceptors -b $temp_obs_junctions -f 1.0 -s -wa -wb | cut -f 10 | sort | uniq -c > $temp_result";
   if ($verbose){ print BLUE, "\n\t$bed_cmd3", RESET; }
-  system($bed_cmd3);
+  Genome::Sys->shellcmd(cmd => $bed_cmd3);
   open (COUNTS, "$temp_result") || die "\n\nCould not open temp results file: $temp_result\n\n";
   while(<COUNTS>){
     chomp($_);
@@ -539,7 +540,7 @@ sub annotateSkippingBT{
   #Clean up the temp files
   my $rm_cmd = "rm -f $temp_obs_junctions $temp_known_exons $temp_known_donors $temp_known_acceptors $temp_result";
   if ($verbose){ print BLUE, "\n\nCleaning up ...\n$rm_cmd", RESET; }
-  system ($rm_cmd);
+  Genome::Sys->shellcmd(cmd => $rm_cmd);
 
   return();
 }

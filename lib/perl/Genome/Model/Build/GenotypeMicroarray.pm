@@ -54,6 +54,15 @@ class Genome::Model::Build::GenotypeMicroarray {
     ],
 };
 
+sub validate_for_start_methods {
+    return (qw/
+            validate_inputs_have_values
+            inputs_have_compatible_reference
+            instrument_data_assigned
+            validate_has_reference_alignment
+    /);
+}
+
 sub validate_has_reference_alignment {
     my $self = shift;
     my @tags;
@@ -67,17 +76,6 @@ sub validate_has_reference_alignment {
     }
     return @tags;
 
-}
-
-sub validate_for_start_methods {
-    my $self = shift;
-    my @methods = $self->SUPER::validate_for_start_methods();
-    push @methods,
-        qw/
-            instrument_data_assigned
-            validate_has_reference_alignment
-        /;
-    return @methods;
 }
 
 sub perform_post_success_actions {

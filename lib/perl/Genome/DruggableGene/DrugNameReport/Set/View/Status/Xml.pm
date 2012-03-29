@@ -24,6 +24,25 @@ class Genome::DruggableGene::DrugNameReport::Set::View::Status::Xml {
                         'source_db_name',
                         'source_db_version',
                         'original_data_source_url',
+                        'human_readable_name',
+                        {
+                            name => 'drug_alt_names',
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            aspects => [
+                                'alternate_name',
+                                'nomenclature',
+                            ],
+                        },
+                        {
+                            name => 'drug_categories',
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            aspects => [
+                                'category_name',
+                                'category_value',
+                            ],
+                        },
                     ],
                 },
                 'name',

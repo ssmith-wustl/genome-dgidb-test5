@@ -161,8 +161,10 @@ sub convert_chrXX_contigs_to_GL {
 
     if($chrom =~ /\d+_(GL\d+)R/) {
         $chrom = $1 . '.1';
-    } elsif ($chrom =~ /Un_gl(\d+)/) {
+    } elsif ($chrom =~ /Un_gl(\d+)/i) {
         $chrom = 'GL' . $1 . '.1';
+    }elsif ( $chrom =~ /\d+_GL(\d+)_random$/i) {
+        $chrom = "GL" .  $1 . '.1';
     }
 
     return ($chrom, $start, $stop);

@@ -81,8 +81,8 @@ sub _execute_build {
     }
     if ($normal_rnaseq_build) {
         $cmd .= ' --normal_rna ' . $normal_rnaseq_build->id;
-        $normal_rnaseq_common_name = $tumor_rnaseq_build->subject->patient->common_name;
-        $normal_rnaseq_name = $tumor_rnaseq_build->subject->patient->name;
+        $normal_rnaseq_common_name = $normal_rnaseq_build->subject->patient->common_name;
+        $normal_rnaseq_name = $normal_rnaseq_build->subject->patient->name;
     }
 
     #Get the patient common name from one of the builds, if none can be found, use the individual name instead, if that can't be found either set the name to 'UnknownName'
@@ -98,6 +98,13 @@ sub _execute_build {
     $cmd .= " --working '$data_directory'";
     $cmd .= " --verbose=1 --clean=1";
     $cmd .= " 1>&2";
+
+    #Before executing, change the environment variable for R_LIBS to be ''
+    #This will force R to use it own local notion of library paths instead of the /gsc/ versions
+    #This should work for R installed on the machine /usr/bin/R  OR  a standalone version of R installed by a local user. e.g. /gscmnt/gc2142/techd/tools/R/R-2.14.0/bin/R
+    local $ENV{R_LIBS}='';
+    local $ENV{PATH}="/gscmnt/gc2142/techd/tools/R/R-2.12.1/bin/:$ENV{PATH}";
+    warn("Setting R_LIBS to null and PATH to R interpreter to: /gscmnt/gc2142/techd/tools/R/R-2.12.1/bin/R - CHANGE THIS WHEN R PACKAGING IS FIXED ON THE CLUSTER");
 
     if ($dry_run) {
         $build->status_message("NOT running! I _would_ have run: $cmd");

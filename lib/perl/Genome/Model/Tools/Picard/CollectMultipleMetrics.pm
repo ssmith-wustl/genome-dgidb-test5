@@ -18,7 +18,7 @@ class Genome::Model::Tools::Picard::CollectMultipleMetrics {
         },
         program_list => {
             is_optional => 1,
-            default_value => 'CollectAlignmentSummaryMetrics,CollectInsertSizeMetrics,QualityScoreDistribution,MeanQualityByCycle',
+            doc => 'The default are CollectAlignmentSummaryMetrics,CollectInsertSizeMetrics,QualityScoreDistribution,MeanQualityByCycle',
         }, 
         reference_sequence => {
             is_optional => 1,
@@ -50,6 +50,15 @@ EOS
 sub execute {
     my $self = shift;
 
+    my $jar_path = $self->picard_path .'/CollectMultipleMetrics.jar';
+    unless (-e $jar_path) {
+        if ($self->use_version < 1.40) {
+            die('Please use Picard version 1.40 or greater.');
+        } else {
+            die('Missing jar file: '. $jar_path);
+        }
+    }
+
     my $cmd = $self->picard_path .'/CollectMultipleMetrics.jar net.sf.picard.analysis.CollectMultipleMetrics';
     $cmd   .= ' OUTPUT='. $self->output_basename  .' INPUT='. $self->input_file;
     if (defined($self->stop_after)) {
@@ -65,11 +74,22 @@ sub execute {
             $cmd .= ' ASSUME_SORTED=false';
         }
     }
-    my @programs = split(',',$self->program_list);
+
+    my $program_list = $self->program_list;
+    if ($program_list) {
+        $program_list = 'null,' . $program_list;  #turn off the default 4
+    }
+    else {
+        $program_list = 'CollectAlignmentSummaryMetrics,CollectInsertSizeMetrics,QualityScoreDistribution,MeanQualityByCycle';
+    }
+
+    my @programs = split(',', $program_list);
+
     for my $program (@programs) {
         $program =~ s/ //g;
         $cmd .= ' PROGRAM='. $program;
     }
+
     $self->run_java_vm(
         cmd          => $cmd,
         input_files  => [$self->input_file],

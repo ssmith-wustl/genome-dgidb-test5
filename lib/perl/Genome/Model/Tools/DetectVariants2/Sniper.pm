@@ -7,7 +7,8 @@ use Genome;
 use Workflow;
 
 my $DEFAULT_VERSION = '0.7.3';
-my $SNIPER_COMMAND = 'bam-somaticsniper';
+my $LEGACY_SNIPER_COMMAND = 'bam-somaticsniper';
+my $SNIPER_COMMAND = 'bam-somaticsniper1.0.0';
 
 class Genome::Model::Tools::DetectVariants2::Sniper {
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
@@ -22,10 +23,11 @@ class Genome::Model::Tools::DetectVariants2::Sniper {
 };
 
 my %SNIPER_VERSIONS = (
-    '0.7' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7/' . $SNIPER_COMMAND,
-    '0.7.1' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.1/' . $SNIPER_COMMAND,
-    '0.7.2' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.2/' . $SNIPER_COMMAND,
-    '0.7.3' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.3/' . $SNIPER_COMMAND,
+    '0.7' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7/' . $LEGACY_SNIPER_COMMAND,
+    '0.7.1' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.1/' . $LEGACY_SNIPER_COMMAND,
+    '0.7.2' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.2/' . $LEGACY_SNIPER_COMMAND,
+    '0.7.3' => '/gsc/pkg/bio/samtools/sniper/somatic_sniper-v0.7.3/' . $LEGACY_SNIPER_COMMAND,
+    '1.0.0' => '/usr/bin/' . $SNIPER_COMMAND,
 );
 
 sub help_synopsis {

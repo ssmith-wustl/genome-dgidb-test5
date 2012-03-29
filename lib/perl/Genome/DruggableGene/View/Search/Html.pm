@@ -14,7 +14,7 @@ class Genome::DruggableGene::View::Search::Html {
 };
 
 sub _title {
-    return 'DruggableGene';
+    return 'The Drug-Gene Interactions Database';
 }
 
 sub _html_body {

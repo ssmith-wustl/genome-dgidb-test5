@@ -21,7 +21,7 @@ class Genome::Model::Tools::Allpaths::Test {
 package main;
 use_ok('Genome::Model::Tools::Allpaths') or die;
 
-my $obj = Genome::Model::Tools::Allpaths::Test->create(version => 39099,
+my $obj = Genome::Model::Tools::Allpaths::Test->create(version => 41055,
 );
 
 ok($obj, "Object was created");
