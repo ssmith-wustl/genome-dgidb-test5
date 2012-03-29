@@ -139,3 +139,6 @@
 [submodule "vendor/freebayes"]
 	path = vendor/freebayes
 	url = git@github.com:genome-vendor/freebayes.git
+[submodule "vendor/FLASH"]
+	path = vendor/FLASH
+	url = git@github.com:genome-vendor/FLASH.git
