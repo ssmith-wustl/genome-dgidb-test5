@@ -980,12 +980,19 @@ sub _compute_alignment_metrics {
     my $out_base = $self->temp_scratch_directory . '/all_sequences';
     my $ref_seq  = $self->reference_build->full_consensus_path('fa');
 
+    my $picard_version = $self->picard_version;
+
+    if ($picard_version < 1.40) {
+        $picard_version = Genome::Model::Tools::Picard->default_picard_version;
+        $self->warning_message('Given picard version: '.$self->picard_version.' not compatible to CollectMultipleMetrics. Use default: '.$picard_version);
+    }
+
     my $cmd = Genome::Model::Tools::Picard::CollectMultipleMetrics->create(
         input_file         => $bam,
         output_basename    => $out_base,
         reference_sequence => $ref_seq,
         program_list       => 'CollectAlignmentSummaryMetrics,CollectInsertSizeMetrics',
-        use_version        => $self->picard_version,
+        use_version        => $picard_version,
     );
 
     unless ($cmd and $cmd->execute) {
