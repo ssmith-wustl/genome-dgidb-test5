@@ -30,7 +30,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <div class="content rounded shadow">
       <div class="container">
         <div id="objects" class="span-24 last">
-          <xsl:for-each select="aspect[@name='gene_name_reports']/object">
+          <xsl:for-each select="aspect[@name='genes']/object">
             <xsl:call-template name="genome_genenamegroup_box"/>
           </xsl:for-each>
         </div>

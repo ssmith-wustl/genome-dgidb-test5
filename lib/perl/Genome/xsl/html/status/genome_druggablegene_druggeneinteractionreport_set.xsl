@@ -127,13 +127,13 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     </div> <!-- end container -->
     <div class='container'>
       <div class="span-24 last">
-        <h2><xsl:value-of select="aspect[@name='gene_name_report']/object/display_name/text()"/></h2>
-          <xsl:for-each select="aspect[@name='gene_name_report']/object">
+        <h2><xsl:value-of select="aspect[@name='gene']/object/display_name/text()"/></h2>
+          <xsl:for-each select="aspect[@name='gene']/object">
             <xsl:call-template name="name_value_table"/>
           </xsl:for-each>
 
-          <h2><xsl:value-of select="aspect[@name='drug_name_report']/object/display_name/text()"/></h2>
-          <xsl:for-each select="aspect[@name='drug_name_report']/object">
+          <h2><xsl:value-of select="aspect[@name='drug']/object/display_name/text()"/></h2>
+          <xsl:for-each select="aspect[@name='drug']/object">
             <xsl:call-template name="name_value_table"/>
           </xsl:for-each>
       </div>

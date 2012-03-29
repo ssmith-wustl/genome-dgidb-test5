@@ -15,6 +15,16 @@ class Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions {
 #            doc => "Output interactions to specified file. Defaults to STDOUT if no file is supplied.",
 #            default => "STDOUT",
 #        },
+#        filter => {
+#            is => 'Text',
+#            doc => 'Filter results based on the parameters.  See below for how to.',
+#            shell_args_position => 2,
+#        },
+#        headers => {
+#            is => 'Boolean',
+#            default => 1,
+#            doc => 'Do include headers',
+#        },
         gene_file => {
             is => 'Path',
             is_input => 1,
@@ -26,41 +36,8 @@ class Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions {
             is_many => 1,
             doc => 'Array of gene identifiers',
         },
-        filter => {
-            is => 'Text',
-            doc => 'Filter results based on the parameters.  See below for how to.',
-            shell_args_position => 2,
-        },
-#        headers => {
-#            is => 'Boolean',
-#            default => 1,
-#            doc => 'Do include headers',
-#        },
     ],
     has_transient_optional => [
-        no_match_genes => {
-            is_many => 1,
-            is => 'Text',
-        },
-        many_match_genes => {
-            is_many => 1,
-            is => 'Text',
-        },
-        no_interaction_genes => {
-            is_many => 1,
-            is => 'Genome::DruggableGene::GeneNameReport',
-        },
-        filtered_out_interactions => {
-            is_many => 1,
-            is => 'Genome::DruggableGene::GeneNameReport',
-        },
-        interactions => {
-            is_many => 1,
-            is => 'Genome::DruggableGene::DrugGeneInteractionReport',
-        },
-        identifier_to_genes => {
-            is => 'HASH',
-        },
         result => {
             is => 'HASH',
         },
@@ -100,185 +77,86 @@ sub execute {
     push @gene_identifiers, $_ for $self->gene_identifiers;
     $self->status_message('No genes found') unless @gene_identifiers;
 
-    #Populate a data structure for each name
-    # Maybe the names given were: HUGO_GENE_NAME1, VAGUE_GENE_NAME2, AMBIGUOUS_GENE_NAME3
-    # and we found 1 possible group for each of the first two, and several possible groups for the ambiguous one
-    #$result = {
-    #  HUGO_GENE_NAME1 => {
-    #    group => $DIRECT_GROUP1,
-    #    interactions => [
-    #      $INTERACTION1,
-    #    ],
-    #  },
-    #  VAGUE_GENE_NAME2 => {
-    #    group => $INDIRECT_GROUP2,
-    #    interactions => [
-    #      $INTERACTION2,
-    #      $ANOTHER_INTERACTION2,
-    #    ],
-    #  },
-    #  AMBIGUOUS_GENE_NAME3 => {
-    #    groups => [
-    #      $POSSIBLE_GROUP3,
-    #      $ANOTHER_POSSIBLE_GROUP3,
-    #    ]
-    #  },
-    #}
+    my $result = $self->find_groups_and_interactions(@gene_identifiers);
+    $self->result($result);#For unknown reasons this isn't working, so just return the result directly when calling execute()
+    return $result;
+}
+
+#######   find_groups_and_interactions    #######
+#Populate a data structure containing each search term
+# Maybe the names given were: 'stk1','flt3','cdk7','asdf'
+# and we found 1 possible group for flt3 and cdk7, and two possible groups for stk1, and no groups for asdf
+#$result =
+#\ {
+#    ambiguous_search_terms        {
+#        STK1   {
+#            CDK7   {
+#                group               $GeneNameGroup1,
+#                number_of_matches   2
+#            },
+#            FLT3   {
+#                group               $GeneNameGroup2,
+#                number_of_matches   1
+#            }
+#        }
+#    },
+#    definite_groups               {
+#        CDK7   {
+#            group          $GeneNameGroup1,
+#            search_terms   [
+#                [0] "CDK7"
+#            ]
+#        },
+#        FLT3   {
+#            group          $GeneNameGroup2,
+#            search_terms   [
+#                [0] "FLT3"
+#            ]
+#        }
+#    },
+#    search_terms_without_groups   [
+#        [0] "ASDF"
+#    ]
+#} #This output is compliments of Data::Printer
+sub find_groups_and_interactions{
+    my $self = shift;
+    my @gene_names = @_;
+    @gene_names = map{uc}@gene_names;
+    @gene_names = uniq @gene_names;
     my $result;
-    for my $name (@gene_identifiers){
+
+    for my $name (@gene_names){
         $name = uc $name;
 
         #Search for group, directly and indirectly
+        #If no groups are found ... drop it on the floor and don't try to match genes that aren't in hugo groups
+        my @groups;
+        my %group_matches;
         my $group = Genome::DruggableGene::GeneNameGroup->get(name=>$name);#Group generation guarentees no duplicate named groups
-        if($group){
-            $self->status_message("$name has direct group");
-        } else {
-            my @alts = Genome::DruggableGene::GeneAlternateNameReport->get(alternate_name=>$name);
-            my @groups;
-            push @groups, Genome::DruggableGene::GeneNameGroupBridge->get(gene_id=>$_->gene_id)->group for (@alts);
+        unless($group) {
+            #Cycle alternate names, and their group association
+            for(Genome::DruggableGene::GeneAlternateNameReport->get(alternate_name=>$name)){
+                my $ambiguous_group = Genome::DruggableGene::GeneNameGroupBridge->get(gene_id=>$_->gene_id)->group;
+                push @groups, $ambiguous_group;#record a uniq list of groups
+                $group_matches{$ambiguous_group->name}++;#record how many times each group was matched
+            }
             @groups = uniq @groups;
 
+            ($group) = @groups if @groups == 1;
+            push @{$result->{search_terms_without_groups}}, $name if @groups == 0;
             if(@groups > 1){
-                $self->status_message("$name has multiple groups");
-                $result->{$name}{groups} = \@groups;#Record all the ambiguous groups
-            } elsif(@groups == 1) {
-                ($group) = @groups;
-                $self->status_message("$name has indirect group " . $group->name);
-            } else {
-                $self->status_message("$name has no groups");
+                for my $ambiguous_group (@groups){
+                    $result->{ambiguous_search_terms}{$name}{$ambiguous_group->name}{group} = $ambiguous_group;
+                    $result->{ambiguous_search_terms}{$name}{$ambiguous_group->name}{number_of_matches} = $group_matches{$ambiguous_group->name};
+                }
             }
         }
 
-        if($group){ #found direct or indirect group
-            $result->{$name}{group} = $group;
-            for my $gene ($group->genes){
-                push @{$result->{$name}{interactions}}, $gene->interactions;
-                map{$self->status_message("$name has interaction " . $_->__display_name__)}$gene->interactions;
-            }
+        if($group){ #found single direct or indirect group
+            $result->{definite_groups}{$group->name}{group} = $group;
+            push @{$result->{definite_groups}{$group->name}{search_terms}}, $name;
         }
     }
-    return 1;
-}
-
-sub group_interactions_by_drug{
-    my $self = shift;
-    my @interactions = @_;
-    my %grouped_interactions = ();
-
-    for my $interaction (@interactions){
-        my $drug_id = $interaction->drug_id;
-        if($grouped_interactions{$drug_id}){
-            my @temp = @{$grouped_interactions{$drug_id}};
-            push @temp, $interaction;
-            $grouped_interactions{$drug_id} = \@temp;
-        }
-        else{
-            $grouped_interactions{$drug_id} = [$interaction];
-        }
-    }
-
-    return %grouped_interactions;
-}
-
-sub print_grouped_interactions{
-    my $self = shift;
-    my %grouped_interactions = @_;
-
-    my $output_file = $self->output_file;
-    my $output_fh;
-    if ($self->output_file =~ /STDOUT/i) {
-        $output_fh = 'STDOUT';
-    }else{
-        $output_fh = IO::File->new($self->output_file, 'w');
-        unless($output_fh){
-            $self->error_message("Could not open file " . $self->output_file . " : $@");
-            return;
-        }
-    }
-
-    my @headers = qw/
-    drug
-    drug_nomenclature
-    drug_primary_name
-    drug_alternate_names
-    drug_brands
-    drug_types
-    drug_groups
-    drug_categories
-    drug_source_db_name
-    drug_source_db_version
-    gene_identifiers
-    gene
-    gene_nomenclature
-    gene_alternate_names
-    gene_source_db_name
-    gene_source_db_version
-    entrez_gene_name
-    entrez_gene_synonyms
-    interaction_types
-    /;
-    if($self->headers){
-        $output_fh->print(join("\t", @headers), "\n");
-    }
-
-    my @drugs = Genome::DruggableGene::DrugNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugNameReport', 'id', '', keys %grouped_interactions));
-    for my $drug_id (keys %grouped_interactions){
-        for my $interaction (@{$grouped_interactions{$drug_id}}){
-            $output_fh->print($self->_build_interaction_line($interaction), "\n");
-        }
-    }
-
-    unless($self->output_file =~ /STDOUT/i){
-        $output_fh->close;
-    }
-
-    return 1;
-}
-
-sub _build_interaction_line {
-    my $self = shift;
-    my $interaction = shift;
-    my $drug = $interaction->drug;
-    my $gene = $interaction->gene;
-    my $gene_alternate_names = join(':', map($_->alternate_name, $gene->gene_alt_names));
-    my $gene_identifiers = join(':', sort @{$self->gene_to_identifiers->{$gene->id}});
-    my ($entrez_gene_name, $entrez_gene_synonyms) = $self->_create_entrez_gene_outputs($gene_identifiers);
-    my ($drug_primary_name) = map($_->alternate_name, grep($_->nomenclature =~ /primary/i, $drug->drug_alt_names));
-    my $drug_alternate_names = join(':', map($_->alternate_name, grep($_->nomenclature !~ /primary/i && $_->nomenclature ne 'drug_brand', $drug->drug_alt_names)));
-    my $drug_brands = join(':', map($_->alternate_name, grep($_->nomenclature eq 'drug_brand', $drug->drug_alt_names)));
-    my $drug_types = join(';', map($_->category_value, grep($_->category_name eq 'drug_type', $drug->drug_categories)));
-    my $drug_groups = join(';', map($_->category_value, grep($_->category_name eq 'drug_group', $drug->drug_categories)));
-    my $drug_categories = join(';', map($_->category_value, grep($_->category_name eq 'drug_category', $drug->drug_categories)));
-    my $interaction_types = join(':', $interaction->interaction_types);
-    my $interaction_line = join("\t", $drug->name, $drug->nomenclature, $drug_primary_name,
-        $drug_alternate_names, $drug_brands, $drug_types, $drug_groups, $drug_categories, $drug->source_db_name, $drug->source_db_version,
-        $gene_identifiers, $gene->name, $gene->nomenclature, $gene_alternate_names,
-        $gene->source_db_name, $gene->source_db_version, $entrez_gene_name, $entrez_gene_synonyms, $interaction_types);
-    return $interaction_line;
-}
-
-sub _create_entrez_gene_outputs{
-    my $self = shift;
-    my @gene_identifiers = split(':', shift);
-    my $entrez_gene_output = "";
-    my $entrez_gene_synonyms_output = "";
-    my $entrez_delimiter = '|';
-    my $sub_delimiter = '/';
-    for my $gene_identifier (@gene_identifiers){
-        my @genes = @{$self->identifier_to_genes->{$gene_identifier}};
-        my @entrez_genes = grep($_->nomenclature eq 'entrez_id', @genes);
-        if(@entrez_genes){
-            for my $entrez_gene (sort {$a->name cmp $b->name} @entrez_genes){
-                my ($entrez_gene_symbol) = sort map($_->alternate_name, grep($_->nomenclature eq 'entrez_gene_symbol', $entrez_gene->gene_alt_names));
-                my @entrez_gene_synonyms = sort map($_->alternate_name, grep($_->nomenclature eq 'entrez_gene_synonym', $entrez_gene->gene_alt_names));
-                $entrez_gene_output = $entrez_gene_output . ($entrez_gene_output ? $entrez_delimiter : '') . $entrez_gene_symbol;
-                $entrez_gene_synonyms_output = $entrez_gene_synonyms_output . ($entrez_gene_synonyms_output ? $entrez_delimiter : '') . join($sub_delimiter, @entrez_gene_synonyms);
-            }
-        }else{
-            $entrez_gene_output = $entrez_gene_output . $entrez_delimiter;
-            $entrez_gene_synonyms_output = $entrez_gene_synonyms_output . $entrez_delimiter;
-        }
-    }
-    return ($entrez_gene_output, $entrez_gene_synonyms_output);
+    return $result;
 }
 1;

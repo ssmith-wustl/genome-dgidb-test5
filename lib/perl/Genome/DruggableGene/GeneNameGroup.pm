@@ -45,7 +45,7 @@ sub consume {
 
 sub delete {
     my $self = shift;
-    for($self->gene_name_group_bridges) {
+    for($self->bridges) {
         $_->delete;
     }
     return $self->SUPER::delete();
