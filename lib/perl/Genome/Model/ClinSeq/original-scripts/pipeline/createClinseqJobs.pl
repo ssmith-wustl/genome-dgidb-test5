@@ -58,10 +58,11 @@ if ($wgs_somatic_model_group){
   foreach my $model (@models){
     my $model_id = $model->id;
     my $sample = $model->subject;
+    my $sample_name = $sample->name;
     my $individual = $sample->patient;
     my $individual_name = $individual->name;
-    my $tissue_desc = $sample->tissue_desc;
-    my $common_name = $individual->common_name;
+    my $tissue_desc = $sample->tissue_desc || "NA";
+    my $common_name = $individual->common_name || $sample->name;
     #print "\nWGS\t$model_id\t$individual_name\t$common_name\t$tissue_desc";
     $individuals{$individual_name}{wgs_somatic_model_id} = $model_id;
     $individuals{$individual_name}{common_name} = $common_name;
@@ -73,10 +74,11 @@ if ($exome_somatic_model_group){
   foreach my $model (@models){
     my $model_id = $model->id;
     my $sample = $model->subject;
+    my $sample_name = $sample->name;
     my $individual = $sample->patient;
     my $individual_name = $individual->name;
-    my $tissue_desc = $sample->tissue_desc;
-    my $common_name = $individual->common_name;
+    my $tissue_desc = $sample->tissue_desc || "NA";
+    my $common_name = $individual->common_name || $sample->name;
     #print "\nExome\t$model_id\t$individual_name\t$common_name\t$tissue_desc";
     $individuals{$individual_name}{exome_somatic_model_id} = $model_id;
     $individuals{$individual_name}{common_name} = $common_name;
@@ -88,6 +90,7 @@ if ($rnaseq_model_group){
   foreach my $model (@models){
     my $model_id = $model->id;
     my $sample = $model->subject;
+    my $sample_name = $sample->name;
     my $individual = $sample->patient;
     my $individual_name = $individual->name;
     my $tissue_desc = $sample->tissue_desc || "NA";
