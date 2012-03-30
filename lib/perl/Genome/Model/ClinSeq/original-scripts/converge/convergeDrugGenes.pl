@@ -220,12 +220,14 @@ $et_header_s = join("\t", @et_header);
 
 print BLUE, "\n\nWriting (gene family -> patient events <- gene family member) table to: $gene_family_table", RESET;
 open (OUT, ">$gene_family_table") || die "\n\nCould not open output file: $gene_family_table\n\n";
-print OUT "gene_family\tgrand_patient_count\tgrand_patient_list\tgrand_gene_count\tgrand_gene_list\tgrand_hit_count\t$et_header_s\n";
+print OUT "gene_group\tgene_group_size\tgrand_patient_count\tgrand_patient_list\tgrand_gene_count\tgrand_gene_list\tgrand_hit_count\t$et_header_s\n";
 
 
 my $sublists = $symbol_list_names->{sublists};
 my $target_groups = $sublists->{$gene_groups}->{groups};
 foreach my $group_name (sort {$target_groups->{$a}->{order} <=> $target_groups->{$b}->{order}} keys %{$target_groups}){
+
+  my $group_gene_count = $p_gf->{$group_name}->{gene_count};
 
   my %patient_list = %{$p_gf->{$group_name}->{grand_list}->{patient_list}};
   my @grand_patient_list = keys %patient_list;
@@ -277,7 +279,7 @@ foreach my $group_name (sort {$target_groups->{$a}->{order} <=> $target_groups->
 		}
 	}
 	my $et_values_s = join("\t", @et_values);
-  print OUT "$group_name\t$grand_patient_count\t$grand_patient_list_s\t$grand_gene_count\t$grand_gene_list_s\t$grand_hit_count\t$et_values_s\n";
+  print OUT "$group_name\t$group_gene_count\t$grand_patient_count\t$grand_patient_list_s\t$grand_gene_count\t$grand_gene_list_s\t$grand_hit_count\t$et_values_s\n";
 
 }
 
@@ -601,6 +603,7 @@ sub parsePotentiallyDruggableFiles{
         foreach my $group_name (sort {$target_groups->{$a}->{order} <=> $target_groups->{$b}->{order}} keys %{$target_groups}){
            my @list = @{$master_group_list->{$group_name}->{members}};
            my $group_gene_count = $master_group_list->{$group_name}->{gene_count};
+           $gene_fams{$group_name}{gene_count} = $group_gene_count;
            foreach my $member (@list){
 
             #Skip undefined group member values? - meaningless if we choke on missing column above...
