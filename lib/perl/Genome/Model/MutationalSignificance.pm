@@ -68,7 +68,8 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
         input_properties => ['clinical_data_file', 'merged_maf_path', 'create_maf_output_dir', 'bam_list', 'processors', 'pathway_file', 'gene_covg_dir','reference_sequence','reference_build','somatic_variation_builds','annotation_build','pfam_output_file','cosmic_omim_output_file',
-                             'clinical_correlation_output_file','mutation_relation_output_file','smg_output_file','path_scan_output_file','output_dir', 'log_directory'],
+                             'clinical_correlation_output_file','mutation_relation_output_file','smg_output_file','path_scan_output_file','output_dir', 'log_directory', 'roi_flank_size', 'excluded_reference_sequence_patterns',
+                             'included_feature_type_patterns'],
         output_properties => ['smg_result','pathscan_result','mr_result','pfam_result','proximity_result',
                               'cosmic_result','cct_result'],
     );
@@ -451,6 +452,9 @@ sub _map_workflow_inputs {
     push @inputs, bam_list => $base_dir."/bam_list.txt";
     push @inputs, clinical_data_file => $base_dir."/clinical_data.txt";
 
+    push @inputs, excluded_reference_sequence_patterns => ("^HS","^Un","^MT","^LRG");
+    push @inputs, included_feature_type_patterns => ("cds_exon","rna");
+    push @inputs, roi_flank_size => 2;
     return @inputs;
 }
 

@@ -77,6 +77,26 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         },
     ],
     has_optional_input => [
+        excluded_reference_sequence_patterns => {
+            is => 'Text',
+            doc => 'TODO',
+        },
+        included_feature_type_patterns => {
+            is => 'Text',
+            doc => 'TODO',
+        },
+        condense_roi_feature_name => {
+            is => 'Boolean',
+            doc => 'TODO',
+        },
+        roi_flank_size => {
+            is => 'Integer',
+            doc => 'TODO',
+        },
+        is_one_based_roi => {
+            is => 'Boolean',
+            doc => 'TODO',
+        },
         numeric_clinical_data_file => {
             is => 'Text',
             doc => 'Table of samples (y) vs. numeric clinical data category (x)',
@@ -447,6 +467,11 @@ sub _play_music_dependencies {
     );
     my %names = map {$_ => $self->_get_operation_name_for_module($operation_names{$_})} keys %operation_names;
     my %links = (
+        $names{create_roi_operation} => {
+            one_based => ['input connector', 'is_roi_one_based'],
+            flank_size => ['input connector', 'roi_flank_size'],
+            condense_feature_name => ['input connector', 'condense_roi_feature_name'],
+        },
         $names{path_scan_operation} => {
             bmr => [$names{bmr_calc_bmr_operation}, 'bmr_output'],
             output_file => ['input connector', 'path_scan_output_file'],
