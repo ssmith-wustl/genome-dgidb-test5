@@ -60,17 +60,13 @@ sub dispatch_request {
             push @filter, $filter;
         }
 
-        my $command = Genome::DruggableGene::Command::GeneNameReport::LookupInteractions->execute(
+        my $command = Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions->execute(
             gene_identifiers => \@gene_names,
-            filter => join(',',@filter),
+#            filter => join(',',@filter),
         );
         my %params = (
-            no_match_genes => [$command->no_match_genes],
-            no_interaction_genes => [$command->no_interaction_genes],
+            data => $command->result,
             subject => Genome::DruggableGene::GeneNameReport->define_set,
-            interactions => [$command->interactions],
-            filtered_out_interactions => [$command->filtered_out_interactions],
-            identifier_to_genes => $command->identifier_to_genes,
         );
         for($params->{'return'}){
             if(/html/){
