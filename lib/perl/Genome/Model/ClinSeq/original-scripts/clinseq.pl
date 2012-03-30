@@ -144,9 +144,8 @@ $gene_symbol_lists_dir = &checkDir('-dir'=>$gene_symbol_lists_dir, '-clear'=>"no
 $step++; print MAGENTA, "\n\nStep $step. Importing gene symbol lists (from $gene_symbol_lists_dir)", RESET;
 my $symbol_list_names = &importSymbolListNames('-gene_symbol_lists_dir'=>$gene_symbol_lists_dir, '-verbose'=>$verbose);
 my $master_list = $symbol_list_names->{master_list};
-my @symbol_list_names = keys %{$master_list};
+my @symbol_list_names = sort {$master_list->{$a}->{order} <=> $master_list->{$b}->{order}} keys %{$master_list};
 my $gene_symbol_lists = &importGeneSymbolLists('-gene_symbol_lists_dir'=>$gene_symbol_lists_dir, '-symbol_list_names'=>\@symbol_list_names, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
-
 
 #Create a hash for storing output files as they are created
 my %out_paths; my $out_paths = \%out_paths;
