@@ -82,7 +82,10 @@ class Genome::ProcessingProfile::Command::Create::Tester {
     ],
 };
 Genome::ProcessingProfile::Command::Create::Tester->dump_status_messages(1);
-Genome::ProcessingProfile::Command::Create->_overload_target_class_name('Genome::ProcessingProfile::Command::Create::Tester');
+#Genome::ProcessingProfile::Command::Create->_overload_target_class_name('Genome::ProcessingProfile::Command::Create::Tester');
+no warnings 'redefine';
+eval "sub Genome::ProcessingProfile::Command::Create::Tester::_target_class_name { 'Genome::ProcessingProfile::Tester' }";
+use warnings;
 is(Genome::ProcessingProfile::Command::Create::Tester->_target_class_name, 'Genome::ProcessingProfile::Tester', 'target class is Genome::ProcessingProfile::Tester');
 
 # Create a pp
