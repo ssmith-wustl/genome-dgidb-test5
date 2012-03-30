@@ -331,7 +331,11 @@
       </div>
 
       <div class="box_content rounded-bottom span-8 last">
-        <table class="name-value">
+        <table class="name-value" style="width: 310px; table-layout: fixed">
+          <cols>
+            <col width="100"/>
+            <col width="210"/>
+          </cols>
           <tbody>
             <tr>
               <td class="name">status:
