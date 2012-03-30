@@ -55,11 +55,11 @@ require Exporter;
 @EXPORT = qw();
 
 @EXPORT_OK = qw(
-                &createNewDir &checkDir &commify &memoryUsage &loadEnsemblMap &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase
+                &createNewDir &checkDir &commify &memoryUsage &loadEnsemblMap &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importSymbolListNames &importGeneSymbolLists &getFilePathBase
                );
 
 %EXPORT_TAGS = (
-                all => [qw(&createNewDir &checkDir &commify &memoryUsage &loadEnsemblMap &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase)]
+                all => [qw(&createNewDir &checkDir &commify &memoryUsage &loadEnsemblMap &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importSymbolListNames &importGeneSymbolLists &getFilePathBase)]
                );
 
 use strict;
@@ -866,6 +866,112 @@ sub listGeneCategories{
     print "\n\n";
   }
   return(\%categories)
+}
+
+
+
+
+
+###################################################################################################################################
+#Import symbol list names                                                                                               #
+###################################################################################################################################
+sub importSymbolListNames{
+  my %args = @_;
+  my $gene_symbol_lists_dir = $args{'-gene_symbol_lists_dir'};
+  my $verbose = $args{'-verbose'};
+
+  my %lists;
+  my %master_lists;
+  my %master_groups;
+
+  #The following file defines all the possible gene symbol lists that will be used for annotation purposes
+  #Perform basic checks on these file and make sure no duplicates are being defined
+  my $master_list_file = $gene_symbol_lists_dir . "config/MasterList.txt";
+  open (MASTER, "$master_list_file") || die "\n\nCould not open master gene symbol list file: $master_list_file\n\n";
+  my $header = 1;
+  while(<MASTER>){
+    if ($header){
+      $header = 0;
+      next();
+    }
+    chomp($_);
+    my @line = split("\t", $_);
+    my $name = $line[0];
+    my $filename = $line[1];
+    my $readable = $line[2];
+    my $source = $line[3];
+    
+    #Get the gene count of each of these files
+    my $path = $gene_symbol_lists_dir . "$filename";
+    open(IN, "$path") || die "\n\nCould not find expected gene list file: $path in $gene_symbol_lists_dir\n\n";
+    my %genes;
+    while(<IN>){
+      chomp($_);
+      if ($genes{$_}){
+        if ($verbose){
+          print YELLOW, "\n\nFound a duplicate gene name ($_) in $path", RESET;
+        }
+      }
+      $genes{$_}=1;
+    }
+    close(IN);
+    my $count = keys %genes;
+
+    #Check to see if the master list name is unique, and if so, store it
+    if (defined($master_lists{$name})){
+      print RED, "\n\nFound a duplicate gene_symbol list name ($name) in $master_list_file\n\n", RESET;
+      exit(1);
+    }
+    $master_lists{$name}{filename} = $filename;
+    $master_lists{$name}{readable} = $readable;
+    $master_lists{$name}{source} = $source;
+    $master_lists{$name}{count} = $count;
+  }
+  close(MASTER);
+
+  #The following file defines meta-groups of gene symbol lists
+  #A group can be composed of one or more of the groups defined above
+  my $master_group_file = $gene_symbol_lists_dir . "config/MasterGroups.txt";
+  open (GROUP, "$master_group_file") || die "\n\nCould not open master group file: $master_group_file\n\n";
+  $header = 1;
+  my $order = 0;
+  while(<GROUP>){
+    if ($header){
+      $header = 0;
+      next();
+    }
+    $order++;
+    chomp($_);
+    my @line = split("\t", $_);
+    my $name = $line[0];
+    my $readable = $line[1];
+    my $members = $line[2];
+    my @member_list = split(",", $members);
+
+    #Make sure every member in this group is in the master list
+    foreach my $member (@member_list){
+      unless ($master_lists{$member}){
+        print RED, "\n\nGene group file: $master_group_file contains a group ($name) with a member ($member) that is not in the master gene symbol list file: $master_list_file\n\n", RESET;
+        exit(1);
+      }
+    }
+    #Make sure this group name is not a duplicate
+    if (defined($master_groups{$name})){
+      print RED, "\n\nFound a duplicate gene group name ($name) in $master_group_file\n\n", RESET;
+      exit(1);
+    }
+    my $count = scalar(@member_list);
+    $master_groups{$name}{order} = $order;
+    $master_groups{$name}{readable} = $readable;
+    $master_groups{$name}{members} = \@member_list;
+    $master_groups{$name}{count} = $count;
+  }
+  close(GROUP);
+
+  $lists{master_list} = \%master_lists;
+  $lists{master_group_list} = \%master_groups;
+
+  return(\%lists);
 }
 
 
