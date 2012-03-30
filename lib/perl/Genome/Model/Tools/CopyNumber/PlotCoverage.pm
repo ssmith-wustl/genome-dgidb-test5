@@ -27,24 +27,26 @@ class Genome::Model::Tools::CopyNumber::PlotCoverage{
 	    doc => 'window size to average the coverage',
 	    default => '1000'
         },
-
         output_file => {
 	    is => 'String',
 	    is_optional => 0,
 	    doc => 'output file in PDF format',
         },
-
         plot_title => {
             is => 'String',
             is_optional => 1,
 	    doc => 'Title of the plot (appended by normal or tumor)',
         },
-        
         transcript_file => {
             is => 'String',
             is_optional => 1,
 	    doc => '',
         },
+	coverage_file => {
+	    is => 'String',
+	    is_optional => 1,
+	    doc => 'Name of the file to save coverage file in.  Default: chr_start_stop_win-size.depth',
+	},
         normal_bam => {
             is => 'String',
             is_optional => 1,
@@ -97,8 +99,13 @@ sub execute {
     my $window_size = $self->window_size;
     my $output_file = abs_path($self->output_file);
     my $plot_title = $self->plot_title || $ROI;
-    my $transcript_file = abs_path($self->transcript_file);
 
+    my $transcript_file;
+    if(defined($self->transcript_file)) {
+	$transcript_file = abs_path($self->transcript_file);
+    }else {
+	$transcript_file = '';
+    }
     my $user_normalBAM = $self->normal_bam;
     my $user_tumorBAM = $self->tumor_bam;
 
@@ -174,7 +181,14 @@ sub execute {
     $fh->close;
 
     print STDERR "Get mean depth using window size of $window_size\n";
-    my $plot_input_file = abs_path("${chr}_${start}_${stop}_win${window_size}.depth");
+    
+    my $plot_input_file;
+    if($self->coverage_file) {
+	$plot_input_file = abs_path($self->coverage_file);
+    }else {
+	$plot_input_file = abs_path("${chr}_${start}_${stop}_win${window_size}.depth");
+    }
+
     get_mean_depth($temp_file,$window_size,$plot_input_file);
     #unlink($temp_file); 
 
