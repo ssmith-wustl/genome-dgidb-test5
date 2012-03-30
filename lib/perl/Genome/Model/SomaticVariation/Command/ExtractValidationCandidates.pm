@@ -63,21 +63,64 @@ sub execute {
     Genome::Sys->create_directory($lq_tiers);
     
     my $variants_dir = $build->data_directory."/variants";
-    my @possible_ssmq_directories = glob( $variants_dir."/snv/sniper*/false-positive-*/somatic-score-mapping-quality-*");
-    unless(@possible_ssmq_directories == 1){
-        die $self->status_message("Found ".scalar(@possible_ssmq_directories)." results when looking for somatic-score-mapping-quality directory!");
+
+    #get strategy and parseable tree to locate exact software result subdirectories
+    my $snv_strategy = $build->snv_detection_strategy;
+    my $dv2_strategy = Genome::Model::Tools::DetectVariants2::Strategy->get($snv_strategy);
+    my $strategy_tree = $dv2_strategy->tree;
+    my $detectors = $strategy_tree->{intersect};
+
+    my ($sniper_strategy) =  grep {$_->{detector}->{name} eq 'sniper'} @$detectors;
+    die $self->error_message("No sniper strategy detected for build!") unless $sniper_strategy; 
+    $sniper_strategy = $sniper_strategy->{detector};
+    my $sniper_hash = Digest::MD5::md5_hex($sniper_strategy->{params});
+    my $sniper_subdir = 'sniper-'.$sniper_strategy->{version}."-$sniper_hash";
+    my $ssmq_dir = "$variants_dir/snv/$sniper_subdir";
+    unless (-d $ssmq_dir){
+        die $self->error_message("unable to locate sniper result directory in build dir!");
     }
 
-    my $ssmq_dir=$possible_ssmq_directories[0];
-    unless(-d $ssmq_dir){
+    my $sniper_filters = $sniper_strategy->{filters};
+    
+    my ($fp_strategy) = grep {$_->{name} eq 'false-positive'} @$sniper_filters;
+    die $self->error_message("unable to locate false positive strategy") unless $fp_strategy;
+    my $fp_hash = Digest::MD5::md5_hex($fp_strategy->{params});
+    my $fp_subdir = 'false-positive-'.$fp_strategy->{version}."-$fp_hash";
+    $ssmq_dir = "$ssmq_dir/$fp_subdir";
+    unless (-d $ssmq_dir){
+        die $self->error_message("unable to locate sniper filtered by false positive result directory in build dir!");
+    }
+
+    my ($ssmq_strategy) = grep {$_->{name} eq 'somatic-score-mapping-quality'} @$sniper_filters;
+    die 'no somatic' unless $ssmq_strategy;
+    my $ssmq_hash = Digest::MD5::md5_hex($ssmq_strategy->{params});
+    my $ssmq_subdir = 'somatic-score-mapping-quality-'.$ssmq_strategy->{version}."-$ssmq_hash";
+    $ssmq_dir = "$ssmq_dir/$ssmq_subdir";
+    unless (-d $ssmq_dir){
         die $self->error_message("Could not locate somatic-score-mapping-quality filter directory at: ".$ssmq_dir);
     }
 
-    my @filtered_samtools = glob($variants_dir."/snv/samtools-*/snp-filter-*/snvs.hq.bed");
-    unless(@filtered_samtools == 1){
-        die $self->error_message("Found ".scalar(@filtered_samtools)." results when searching for snp-filter'ed samtools results");
+    my ($samtools_strategy) = grep {$_->{detector}->{name} eq 'samtools'} @$detectors;
+    die $self->error_message('unable to locate samtools strategy') unless $samtools_strategy;
+    $samtools_strategy = $samtools_strategy->{detector};
+    my $samtools_hash = Digest::MD5::md5_hex($samtools_strategy->{params});
+    my $samtools_subdir = 'samtools-'.$samtools_strategy->{version}."-$samtools_hash";
+    my $filtered_samtools_dir = "$variants_dir/snv/$samtools_subdir";
+    unless (-d $filtered_samtools_dir){
+        die $self->error_message("Couldn't find samtools result dir in build dir");
     }
-    my $filtered_samtools = $filtered_samtools[0];
+
+    my $samtools_filters = $samtools_strategy->{filters};
+
+    my ($snp_filter_strategy) = grep {$_->{name} eq 'snp-filter' } @$samtools_filters;
+    die 'no snp-filter' unless $snp_filter_strategy;
+    my $snp_filter_hash = Digest::MD5::md5_hex($snp_filter_strategy->{params});
+    my $snp_filter_subdir = 'snp-filter-'.$snp_filter_strategy->{version}."-$snp_filter_hash";
+    $filtered_samtools_dir = "$filtered_samtools_dir/$snp_filter_subdir";
+    unless (-d $filtered_samtools_dir){
+        die $self->error_message("Couldn't find samtools snp-filtered result dir in build dir");
+    }
+    my $filtered_samtools = "$filtered_samtools_dir/snvs.hq.bed";
     unless(-e $filtered_samtools){
         die $self->error_message("Could not locate samtools filtered output at: ".$filtered_samtools);
     }
@@ -87,16 +130,16 @@ sub execute {
     $self->status_message("Now running fast-tier on somatic-score-mapping-quality lq output.");
 
     my $tier_cmd = Genome::Model::Tools::FastTier::FastTier->create(
-                    variant_bed_file => $lq_tiers."/snvs.lq.bed",
-                    tier_file_location => $tier_file_location,
-                    tiering_version => $tiering_version,
+        variant_bed_file => $lq_tiers."/snvs.lq.bed",
+        tier_file_location => $tier_file_location,
+        tiering_version => $tiering_version,
     );
     unless($tier_cmd->execute){
         die $self->error_message("Failed to run fast-tier on snvs.lq.bed!");
     }
     my $intersect_dir = $output_directory."/intersect_samtools";
     Genome::Sys->create_directory($intersect_dir);
-    
+
     $self->status_message("Now intersecting tier1 lq results with filtered samtools results.");
 
     my $intersect_cmd = Genome::Model::Tools::Joinx::Intersect->create(
@@ -113,9 +156,9 @@ sub execute {
     $self->status_message("Now checking for loh from intersected results.");
 
     my $loh_cmd = Genome::Model::SomaticVariation::Command::Loh->create( 
-                    build => $build, 
-                    output_directory => $loh_output,
-                    variant_bed_file => $intersect_dir."/snvs.hq.bed",
+        build => $build, 
+        output_directory => $loh_output,
+        variant_bed_file => $intersect_dir."/snvs.hq.bed",
     );
     unless($loh_cmd->execute){
         die $self->error_message("Failed to run loh.");
@@ -155,14 +198,14 @@ sub execute {
     my $novel_tier3_result = $validation_candidates."/snvs.hq.novel.tier3.v2.bed";
 
     $self->status_message("Copying results into ".$validation_candidates);
-   
+
     Genome::Sys->copy_file($novel_tier1,$novel_tier1_result);
     Genome::Sys->copy_file($novel_tier2,$novel_tier2_result);
     Genome::Sys->copy_file($novel_tier3,$novel_tier3_result);
     Genome::Sys->copy_file($dbsnp_dir."/snvs.hq.bed",$validation_candidates."/snvs.tier1_ssmq.hq.bed");
 
     $self->status_message("Validation Candidates have been deposited at: ".$validation_candidates);
-    
+
     return 1;
 }
 
