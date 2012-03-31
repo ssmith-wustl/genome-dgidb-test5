@@ -208,7 +208,7 @@ sub execute
         my ( $gene, $entrez_id, $mutation_class, $tumor_sample ) = ( $cols[0], $cols[1], $cols[8], $cols[15] );
 
         # If the mutation classification is odd, quit with error
-        if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|Silent|In_Frame_Ins|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region|Indel|De_novo_Start_InFrame|De_novo_Start_OutOfFrame)$/ )
+        if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|Silent|In_Frame_Ins|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region|De_novo_Start_InFrame|De_novo_Start_OutOfFrame)$/ )
         {
             print STDERR "Unrecognized Variant_Classification $mutation_class in MAF file.\n";
             print STDERR "Please use TCGA MAF Specification v2.2.\n";

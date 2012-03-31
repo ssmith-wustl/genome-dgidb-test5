@@ -62,7 +62,8 @@ plot_tumor_normal_read_depth <- function(coverage_file,plot_title="Sequence Cove
 
   p_normal <- get_normalized_reads_plot(normal.df,paste(plot_title,"(normal)",sep=" "),c(xlim_min,xlim_max),plot_color=colors()[51],transcript_file=transcript.info);
   p_tumor  <- get_normalized_reads_plot(tumor.df,paste(plot_title,"(tumor)",sep=" "),c(xlim_min,xlim_max),plot_color=colors()[556],transcript_file=transcript.info);
-  p_diff   <- get_tumor_normal_diff_plot(cov.diff.data,plot_title,c(xlim_min,xlim_max));
+  #p_diff   <- get_tumor_normal_diff_plot(cov.diff.data,plot_title,c(xlim_min,xlim_max));
+  p_ratio   <- get_tumor_normal_ratio_plot(cov.diff.data,plot_title,c(xlim_min,xlim_max),transcript_file=transcript.info);
 
   #if outputfile is defined, print plots to outputfile
   #else, return ggplot_obj to caller
@@ -73,7 +74,7 @@ plot_tumor_normal_read_depth <- function(coverage_file,plot_title="Sequence Cove
     #pushViewport(viewport(layout = grid.layout(plotRows, plotCols)))
     print(p_normal,vp=viewport(layout.pos.row=1,layout.pos.col=1));
     print(p_tumor, vp=viewport(layout.pos.row=2,layout.pos.col=1));
-    print(p_diff,  vp=viewport(layout.pos.row=3,layout.pos.col=1));
+    print(p_ratio,  vp=viewport(layout.pos.row=3,layout.pos.col=1));
     dev.off();
   }
   else {
@@ -132,6 +133,38 @@ get_tumor_normal_diff_plot<- function (data_input,plot_title='Tumor-Normal',xlim
   
 }
 
+get_tumor_normal_ratio_plot<-function(data_input,plot_title="Tumor/Normal Coverage",xlim,transcript_file=NULL) {
+
+  #determine the xlab breakpoints
+  x_tick_mark <- round((seq(xlim[1],xlim[2],len=4)),2);
+
+  ylim_max <- 4;
+  ylim_min <- 0;
+  pobj <- ggplot(data_input);
+  if(!is.null(transcript_file)) { #if transcript file is defined, draw it
+    transcript_info <- process_transcript_struct(transcript_file,ylim_max);
+    ylim_min <- transcript_info$exon$ymax[1]; #override the default value of zero 
+    pobj <- pobj + geom_rect(aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax),fill='black',data=transcript_info$exon);  #draw exons
+    pobj <- pobj + geom_segment(aes(x=xmin,xend=xmax,y=ymin,yend=ymin),data=transcript_info$intron,colour='black'); #draw introns
+    pobj <- pobj + geom_segment(aes(x=xmin,xend=xmax,y=ymin,yend=ymin),data=transcript_info$arrow,colour='black',arrow=arrow(length=unit(0.25,'cm'))); #draw arrow line
+    pobj <- pobj + scale_fill_manual('', c('utr_exon'=colors()[30],'cds_exon'= colors()[552]),breaks=c('utr_exon','cds_exon'),labels=c('UTR','CDS'),legend=FALSE);
+  }
+  pobj <- pobj + geom_line(aes(x=mean_pos,y=ratio),colour=colors()[28]);
+  #ylimits = round((range(data_input$ratio)));
+  pobj <- pobj + geom_hline(yintercept=1,size=0.5,colour='purple');
+  pobj <- pobj + geom_hline(yintercept=0,size=0.5,colour='black');
+  pobj <- pobj + scale_y_continuous(name="Tumor/Normal",breaks=c(0,1,2,4),limits=c(ylim_min,ylim_max));
+  #pobj <- pobj + scale_y_continuous(name="Tumor/Normal",breaks=c(0,0.5,1,ceiling(ylimits[2])),limits=c(0,ceiling(ylimits[2])));
+  pobj <- pobj + scale_x_continuous(name="MB",breaks=x_tick_mark);
+  pobj <- pobj + coord_cartesian(xlim=xlim); #control the area to be displayed
+
+  pobj <- pobj + opts(title=plot_title);
+  pobj <- pobj + opts(plot.title = theme_text(size=14, lineheight=.8, face="bold"),axis.text.y=theme_text(colour='black'),axis.text.x=theme_text(colour='black'),panel.grid.major=theme_blank(),panel.grid.minor=theme_blank(),panel.background=theme_rect(fill=colors()[141]));
+
+  return(pobj);
+  
+  
+}
 
 
 process_transcript_struct <- function(transcript_file,y_max,arrow_size=0.01) {
