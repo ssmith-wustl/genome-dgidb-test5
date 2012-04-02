@@ -78,7 +78,7 @@ my $usage=<<INFO;
 
   Example usage: 
   
-  clinseq.pl  --wgs_som_var_data_set='2880644349'  --exome_som_var_data_set='2880732183'  --tumor_rna_seq_data_set='2880693923'  --working_dir=/gscmnt/sata132/techd/mgriffit/hgs/  --common_name='hg3'
+  clinseq.pl  --wgs_som_var_data_set='2882504846'  --exome_som_var_data_set='2882505032'  --tumor_rna_seq_data_set='2880794613'  --working_dir=/gscmnt/sata132/techd/mgriffit/hgs/  --common_name='ALL1'
   
   Intro:
   This script attempts to automate the process of running the 'clinseq' pipeline
@@ -97,7 +97,7 @@ INFO
 
 #Get build directories for the three datatypes: $data_paths->{'wgs'}->*, $data_paths->{'exome'}->*, $data_paths->{'tumor_rnaseq'}->*
 my $step = 0;
-$step++; print MAGENTA, "\n\n  Step $step. Getting data paths from 'genome' for specified model ids\n", RESET;
+$step++; print MAGENTA, "\n\nStep $step. Getting data paths from 'genome' for specified model ids\n", RESET;
 my ($data_paths, $builds) = &getDataDirsAndBuilds('-wgs_som_var_data_set'=>$wgs_som_var_data_set, '-exome_som_var_data_set'=>$exome_som_var_data_set, '-tumor_rna_seq_data_set'=>$tumor_rna_seq_data_set, '-normal_rna_seq_data_set'=>$normal_rna_seq_data_set);
 
 unless (($wgs_som_var_data_set || $exome_som_var_data_set || $tumor_rna_seq_data_set || $normal_rna_seq_data_set) && $working_dir && $common_name){
@@ -141,10 +141,11 @@ $gene_symbol_lists_dir = &checkDir('-dir'=>$gene_symbol_lists_dir, '-clear'=>"no
 #Import a set of gene symbol lists (these files must be gene symbols in the first column, .txt extension, tab-delimited if multiple columns, one symbol per field, no header)
 #Different sets of genes list could be used for different purposes
 #Fix gene names as they are being imported
-my @symbol_list_names = qw (CancerGeneCensus FutrealEtAl2004Review HahnAndWeinberg2002Review Mitelman2000Review VogelsteinAndKinzler2004Review OncogeneEntrezQuery TumorSuppresorEntrezQuery Kinases KinasesGO ProteinKinaseEntrezQuery DrugBankAntineoplastic DrugBankInhibitors Druggable_RussLampel TfcatTransFactors FactorBookTransFactors TranscriptionFactorBinding_GO0008134 TranscriptionFactorComplex_GO0005667 CellSurface_GO0009986 DnaRepair_GO0006281 DrugMetabolism_GO0017144 TransporterActivity_GO0005215 ExternalSideOfPlasmaMembrane_GO0009897 GpcrActivity_GO0045028 GrowthFactorActivity_GO0008083 HistoneModification_GO0016570 HormoneActivity_GO0005179 IonChannelActivity_GO0005216 LipidKinaseActivity_GO0001727 NuclearHormoneReceptor_GO0004879 PeptidaseInhibitorActivity_GO0030414 PhospholipaseActivity_GO0004620 PhospoproteinPhosphataseActivity_GO0004721 PhosphataseEntrezQuery ProteinSerineThreonineKinaseActivity_GO0004674 ProteinTyrosineKinaseActivity_GO0004713 TyrosineKinaseEntrezQuery RegulationOfCellCycle_GO0051726 ResponseToDrug_GO0042493 Alpha6Beta4IntegrinPathway AndrogenReceptorPathway EGFR1Pathway HedgehogPathway IDPathway KitReceptorPathway NotchPathway TGFBRPathway TNFAlphaNFkBPathway WntPathway StabilityEntrezQuery AmplificationSangerCGC FrameshiftMutationSangerCGC LargeDeletionSangerCGC MissenseMutationSangerCGC NonsenseMutationSangerCGC SplicingMutationSangerCGC TranslocationSangerCGC);
-$step++; print MAGENTA, "\n\nStep $step. Importing gene symbol lists (@symbol_list_names)", RESET;
+$step++; print MAGENTA, "\n\nStep $step. Importing gene symbol lists (from $gene_symbol_lists_dir)", RESET;
+my $symbol_list_names = &importSymbolListNames('-gene_symbol_lists_dir'=>$gene_symbol_lists_dir, '-verbose'=>$verbose);
+my $master_list = $symbol_list_names->{master_list};
+my @symbol_list_names = sort {$master_list->{$a}->{order} <=> $master_list->{$b}->{order}} keys %{$master_list};
 my $gene_symbol_lists = &importGeneSymbolLists('-gene_symbol_lists_dir'=>$gene_symbol_lists_dir, '-symbol_list_names'=>\@symbol_list_names, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>0);
-
 
 #Create a hash for storing output files as they are created
 my %out_paths; my $out_paths = \%out_paths;
@@ -179,7 +180,7 @@ $step++; print MAGENTA, "\n\nStep $step. Summarizing SNVs and Indels", RESET;
 #Run CNView analyses on the CNV data to identify amplified/deleted genes
 $step++; print MAGENTA, "\n\nStep $step. Identifying CNV altered genes", RESET;
 if ($wgs){
-  my @cnv_symbol_lists = qw (Kinases CancerGeneCensusPlus DrugBankAntineoplastic DrugBankInhibitors Ensembl_v58);
+  my @cnv_symbol_lists = qw (Kinase_RonBose CancerGeneCensusPlus_Sanger AntineoplasticTargets_DrugBank AllGenes_Ensembl58);
   &identifyCnvGenes('-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-reference_build_name'=>$reference_build_ucsc, '-common_name'=>$common_name, '-patient_dir'=>$patient_dir, '-gene_symbol_lists_dir'=>$gene_symbol_lists_dir, '-symbol_list_names'=>\@cnv_symbol_lists, '-verbose'=>$verbose);
 }
 

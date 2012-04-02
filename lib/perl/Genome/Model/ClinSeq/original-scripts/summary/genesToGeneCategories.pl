@@ -48,7 +48,7 @@ my $usage=<<INFO;
 
   Example usage: 
   
-  geneToGeneCategories.pl  --infile=Genes.txt  --name_column=1  --gene_category_names='CancerGeneCensus,Kinases'  --outfile=GenesAnnotated.txt
+  geneToGeneCategories.pl  --infile=Genes.txt  --name_column=1  --gene_category_names='CancerGeneCensus_Sanger,Kinase_GO0016301'  --outfile=GenesAnnotated.txt
   
   Notes:
   This script will take an input TSV file containing a gene name column and will append columns indicating whether each gene belongs to a list of categories

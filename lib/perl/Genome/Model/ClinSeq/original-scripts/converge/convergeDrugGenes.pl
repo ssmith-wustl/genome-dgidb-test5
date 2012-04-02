@@ -36,6 +36,8 @@ use lib $lib_dir;
 use ClinSeq qw(:all);
 use converge::Converge qw(:all);
 
+my $reference_annotations_dir = '';
+my $gene_groups = '';
 my $build_ids = '';
 my $model_ids = '';
 my $model_group_id = '';
@@ -43,28 +45,33 @@ my $filter_name = '';
 my $outdir = '';
 my $verbose = 0;
 
-GetOptions ('build_ids=s'=>\$build_ids, 'model_ids=s'=>\$model_ids, 'model_group_id=s'=>\$model_group_id,
+GetOptions ('reference_annotations_dir=s'=>\$reference_annotations_dir, 'gene_groups=s'=>\$gene_groups,
+            'build_ids=s'=>\$build_ids, 'model_ids=s'=>\$model_ids, 'model_group_id=s'=>\$model_group_id,
             'filter_name=s'=>\$filter_name, 'outdir=s'=>\$outdir, 'verbose=i'=>\$verbose);
 
 my $usage=<<INFO;
   Example usage: 
 
-  convergeDrugGenes.pl  --model_group_id='31779'  --filter_name='antineo'  --outdir=/gscmnt/sata132/techd/mgriffit/luc/druggable_genes/  --verbose=1
+  convergeDrugGenes.pl  --model_group_id='31779'  --filter_name='antineo'  --outdir=/gscmnt/sata132/techd/mgriffit/luc/druggable_genes/  --reference_annotations_dir=/gscmnt/sata132/techd/mgriffit/reference_annotations/  --gene_groups='LUC17'  --verbose=1
+
+  Specify the following to define which sets of gene groups will be summarized for potential druggability
+  --reference_annotation_dirs  Path to reference annotation files
+  --gene_groups                Name of gene group sublist (e.g. 'Default', 'LUC17').  See reference annotations dir for details
 
   Specify *one* of the following as input (each model/build should be a ClinSeq model)
-  --build_ids                Comma separated list of specific build IDs
-  --model_ids                Comma separated list of specific model IDs
-  --model_group_id           A single genome model group ID
-  --filter_name              The name appended to each file indicating which filter was applied
-  --outdir                   Path of the a directory for output files
-  --verbose                  More descriptive stdout messages
+  --build_ids                  Comma separated list of specific build IDs
+  --model_ids                  Comma separated list of specific model IDs
+  --model_group_id             A single genome model group ID
+  --filter_name                The name appended to each file indicating which filter was applied
+  --outdir                     Path of the a directory for output files
+  --verbose                    More descriptive stdout messages
 
   Test Clinseq model groups:
   31779                      LUC17 project
 
 INFO
 
-unless (($build_ids || $model_ids || $model_group_id) && $filter_name && $outdir){
+unless ($reference_annotations_dir && $gene_groups && ($build_ids || $model_ids || $model_group_id) && $filter_name && $outdir){
   print RED, "\n\nRequired parameter missing", RESET;
   print GREEN, "\n\n$usage", RESET;
   exit(1);
@@ -92,6 +99,11 @@ if ($build_ids){
   exit();
 }
 
+#Import gene symbol lists, groups of gene symbol lists, and the subset that is going to be processed for this analysis
+my $gene_symbol_lists_dir = $reference_annotations_dir . "GeneSymbolLists/";
+$gene_symbol_lists_dir = &checkDir('-dir'=>$gene_symbol_lists_dir, '-clear'=>"no");
+my $symbol_list_names = &importSymbolListNames('-gene_symbol_lists_dir'=>$gene_symbol_lists_dir, '-verbose'=>$verbose);
+
 #Get files:
 # - drug-gene interaction files for each event type
 # - annotated files for each event type containing potentially druggable results
@@ -101,85 +113,15 @@ my $files = &getFiles('-models_builds'=>$models_builds, '-filter_name'=>$filter_
 #Go through each event type for each patient and parse out the values needed.
 my @event_types = qw (snv indel cnv_gain rna_cufflinks_absolute rna_tophat_absolute);
 
-#Known druggable ge
+#Known druggable genes
 my $k_result = &parseKnownDruggableFiles('-files'=>$files, '-event_types'=>\@event_types);
 my $k_g = $k_result->{'genes'}; #Known druggable genes
 my $k_i = $k_result->{'interactions'}; #Known druggable gene interactions
 #print Dumper $k_g;
 
-#Define potentially druggable families
-#TODO: Do not hard code these groupings of gene list names here.  Either do all of this using DGIdb
-#Or at least define the meta groups in the same location as where the gene lists are stored and load them here.
-#Then load the same list when ClinSeq is actually launched...  We will need both the gene lists and the gene-family lists (each with human readable names)
-my %gene_families;
-my @potentially_druggable = qw ( Druggable_RussLampel );
-my @kinases = qw ( Kinases KinasesGO ProteinKinaseEntrezQuery LipidKinaseActivity_GO0001727 ProteinSerineThreonineKinaseActivity_GO0004674 ProteinTyrosineKinaseActivity_GO0004713 TyrosineKinaseEntrezQuery );
-my @ion_channels = qw ( IonChannelActivity_GO0005216 ); 
-my @phosphatases = qw ( PhospoproteinPhosphataseActivity_GO0004721 PhosphataseEntrezQuery ); 
-my @gpcrs = qw ( GpcrActivity_GO0045028 );
-my @phospholipases = qw ( PhospholipaseActivity_GO0004620 );
-my @peptidases = qw ( PeptidaseInhibitorActivity_GO0030414 );
-my @transporter = qw ( TransporterActivity_GO0005215 IonChannelActivity_GO0005216 );
-my @growth_factors = qw ( GrowthFactorActivity_GO0008083 );
-my @hormone_related = qw ( HormoneActivity_GO0005179 NuclearHormoneReceptor_GO0004879 );
-my @cell_surface = qw ( CellSurface_GO0009986 ExternalSideOfPlasmaMembrane_GO0009897  );
-my @response_to_drug = qw ( DrugMetabolism_GO0017144 TransporterActivity_GO0005215 ResponseToDrug_GO0042493 );
-my @transcription_factors = qw ( TfcatTransFactors FactorBookTransFactors TranscriptionFactorBinding_GO0008134 TranscriptionFactorComplex_GO0005667 );
-my @cancer_genes = qw ( CancerGeneCensus FutrealEtAl2004Review HahnAndWeinberg2002Review Mitelman2000Review VogelsteinAndKinzler2004Review OncogeneEntrezQuery TumorSuppresorEntrezQuery );
-my @oncogenes = qw ( OncogeneEntrezQuery );
-my @tumor_suppressors = qw ( TumorSuppresorEntrezQuery RegulationOfCellCycle_GO0051726 );
-my @dna_repair = qw ( DnaRepair_GO0006281 );
-my @cancer_pathway = qw ( Alpha6Beta4IntegrinPathway AndrogenReceptorPathway EGFR1Pathway HedgehogPathway IDPathway KitReceptorPathway NotchPathway TGFBRPathway TNFAlphaNFkBPathway WntPathway );
-my @egfr_pathway = qw ( EGFR1Pathway );
-my @histone_related = qw ( HistoneModification_GO0016570 );
-my @genome_stability = qw ( StabilityEntrezQuery );
-
-$gene_families{'Potentially Druggable'}{list} = \@potentially_druggable;
-$gene_families{'Potentially Druggable'}{order} = 1;
-$gene_families{'Kinase'}{list} = \@kinases;
-$gene_families{'Kinase'}{order} = 2;
-$gene_families{'Ion Channel'}{list} = \@ion_channels;
-$gene_families{'Ion Channel'}{order} = 3;
-$gene_families{'Phophatase'}{list} = \@phosphatases;
-$gene_families{'Phophatase'}{order} = 4;
-$gene_families{'GPCR'}{list} = \@gpcrs;
-$gene_families{'GPCR'}{order} = 5;
-$gene_families{'Phospholipase'}{list} = \@phospholipases;
-$gene_families{'Phospholipase'}{order} = 6;
-$gene_families{'Peptidase'}{list} = \@peptidases;
-$gene_families{'Peptidase'}{order} = 7;
-$gene_families{'Transporter'}{list} = \@transporter;
-$gene_families{'Transporter'}{order} = 8;
-$gene_families{'Growth Factor'}{list} = \@growth_factors;
-$gene_families{'Growth Factor'}{order} = 9;
-$gene_families{'Hormone Related'}{list} = \@hormone_related;
-$gene_families{'Hormone Related'}{order} = 10;
-$gene_families{'Cell Surface'}{list} = \@cell_surface;
-$gene_families{'Cell Surface'}{order} = 11;
-$gene_families{'Response To Drug'}{list} = \@response_to_drug;
-$gene_families{'Response To Drug'}{order} = 12;
-$gene_families{'Transcription Factor'}{list} = \@transcription_factors;
-$gene_families{'Transcription Factor'}{order} = 13;
-$gene_families{'Cancer Gene'}{list} = \@cancer_genes;
-$gene_families{'Cancer Gene'}{order} = 14;
-$gene_families{'Oncogene'}{list} = \@oncogenes;
-$gene_families{'Oncogene'}{order} = 15;
-$gene_families{'Tumor Suppressors'}{list} = \@tumor_suppressors;
-$gene_families{'Tumor Suppressors'}{order} = 16;
-$gene_families{'DNA Repair'}{list} = \@dna_repair;
-$gene_families{'DNA Repair'}{order} = 17;
-$gene_families{'Cancer Pathway'}{list} = \@cancer_pathway;
-$gene_families{'Cancer Pathway'}{order} = 18;
-$gene_families{'EGFR Pathway'}{list} = \@egfr_pathway;
-$gene_families{'EGFR Pathway'}{order} = 19;
-$gene_families{'Histone Related'}{list} = \@histone_related;
-$gene_families{'Histone Related'}{order} = 20;
-$gene_families{'Genome Stability'}{list} = \@genome_stability;
-$gene_families{'Genome Stability'}{order} = 21;
-
-my $p_result = &parsePotentiallyDruggableFiles('-files'=>$files, '-event_types'=>\@event_types, '-gene_families'=>\%gene_families);
+#Potentially druggable genes
+my $p_result = &parsePotentiallyDruggableFiles('-files'=>$files, '-event_types'=>\@event_types, '-symbol_list_names'=>$symbol_list_names, '-gene_groups'=>$gene_groups);
 my $p_gf = $p_result->{'gene_fams'}; #Potentially druggable gene families
-my $p_g = $p_result->{'genes'};      #Potentially druggable genes
 #print Dumper $p_result; 
 
 
@@ -278,15 +220,22 @@ $et_header_s = join("\t", @et_header);
 
 print BLUE, "\n\nWriting (gene family -> patient events <- gene family member) table to: $gene_family_table", RESET;
 open (OUT, ">$gene_family_table") || die "\n\nCould not open output file: $gene_family_table\n\n";
-print OUT "gene_family\tgrand_patient_count\tgrand_patient_list\tgrand_gene_count\tgrand_gene_list\tgrand_hit_count\t$et_header_s\n";
-foreach my $family (sort {$gene_families{$a}->{order} <=> $gene_families{$b}->{order}} keys %gene_families){
-  my %patient_list = %{$p_gf->{$family}->{grand_list}->{patient_list}};
+print OUT "gene_group\tgene_group_size\tgrand_patient_count\tgrand_patient_list\tgrand_gene_count\tgrand_gene_list\tgrand_hit_count\t$et_header_s\n";
+
+
+my $sublists = $symbol_list_names->{sublists};
+my $target_groups = $sublists->{$gene_groups}->{groups};
+foreach my $group_name (sort {$target_groups->{$a}->{order} <=> $target_groups->{$b}->{order}} keys %{$target_groups}){
+
+  my $group_gene_count = $p_gf->{$group_name}->{gene_count};
+
+  my %patient_list = %{$p_gf->{$group_name}->{grand_list}->{patient_list}};
   my @grand_patient_list = keys %patient_list;
 	my @tmp = sort { substr($a, &lengthOfAlpha($a)) <=> substr($b, &lengthOfAlpha($b)) } @grand_patient_list;
   my $grand_patient_list_s = join (",", @tmp);
 	my $grand_patient_count = scalar(@grand_patient_list);
 
-  my %gene_list = %{$p_gf->{$family}->{grand_list}->{gene_list}};
+  my %gene_list = %{$p_gf->{$group_name}->{grand_list}->{gene_list}};
   my @grand_gene_list = keys %gene_list;
   @tmp = sort @grand_gene_list;
   my $grand_gene_list_s = join (",", @tmp);
@@ -299,8 +248,8 @@ foreach my $family (sort {$gene_families{$a}->{order} <=> $gene_families{$b}->{o
 
 	my @et_values;
 	foreach my $et (@event_types){
-		if (defined($p_gf->{$family}->{$et})){
-			my %patients = %{$p_gf->{$family}->{$et}->{patient_list}};
+		if (defined($p_gf->{$group_name}->{$et})){
+			my %patients = %{$p_gf->{$group_name}->{$et}->{patient_list}};
 			my @patient_list = keys %patients;
 			my @tmp = sort { substr($a, &lengthOfAlpha($a)) <=> substr($b, &lengthOfAlpha($b)) } @patient_list;;
       my $patient_list_s = join (",", @tmp);
@@ -308,7 +257,7 @@ foreach my $family (sort {$gene_families{$a}->{order} <=> $gene_families{$b}->{o
 			push(@et_values, $patient_count);
 			push(@et_values, $patient_list_s);
 
-			my %genes = %{$p_gf->{$family}->{$et}->{gene_list}};
+			my %genes = %{$p_gf->{$group_name}->{$et}->{gene_list}};
 			my @gene_list = keys %genes;
       @tmp = sort @gene_list;
       my $gene_list_s = join (",", @tmp);
@@ -330,7 +279,7 @@ foreach my $family (sort {$gene_families{$a}->{order} <=> $gene_families{$b}->{o
 		}
 	}
 	my $et_values_s = join("\t", @et_values);
-  print OUT "$family\t$grand_patient_count\t$grand_patient_list_s\t$grand_gene_count\t$grand_gene_list_s\t$grand_hit_count\t$et_values_s\n";
+  print OUT "$group_name\t$group_gene_count\t$grand_patient_count\t$grand_patient_list_s\t$grand_gene_count\t$grand_gene_list_s\t$grand_hit_count\t$et_values_s\n";
 
 }
 
@@ -434,8 +383,8 @@ sub getFiles{
     }
 
     #3.) Look for CNV gain files
-    my $cnv_gain_annot_file_name = "cnv.Ensembl_v58.amp.tsv";
-    my $cnv_gain_drug_file_name = "cnv.Ensembl_v58.amp.dgidb."."$filter_name".".tsv";
+    my $cnv_gain_annot_file_name = "cnv.AllGenes_Ensembl58.amp.tsv";
+    my $cnv_gain_drug_file_name = "cnv.AllGenes_Ensembl58.amp.dgidb."."$filter_name".".tsv";
 
     my $annot_file_path = $topdir . "cnv/$cnv_gain_annot_file_name";
     my $drug_file_path = $topdir . "cnv/dgidb/$dgidb_subdir_name/$cnv_gain_drug_file_name";
@@ -443,7 +392,7 @@ sub getFiles{
       $files{$final_name}{cnv_gain}{annot_file_path} = $annot_file_path;
       $files{$final_name}{cnv_gain}{drug_file_path} = $drug_file_path;
     }else{
-      print RED, "\n\nCould not find INDEL drug-gene and annotation files for $final_name ($subject_name - $subject_common_name) in:\n\t$build_directory\n\n", RESET;
+      print RED, "\n\nCould not find CNV drug-gene and annotation files for $final_name ($subject_name - $subject_common_name) in:\n\t$build_directory\n\n", RESET;
       exit(1);
     }
 
@@ -596,7 +545,17 @@ sub parsePotentiallyDruggableFiles{
   my %args = @_;
   my $files = $args{'-files'};
   my @event_types = @{$args{'-event_types'}};
-  my $families = $args{'-gene_families'};
+  my $symbol_list_names = $args{'-symbol_list_names'};
+  my $gene_groups = $args{'-gene_groups'};
+
+  my $master_list = $symbol_list_names->{master_list};
+  my $master_group_list = $symbol_list_names->{master_group_list};
+  my $sublists = $symbol_list_names->{sublists};
+  unless (defined($sublists->{$gene_groups})){
+    print RED, "\n\nCould not find a gene sublist with the name: $gene_groups\n\n", RESET;
+    exit();
+  }
+  my $target_groups = $sublists->{$gene_groups}->{groups};
 
   print BLUE, "\n\nParsing files containing potentially druggable genes data", RESET;
 
@@ -627,11 +586,12 @@ sub parsePotentiallyDruggableFiles{
           $header = 0;
 
           #Check for columns of data needed for the specified gene families.  Throw warning every time a requested column is missing
-          foreach my $family (sort {$families->{$a}->{order} <=> $families->{$b}->{order}} keys %{$families}){
-            my @list = @{$families->{$family}->{list}};
+          foreach my $group_name (sort {$target_groups->{$a}->{order} <=> $target_groups->{$b}->{order}} keys %{$target_groups}){
+            my @list = @{$master_group_list->{$group_name}->{members}};
             foreach my $member (@list){
               unless($columns{$member}){
-                print YELLOW, "\n\nCould not find column for gene family: $family, member: $member", RESET;
+                print RED, "\n\nCould not find column for gene group: $group_name, member: $member\n\n", RESET;
+                exit(1);
               }
             }
           }
@@ -639,49 +599,49 @@ sub parsePotentiallyDruggableFiles{
         }
         my $mapped_gene_name = $line[$columns{'mapped_gene_name'}{position}];
  
-        #Go through each gene family and aggregate patient by event type
-        foreach my $family (sort {$families->{$a}->{order} <=> $families->{$b}->{order}} keys %{$families}){
-          my @list = @{$families->{$family}->{list}};
-          foreach my $family_member (@list){
-            #Skip undefined family member values
-            unless ($columns{$family_member}){next();}
-            #Get the value, for this patient, and this event type, and this gene family member (e.g. does this patient have an SNV in this gene that is a kinase)
+        #Go through each gene group and aggregate patient by event type
+        foreach my $group_name (sort {$target_groups->{$a}->{order} <=> $target_groups->{$b}->{order}} keys %{$target_groups}){
+           my @list = @{$master_group_list->{$group_name}->{members}};
+           my $group_gene_count = $master_group_list->{$group_name}->{gene_count};
+           $gene_fams{$group_name}{gene_count} = $group_gene_count;
+           foreach my $member (@list){
+
+            #Skip undefined group member values? - meaningless if we choke on missing column above...
+            unless ($columns{$member}){next();}
+
+            #Get the value, for this patient, and this event type, and this gene group member (e.g. does this patient have an SNV in this gene that is a kinase)
             #If the value is 0, skip
-            my $value = $line[$columns{$family_member}{position}];
+            my $value = $line[$columns{$member}{position}];
             unless ($value){next();}
             
-            if (defined($gene_fams{$family}{$event_type})){
-              my $patients = $gene_fams{$family}{$event_type}{patient_list};
+            if (defined($gene_fams{$group_name}{$event_type})){
+              my $patients = $gene_fams{$group_name}{$event_type}{patient_list};
               $patients->{$patient}++;
-              my $genes = $gene_fams{$family}{$event_type}{gene_list};
+              my $genes = $gene_fams{$group_name}{$event_type}{gene_list};
               $genes->{$mapped_gene_name}++;
             }else{
               my %patients;
               $patients{$patient} = 1;
-              $gene_fams{$family}{$event_type}{patient_list} = \%patients;
+              $gene_fams{$group_name}{$event_type}{patient_list} = \%patients;
               my %genes;
               $genes{$mapped_gene_name} = 1;
-              $gene_fams{$family}{$event_type}{gene_list} = \%genes;
+              $gene_fams{$group_name}{$event_type}{gene_list} = \%genes;
             }
 
             #Create or update the grand list of patients with ANY events hitting this gene
-            if (defined($gene_fams{$family}{grand_list})){
-              my $patients = $gene_fams{$family}{grand_list}{patient_list};
+            if (defined($gene_fams{$group_name}{grand_list})){
+              my $patients = $gene_fams{$group_name}{grand_list}{patient_list};
               $patients->{$patient}++;
-              my $genes = $gene_fams{$family}{grand_list}{gene_list};
+              my $genes = $gene_fams{$group_name}{grand_list}{gene_list};
               $genes->{$mapped_gene_name}++;
             }else{
               my %patients;
               $patients{$patient} = 1;
-              $gene_fams{$family}{grand_list}{patient_list} = \%patients;
+              $gene_fams{$group_name}{grand_list}{patient_list} = \%patients;
               my %genes;
               $genes{$mapped_gene_name} = 1;
-              $gene_fams{$family}{grand_list}{gene_list} = \%genes;
+              $gene_fams{$group_name}{grand_list}{gene_list} = \%genes;
             }
-
-
-
-
           }
         }
       }
