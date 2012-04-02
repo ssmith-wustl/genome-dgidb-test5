@@ -150,6 +150,27 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
         right_operation => $roi_operation,
         right_property => 'annotation_build',
     );
+
+    $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'roi_flank_size',
+        right_operation => $roi_operation,
+        right_property => 'flank_size',
+    );
+
+    $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'excluded_reference_sequence_patterns',
+        right_operation => $roi_operation,
+        right_property => 'excluded_reference_sequence_patterns',
+    );
+
+    $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'included_feature_type_patterns',
+        right_operation => $roi_operation,
+        right_property => 'included_feature_type_patterns',
+    );
 =cut
     #Create clinical data file
     $command_module = 'Genome::Model::MutationalSignificance::Command::CreateClinicalData',
@@ -452,8 +473,8 @@ sub _map_workflow_inputs {
     push @inputs, bam_list => $base_dir."/bam_list.txt";
     push @inputs, clinical_data_file => $base_dir."/clinical_data.txt";
 
-    push @inputs, excluded_reference_sequence_patterns => ("^HS","^Un","^MT","^LRG");
-    push @inputs, included_feature_type_patterns => ("cds_exon","rna");
+    push @inputs, excluded_reference_sequence_patterns => ["^HS","^Un","^MT","^LRG"];
+    push @inputs, included_feature_type_patterns => ["cds_exon","rna"];
     push @inputs, roi_flank_size => 2;
     return @inputs;
 }
