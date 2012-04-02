@@ -142,3 +142,6 @@
 [submodule "vendor/FLASH"]
 	path = vendor/FLASH
 	url = git@github.com:genome-vendor/FLASH.git
+[submodule "vendor/chimerascan"]
+	path = vendor/chimerascan
+	url = git@github.com:genome-vendor/chimerascan.git

@@ -55,11 +55,11 @@ require Exporter;
 @EXPORT = qw();
 
 @EXPORT_OK = qw(
-                &createNewDir &checkDir &commify &memoryUsage &loadEnsemblMap &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase
+                &createNewDir &checkDir &commify &memoryUsage &loadEnsemblMap &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importSymbolListNames &importGeneSymbolLists &getFilePathBase
                );
 
 %EXPORT_TAGS = (
-                all => [qw(&createNewDir &checkDir &commify &memoryUsage &loadEnsemblMap &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase)]
+                all => [qw(&createNewDir &checkDir &commify &memoryUsage &loadEnsemblMap &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importSymbolListNames &importGeneSymbolLists &getFilePathBase)]
                );
 
 use strict;
@@ -869,6 +869,158 @@ sub listGeneCategories{
 }
 
 
+
+
+
+###################################################################################################################################
+#Import symbol list names                                                                                               #
+###################################################################################################################################
+sub importSymbolListNames{
+  my %args = @_;
+  my $gene_symbol_lists_dir = $args{'-gene_symbol_lists_dir'};
+  my $verbose = $args{'-verbose'};
+
+  my %lists;
+  my %master_lists;
+  my %master_groups;
+  my %sublists;
+
+  #The following file defines all the possible gene symbol lists that will be used for annotation purposes
+  #Perform basic checks on these file and make sure no duplicates are being defined
+  my $master_list_file = $gene_symbol_lists_dir . "config/MasterList.txt";
+  open (MASTER, "$master_list_file") || die "\n\nCould not open master gene symbol list file: $master_list_file\n\n";
+  my $header = 1;
+  my $order = 0;
+  while(<MASTER>){
+    if ($header){
+      $header = 0;
+      next();
+    }
+    chomp($_);
+    my @line = split("\t", $_);
+    my $name = $line[0];
+    my $filename = $line[1];
+    my $readable = $line[2];
+    my $source = $line[3];
+    
+    #Get the gene count of each of these files
+    my $path = $gene_symbol_lists_dir . "$filename";
+    open(IN, "$path") || die "\n\nCould not find expected gene list file: $path in $gene_symbol_lists_dir\n\n";
+    my %genes;
+    while(<IN>){
+      chomp($_);
+      if ($genes{$_}){
+        if ($verbose){
+          print YELLOW, "\n\nFound a duplicate gene name ($_) in $path", RESET;
+        }
+      }
+      $genes{$_}=1;
+    }
+    close(IN);
+    my $count = keys %genes;
+
+    #Check to see if the master list name is unique, and if so, store it
+    if (defined($master_lists{$name})){
+      print RED, "\n\nFound a duplicate gene_symbol list name ($name) in $master_list_file\n\n", RESET;
+      exit(1);
+    }
+    $order++;
+    $master_lists{$name}{filename} = $filename;
+    $master_lists{$name}{readable} = $readable;
+    $master_lists{$name}{source} = $source;
+    $master_lists{$name}{count} = $count;
+    $master_lists{$name}{order} = $order;
+  }
+  close(MASTER);
+
+  #The following file defines meta-groups of gene symbol lists
+  #A group can be composed of one or more of the groups defined above
+  my $master_group_file = $gene_symbol_lists_dir . "config/MasterGroups.txt";
+  open (GROUP, "$master_group_file") || die "\n\nCould not open master group file: $master_group_file\n\n";
+  $header = 1;
+  $order = 0;
+  while(<GROUP>){
+    if ($header){
+      $header = 0;
+      next();
+    }
+    $order++;
+    chomp($_);
+    my @line = split("\t", $_);
+    my $name = $line[0];
+    my $readable = $line[1];
+    my $members = $line[2];
+    my @member_list = split(",", $members);
+    my $member_count = scalar(@member_list);
+
+    #Make sure every member in this group is in the master list
+    my %genes;
+    foreach my $member (@member_list){
+      unless ($master_lists{$member}){
+        print RED, "\n\nGene group file: $master_group_file contains a group ($name) with a member ($member) that is not in the master gene symbol list file: $master_list_file\n\n", RESET;
+        exit(1);
+      }
+      my $filename = $master_lists{$member}{filename};
+      my $path = $gene_symbol_lists_dir . "$filename";
+      open(IN, "$path") || die "\n\nCould not find expected gene list file: $path in $gene_symbol_lists_dir\n\n";
+      while(<IN>){
+        chomp($_);
+        $genes{$_}=1;
+      }
+      close(IN);
+    }
+    #Make sure this group name is not a duplicate
+    if (defined($master_groups{$name})){
+      print RED, "\n\nFound a duplicate gene group name ($name) in $master_group_file\n\n", RESET;
+      exit(1);
+    }
+    my $gene_count = keys %genes;
+    $master_groups{$name}{order} = $order;
+    $master_groups{$name}{readable} = $readable;
+    $master_groups{$name}{members} = \@member_list;
+    $master_groups{$name}{member_count} = $member_count;
+    $master_groups{$name}{gene_count} = $gene_count;
+  }
+  close(GROUP);
+
+  #Load all the sublists of groups that are defined in:  $gene_symbol_lists_dir/config/group_lists/;
+  my @result = `ls $gene_symbol_lists_dir/config/group_lists/*.txt`;
+  chomp(@result);
+  foreach my $file (@result){
+    if ($file =~ /group_lists\/(\S+)\.txt$/){
+      my $sublist_name = $1;
+      $sublists{$sublist_name}{path} = $file;
+      my %groups;
+      my $header = 1;
+      my $order = 0;
+      open(SUBLIST, "$file") || die "\n\nCould not open file: $file in &importSymbolListNames()\n\n";
+      while(<SUBLIST>){
+        if ($header){
+          $header = 0;
+          next();
+        }
+        chomp($_);
+        $order++;
+        $groups{$_}{order}=$order;
+      }
+      close(SUBLIST);
+      my $group_count = keys %groups;
+      $sublists{$sublist_name}{groups} = \%groups;
+      $sublists{$sublist_name}{group_count} = $group_count;
+    }else{
+      print RED, "\n\nCould not determine sublist name for $file in &importSymbolListNames()\n\n", RESET;
+      exit(1);
+    }
+  }
+
+  $lists{master_list} = \%master_lists;
+  $lists{master_group_list} = \%master_groups;
+  $lists{sublists} = \%sublists;
+  
+  return(\%lists);
+}
+
+
 ###################################################################################################################################
 #Import a set of gene symbol lists                                                                                                #
 ###################################################################################################################################
@@ -897,6 +1049,10 @@ sub importGeneSymbolLists{
     $symbol_lists{$file}{symbols} = \%symbols;
     $symbol_lists{$file}{order} = $s;
   }
+
+  #TODO: How many of the gene symbols actually match Entrez?  
+  #This is important later for determining later how much a list of genes is enriched for members of the gene symbol list
+  
 
   return(\%symbol_lists);
 }

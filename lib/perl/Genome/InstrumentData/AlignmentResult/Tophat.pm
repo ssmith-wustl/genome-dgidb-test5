@@ -54,6 +54,11 @@ class Genome::InstrumentData::AlignmentResult::Tophat {
             {$_->property_name => { is => $_->data_type, doc => $_->doc, is_optional => $_->is_optional} }
             Genome::InstrumentData::AlignmentResult->__meta__->_legacy_properties(via => 'params')
         ),
+        bowtie_version => {
+            is => "Text",
+            is_optional => 1,
+            doc => "the version of bowtie that tophat should run internally"
+        }
     ],
 
     has_constant => [

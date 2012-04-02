@@ -15,6 +15,7 @@ class Genome::Site::WUGC::IlluminaGenotyping {
         source_barcode => { is => 'Text' },
         well => { is => 'Text' },
         bead_chip_barcode => { is => 'Text' },
+        organism_sample_id => { is => 'Number' },
     ],
     has_optional => [
         replicate_dna_name => { is => 'Text' },

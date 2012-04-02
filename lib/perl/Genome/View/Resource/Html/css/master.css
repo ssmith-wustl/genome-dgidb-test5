@@ -360,7 +360,6 @@ div#nomenclature-columns div.enumerated-choices {
 /* name/value table */
 table.name-value {
     margin: 1em 0;
-
 }
 
 table.name-value td.name {
@@ -376,6 +375,7 @@ table.name-value td.value {
     width: 100%;
     padding-right: 10px;
     padding-left: 0;
+    word-wrap: break-word;
 }
 
 table.name-value-row {

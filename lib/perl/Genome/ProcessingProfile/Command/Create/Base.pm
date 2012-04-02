@@ -12,8 +12,8 @@ class Genome::ProcessingProfile::Command::Create::Base {
     has => [
         name => {
             is => 'Text',
-            len => 255, 
-            doc => 'Human readable name.', 
+            len => 255,
+            doc => 'Human readable name.',
         },
         based_on => {
             is => 'Text',
@@ -31,6 +31,12 @@ class Genome::ProcessingProfile::Command::Create::Base {
             doc => 'Display the output of `genome processing-profile describe` for the processing profile that is created',
             default => 1,
             is_optional => 1,
+        },
+        created_processing_profile => {
+            is => "Genome::ProcessingProfile",
+            is_transient => 1,
+            is_optional => 1,
+            doc => "the newly created processing profile"
         }
     ],
 };
@@ -152,6 +158,7 @@ sub execute {
         $describer->execute;
     }
 
+    $self->created_processing_profile($processing_profile);
     return 1;
 }
 

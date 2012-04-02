@@ -82,7 +82,10 @@ class Genome::ProcessingProfile::Command::Create::Tester {
     ],
 };
 Genome::ProcessingProfile::Command::Create::Tester->dump_status_messages(1);
-Genome::ProcessingProfile::Command::Create->_overload_target_class_name('Genome::ProcessingProfile::Command::Create::Tester');
+#Genome::ProcessingProfile::Command::Create->_overload_target_class_name('Genome::ProcessingProfile::Command::Create::Tester');
+no warnings 'redefine';
+eval "sub Genome::ProcessingProfile::Command::Create::Tester::_target_class_name { 'Genome::ProcessingProfile::Tester' }";
+use warnings;
 is(Genome::ProcessingProfile::Command::Create::Tester->_target_class_name, 'Genome::ProcessingProfile::Tester', 'target class is Genome::ProcessingProfile::Tester');
 
 # Create a pp
@@ -110,6 +113,8 @@ $creator = Genome::ProcessingProfile::Command::Create::Tester->create(
 );
 ok($creator, 'create w/ based on');
 ok($creator->execute, 'execute - create new pp w/ based on, but changed roi to UNDEF');
+ok($creator->created_processing_profile, "created processing profile stored on create command");
+isa_ok($creator->created_processing_profile, "Genome::ProcessingProfile::Tester", "newly created processing profile is the correct type");
 
 # w/o changing anything (fails)
 $creator = Genome::ProcessingProfile::Command::Create::Tester->create(

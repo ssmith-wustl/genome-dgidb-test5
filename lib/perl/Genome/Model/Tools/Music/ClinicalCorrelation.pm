@@ -360,7 +360,7 @@ sub create_sample_gene_matrix_gene {
         }
 
         #check that the mutation class is acceptable
-        if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|In_Frame_Ins|Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region|Indel|De_novo_Start_InFrame|De_novo_Start_OutOfFrame)$/ )
+        if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|In_Frame_Ins|Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region|De_novo_Start_InFrame|De_novo_Start_OutOfFrame)$/ )
         {
             print STDERR "Unrecognized Variant_Classification \"$mutation_class\" in MAF file for gene $gene\n";
             print STDERR "Please use TCGA MAF Specification v2.2.\n";
@@ -457,9 +457,8 @@ sub create_sample_gene_matrix_variant {
         my $gene = $fields[$maf_columns{'Hugo_Symbol'}];
         my $chr = $fields[$maf_columns{'Chromosome'}];
 
-
         #check that the mutation class is acceptable
-        if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|In_Frame_Ins|Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ )
+        if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|In_Frame_Ins|Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region|De_novo_Start_InFrame|De_novo_Start_OutOfFrame)$/ )
         {
             print STDERR "Unrecognized Variant_Classification \"$mutation_class\" in MAF file for gene $gene\n";
             print STDERR "Please use TCGA MAF Specification v2.2.\n";
@@ -473,7 +472,6 @@ sub create_sample_gene_matrix_variant {
             print "Skipping $mutation_class mutation in gene $gene.\n";
             next;
         }
-
 
         my $start;
         if (defined $maf_columns{'Start_position'}) {

@@ -85,6 +85,11 @@ class Genome::Model::RnaSeq {
             is_optional => 1,
             valid_values => ['rRNA','MT','pseudogene','rRNA_MT','rRNA_MT_pseudogene'],
         },
+        bowtie_version => {
+            is_optional => 1,
+            is => 'Text',
+            doc => 'version of bowtie for tophat to use internally',
+        }
     ],
     doc => 'A genome model produced by aligning cDNA reads to a reference sequence.',
 };
