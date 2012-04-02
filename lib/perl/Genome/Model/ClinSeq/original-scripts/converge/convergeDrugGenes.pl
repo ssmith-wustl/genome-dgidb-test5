@@ -383,8 +383,8 @@ sub getFiles{
     }
 
     #3.) Look for CNV gain files
-    my $cnv_gain_annot_file_name = "cnv.Ensembl_v58.amp.tsv";
-    my $cnv_gain_drug_file_name = "cnv.Ensembl_v58.amp.dgidb."."$filter_name".".tsv";
+    my $cnv_gain_annot_file_name = "cnv.AllGenes_Ensembl58.amp.tsv";
+    my $cnv_gain_drug_file_name = "cnv.AllGenes_Ensembl58.amp.dgidb."."$filter_name".".tsv";
 
     my $annot_file_path = $topdir . "cnv/$cnv_gain_annot_file_name";
     my $drug_file_path = $topdir . "cnv/dgidb/$dgidb_subdir_name/$cnv_gain_drug_file_name";
@@ -392,7 +392,7 @@ sub getFiles{
       $files{$final_name}{cnv_gain}{annot_file_path} = $annot_file_path;
       $files{$final_name}{cnv_gain}{drug_file_path} = $drug_file_path;
     }else{
-      print RED, "\n\nCould not find INDEL drug-gene and annotation files for $final_name ($subject_name - $subject_common_name) in:\n\t$build_directory\n\n", RESET;
+      print RED, "\n\nCould not find CNV drug-gene and annotation files for $final_name ($subject_name - $subject_common_name) in:\n\t$build_directory\n\n", RESET;
       exit(1);
     }
 
