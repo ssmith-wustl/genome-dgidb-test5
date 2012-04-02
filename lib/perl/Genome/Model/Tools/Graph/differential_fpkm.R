@@ -25,7 +25,9 @@ p <- ggplot(patty.melt, aes(x=TISSUE,y=FPKM))
 col_num = ceiling(nrow(genes)/2)
 preplot <- p + geom_jitter(position=position_jitter(width=.01,height=.01)) + facet_wrap(facets="mapped_gene_name", scales="free_y", ncol=col_num ) + opts(strip.text.x = theme_text(size = 20), axis.text.x=theme_text(size=15), axis.text.y=theme_text(size=13)) 
 plot <- preplot + stat_summary(fun.data = f, geom = "crossbar", colour = "red", width=0.3) 
-pdf(args[3], height=12, width=(col_num * 5))
+height =12
+if(nrow(genes) == 1) { height = 6 }
+pdf(args[3], height=height, width=(col_num * 5))
 print(plot)
 dev.off()
 
