@@ -122,7 +122,6 @@ EOS
 
 sub _doc_authors {
     return <<EOS
- Cyriac Kandoth, Ph.D.
  Michael Wendl, Ph.D.
 EOS
 }
