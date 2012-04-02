@@ -54,9 +54,6 @@ sub execute {
     my $mg_id = $self->model_group_id;
     my $vcf = $self->denovo_vcf;
 
-    my $mg = Genome::ModelGroup->get($mg_id);
-    my @models = $mg->models;
-    @models = sort {$a->subject->name cmp $b->subject->name} @models;
     my $sites_file = Genome::Sys->create_temp_file_path();
     my $cat_cmd = "cat";
     my $vcf_fh;
@@ -69,13 +66,19 @@ sub execute {
     }
 
     my $sites_cmd = qq/ $cat_cmd $vcf | cut -f1,2 | grep -v "^#" | awk '{OFS="\t"}{print \$1, \$2, \$2}' > $sites_file/;
+    my $header_cmd = qq/ $cat_cmd $vcf | grep "^#CHR"/;
     unless(-s $sites_file) {
         print STDERR "running $sites_cmd\n";
         `$sites_cmd`;
     }
+    my $mg = Genome::ModelGroup->get($mg_id);
+    my $header_line= `$header_cmd`;
+    $DB::single=1;
+    my @models = $self->sort_models_by_header($header_line, $mg->models);
+
 ###prepare readcounts
     my $ref_fasta=$models[0]->reference_sequence_build->full_consensus_path("fa");
-    my $readcount_file_ref = $self->prepare_readcount_files($ref_fasta, $sites_file, \@models);
+    my $readcount_file_ref = $self->prepare_readcount_files($ref_fasta, $sites_file, \@models, $header_line);
     my $r_input_path = $self->prepare_r_input($vcf_fh, $readcount_file_ref);
     my ($r_fh, $r_script_path) = Genome::Sys->create_temp_file();
     my ($r_output) = Genome::Sys->create_temp_file_path();
@@ -85,6 +88,28 @@ sub execute {
     $self->output_passing_vcf($self->denovo_vcf, $r_output, $self->min_unaffected_pvalue, $self->output_file);
     return 1;
 }
+
+sub sort_models_by_header {
+    my ($self, $header_line, @models)= @_;
+    chomp($header_line);
+    my @fields = split "\t", $header_line;
+    splice(@fields, 0, 9);
+    my @return_models;
+    for my $subject_id (@fields) {
+        for my $model (@models) {
+            if ($model->subject->name eq $subject_id) {
+                push @return_models, $model;
+            }
+        }
+    }
+    if(scalar(@return_models) != scalar(@fields)) {
+        die "can't match this model group the the denovo output";
+    }
+    return @return_models;
+}
+
+
+
 sub output_passing_vcf {
     my($self, $denovo_vcf, $r_output, $pvalue_cutoff, $output_filename) = @_;
     my $pvalues = Genome::Sys->open_file_for_reading($r_output);
@@ -99,7 +124,7 @@ sub output_passing_vcf {
     $output_file->print(@lines);
     my (@unaffected, $chr, $pos, $affected);
     while(my $line = $pvalues->getline) {
-        ($chr,$pos, $unaffected[0], $unaffected[1], $affected, $unaffected[2]) = split "\t", $line; ###generic method for any kind of family later
+        ($chr,$pos, $unaffected[0], $unaffected[1], $affected) = split "\t", $line; ###generic method for any kind of family later
         my $output=1;
         for my $unaff_pvalue (@unaffected) {
             if($unaff_pvalue < $pvalue_cutoff) {
