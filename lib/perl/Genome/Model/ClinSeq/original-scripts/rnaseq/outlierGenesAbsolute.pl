@@ -116,9 +116,9 @@ my $ensembl_map = &loadEnsemblMap('-ensembl_version'=>$ensembl_version);
 #Fix gene names as they are being imported
 my $gene_symbol_lists_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/GeneSymbolLists/";
 $gene_symbol_lists_dir = &checkDir('-dir'=>$gene_symbol_lists_dir, '-clear'=>"no");
-my @symbol_list_names = qw (GenesOfInterest);
+my @symbol_list_names = qw ( GenesOfInterest_MG );
 my $gene_symbol_lists = &importGeneSymbolLists('-gene_symbol_lists_dir'=>$gene_symbol_lists_dir, '-symbol_list_names'=>\@symbol_list_names, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>0);
-my $goi_ref = $gene_symbol_lists->{'GenesOfInterest'}->{'symbols'};
+my $goi_ref = $gene_symbol_lists->{'GenesOfInterest_MG'}->{'symbols'};
 open (GOI, ">$goi_file") || die "\n\nCould not open genes of interest file\n\n";
 foreach my $goi (sort keys %{$goi_ref}){
   print GOI "$goi\n";
