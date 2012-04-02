@@ -49,12 +49,15 @@ EOS
 }
 
 sub execute {
-    $DB::single = $DB::stopper;
+    $DB::single = 1;
     my $self = shift;
     my $gene_fh = Genome::Sys->open_file_for_reading($self->list_of_genes);
     my ($temp_fh, $temp_filename);
     my $count = 0;
     my @genes;
+
+
+   my $r_script = $INC[0] . "/Genome/Model/Tools/Graph/differential_fpkm.R";
     while(my $line = $gene_fh->getline) {
         if($temp_fh && $temp_fh->opened) {
             $temp_fh->print($line);
@@ -73,7 +76,7 @@ sub execute {
             my $out_filename = $self->output_prefix . "_" . join("_", @genes) . ".pdf";
             @genes = ();
             my $fpkm_matrix = $self->fpkm_matrix;
-            my $r_cmd = "R --slave --args $temp_filename $fpkm_matrix $out_filename < differential_fpkm.R";
+            my $r_cmd = "R --slave --args $temp_filename $fpkm_matrix $out_filename < $r_script";
             $self->status_message("Running $r_cmd");
             Genome::Sys->shellcmd(cmd=>$r_cmd);
             if($self->png_as_well) {
@@ -88,7 +91,7 @@ sub execute {
         $temp_fh->close;
         my $out_filename = $self->output_prefix . "_" . join("_", @genes) . ".pdf";
         my $fpkm_matrix = $self->fpkm_matrix;
-        my $r_cmd = "R --slave --args $temp_filename $fpkm_matrix $out_filename < differential_fpkm.R";
+        my $r_cmd = "R --slave --args $temp_filename $fpkm_matrix $out_filename < $r_script";
         $self->status_message("Running $r_cmd");
         Genome::Sys->shellcmd(cmd=>$r_cmd);
         if($self->png_as_well) {
@@ -98,7 +101,7 @@ sub execute {
             `$convert_cmd`;
         }
     }
-        
+    return 1; 
 }
 
 
