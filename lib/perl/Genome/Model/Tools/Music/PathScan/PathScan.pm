@@ -992,6 +992,16 @@ value
 
 =cut
 
+sub is_float {
+    my $val = shift;
+    if ($val =~ /^([+-]?)(?=\d|\.\d)\d*(\.\d*)?([Ee]([+-]?\d+))?$/) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+
 sub preprocess {
    my $obj = shift;
    my ($mutation_prob) = @_;
@@ -999,8 +1009,8 @@ sub preprocess {
 #__PRELIMINARY VALIDATION
    croak "need background mutation rate" unless $mutation_prob;
    croak "background mutation '$mutation_prob' rate must be a p-val"
-      unless ($mutation_prob =~ /^0\.\d+$/ || $mutation_prob =~ /^[123456789](\.[123456789]*)?[Ee]-\d+$/) &&
-      $mutation_prob > 0 && $mutation_prob < 1;
+      unless (Genome::Model::Tools::Music::PathScan::PathScan::is_float($mutation_prob) &&
+      $mutation_prob > 0 && $mutation_prob < 1);
    croak "preprocessing: no data" unless defined $obj->{'genes'};
 
 #__JUST RETURN SILENTLY IF WE'RE ABOUT TO COMPUTE WHAT HAS ALREADY BEEN DONE

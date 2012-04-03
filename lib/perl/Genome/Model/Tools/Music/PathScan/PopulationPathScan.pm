@@ -2,6 +2,8 @@ package Genome::Model::Tools::Music::PathScan::PopulationPathScan;
 
 #__STANDARD PERL PACKAGES
 use strict;
+use warnings;
+
 use Carp;
 use Genome::Model::Tools::Music::PathScan::CombinePvals;
 use Genome::Model::Tools::Music::PathScan::PathScan;
@@ -319,7 +321,7 @@ sub preprocess {
 #__PRELIMINARY VALIDATION OF ARGUMENT
    croak "need background mutation rate" unless $mutation_prob;
    croak "background mutation '$mutation_prob' rate must be a p-val"
-      unless &is_a_pval ($mutation_prob);
+      unless is_a_pval ($mutation_prob);
 
 #__INVOKE NEW PATHSCAN OBJECT USING PRE-COMPUTED ARGUMENT LIST FOR EXACT SOLN
    my $pm_obj;
@@ -633,10 +635,11 @@ sub population_pval_approx {
 #  ==========================================================================
 
 sub is_a_pval {
-   my ($val) = @_;
 
+    my ($val) = @_;
+$DB::single = 1;
 #__MUST BE A FLOAT (REGEXP: PERL COOKBOOK CHAP 2.1) & MUST BE BOUNDED BY 0 AND 1
-   if ($val =~ /^([+-]?)(?=\d|\.\d)\d*(\.\d*)?([Ee]([+-]?\d+))?$/
+   if (Genome::Model::Tools::Music::PathScan::PathScan::is_float($val)
       && $val >= 0 && $val <= 1) {
       return 1;
 
