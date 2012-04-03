@@ -60,7 +60,6 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         reference_build => {
             is => 'Path',
             doc => 'Put either "Build36" or "Build37"',
-            is_output => 1,
             default => 'Build36',
         },
         reference_sequence => {
