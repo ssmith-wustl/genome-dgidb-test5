@@ -179,7 +179,7 @@ sub is_archived {
     return $self->volume->is_archive;
 }
 
-sub archive_path {
+sub tar_path {
     my $self = shift;
     return join('/', $self->absolute_path, 'archive.tar');
 }
@@ -457,7 +457,6 @@ sub _move {
     my $kilobytes_requested = delete $params{kilobytes_requested};
     my $group_name = delete $params{disk_group_name};
     my $new_mount_path = delete $params{target_mount_path};
-    my $pattern = delete $params{pattern};
     if (%params) {
         confess "Extra parameters given to allocation move method: " . join(',', sort keys %params);
     }
@@ -545,7 +544,6 @@ sub _move {
         Genome::Sys->rsync_directory(
             source_directory => $old_allocation_dir,
             target_directory => $new_allocation_dir,
-            file_pattern => $pattern,
         )
     };
     unless ($copy_rv) {
@@ -593,32 +591,88 @@ sub _archive {
         confess "Extra parameters given to allocation move method: " . join(',', sort keys %params);
     }
 
+    # Lock and load allocation object
+    my $allocation_lock = Genome::Disk::Allocation->get_lock($id);
+    unless ($allocation_lock) {
+        confess "Could not lock allocation with ID $id";
+    }
     my $mode = $class->_retrieve_mode;
     my $self = Genome::Disk::Allocation->$mode($id);
     unless ($self) {
         confess "Found no allocation with ID $id";
     }
 
+    # Record current and target paths
+    my $current_allocation_path = $self->absolute_path;
+    my $archive_allocation_path = join('/', $self->volume->archive_mount_path, $self->group_subdirectory, $self->allocation_path);
+    my $tar_path = join('/', $current_allocation_path, 'archive.tar');
+
+    # Create tarball containing allocation contents
     my $tar_rv = Genome::Sys->tar(
-        tar_path => $self->archive_path,
-        input_directory => $self->absolute_path,
+        tar_path => $tar_path,
+        input_directory => $current_allocation_path,
     );
     unless ($tar_rv) {
         confess "Could not create tarball for allocation contents!";
     }
 
-    my $tar_file = File::Basename::basename($self->archive_path);
-    my $rv = $self->_move(
-        allocation_id => $id,
-        target_mount_path => $self->volume->archive_mount_path,
-        kilobytes_requested => $self->kilobytes_requested,
-        pattern => $tar_file,
-    );
-    unless ($rv) {
-        confess "Could not archive allocation " . $self->id . ", failed to move it from " .
-            $self->mount_path . " to " . $self->volume->archive_mount_path;
+    my $cmd = "mkdir -p $archive_allocation_path && rsync -rlHpgt $tar_path $archive_allocation_path/";
+    eval { 
+        # Copy tarball to archive volume
+        if ($ENV{UR_DBI_NO_COMMIT}) {
+            Genome::Sys->shellcmd(cmd => $cmd);
+        }
+        else {
+            my ($job_id, $status) = Genome::Sys->bsub_and_wait(
+                queue => $ENV{GENOME_ARCHIVE_LSF_QUEUE},
+                cmd => $cmd,
+            );
+            confess "LSF job $job_id failed to execute command $cmd, exited with status $status" unless $status eq 'DONE';
+        }
+
+        # Update allocation and commit
+        $self->mount_path($self->volume->archive_mount_path);
+        $self->_update_owner_for_move;
+        $self->_create_observer($self->_unlock_closure($allocation_lock));
+
+        my $rv = UR::Context->commit;
+        confess "Could not commit!" unless $rv;
+    };
+    if (my $error = $@) {
+        $self->_cleanup_archive_directory($archive_allocation_path);
+        Genome::Sys->unlock_resource($allocation_lock);
+        confess "Could not archive allocation " . $self->id, "error:\n$error";
     }
-    
+
+    # Update volume and commit
+    my $volume_lock;
+    eval {
+        $volume_lock = Genome::Disk::Volume->get_lock($self->volume->active_mount_path);
+        unless ($volume_lock) {
+            confess "Could not get lock for volume " . $self->volume->active_mount_path;
+        }
+
+        my $volume = Genome::Disk::Volume->$mode(mount_path => $self->volume->active_mount_path);
+        unless ($volume) {
+            confess "Found no volume with mount path " . $self->volume->active_mount_path;
+        }
+
+        $volume->unallocated_kb($volume->unallocated_kb + $self->kilobytes_requested);
+        $self->_create_observer($self->_unlock_closure($volume_lock));
+        unless (Genome::Sys->remove_directory_tree($current_allocation_path)) {
+            confess "Could not remove current allocation path $current_allocation_path";
+        }
+
+        unless (UR::Context->commit) {
+            confess "Could not commit!";
+        }
+    };
+    if (my $error = $@) {
+        $self->_cleanup_archive_directory($archive_allocation_path);
+        Genome::Sys->unlock_resource($volume_lock) if $volume_lock;
+        confess "Could not update active volume after copying data to archive volume, received error\n$error";
+    }
+
     return 1;
 }
 
@@ -629,30 +683,63 @@ sub _unarchive {
         confess "Extra parameters given to allocation unarchive method: " . join(',', sort keys %params);
     }
 
+    # Lock and load allocation object
+    my $allocation_lock = Genome::Disk::Allocation->get_lock($id);
+    unless ($allocation_lock) {
+        confess "Could not lock allocation with ID $id";
+    }
     my $mode = $class->_retrieve_mode;
     my $self = Genome::Disk::Allocation->$mode($id);
     unless ($self) {
         confess "Found no allocation with ID $id";
     }
 
-    my $rv = $self->_move(
-        allocation_id => $self->id,
-        target_mount_path => $self->volume->active_mount_path,
-        kilobytes_requested => $self->kilobytes_requested,
-    );
-    unless ($rv) {
-        confess "Could not unarchive allocation " . $self->id . ", failed to move it from " .
-            $self->volume->archive_mount_path . " to " . $self->volume->active_mount_path;
+    my $archive_path = $self->absolute_path;
+    my $active_path = join('/', $self->volume->active_mount_path, $self->group_subdirectory, $self->allocation_path);
+    eval { 
+        unless ($self->is_archived) {
+            confess "Cannot unarchive an allocation that isn't archived!";
+        }
+
+        # Copy archived data to active path
+        my $cmd = "mkdir -p $active_path && rsync -rlHpgt $archive_path/* $active_path";
+        if ($ENV{UR_DBI_NO_COMMIT}) {
+            Genome::Sys->shellcmd(cmd => $cmd);
+        }
+        else {
+            my ($job_id, $status) = Genome::Sys->bsub_and_wait(
+                queue => $ENV{GENOME_ARCHIVE_LSF_QUEUE},
+                cmd => $cmd,
+            );
+            unless ($status eq 'DONE') {
+                confess "Could not execute command $cmd via LSF job $job_id, received status $status";
+            }
+        }
+
+        # Update allocation and commit
+        $self->mount_path($self->volume->active_mount_path);
+        $self->_update_owner_for_move;
+        $self->_create_observer($self->_unlock_closure($allocation_lock));
+        unless (UR::Context->commit) {
+            confess "Could not commit!";
+        }
+
+        # Untar tarball into allocation directory, and remove the tarball afterward
+        my $untar_rv = Genome::Sys->untar(
+            tar_path => $self->tar_path,
+            target_directory => $self->absolute_path,
+            delete_tar => 1,
+        );
+        unless ($untar_rv) {
+            confess "Could not untar tarball " . $self->tar_path . " at " . $self->absolute_path;
+        }
+    };
+    if (my $error = $@) {
+        Genome::Sys->unlock_resource($allocation_lock);
+        confess "Could not unarchive, received error:\n$error";
     }
 
-    my $untar_rv = Genome::Sys->untar(
-        tar_path => $self->archive_path,
-        target_directory => $self->absolute_path,
-        delete_tar => 1,
-    );
-    unless ($untar_rv) {
-        confess "Could not untar tarball at " . $self->absolute_path;
-    }
+    # TODO Should I remove the stuff on the archive volume, or leave it there?
     return 1;
 }
 
@@ -946,6 +1033,22 @@ sub _lock_volume_from_list {
 sub _retrieve_mode {
     return 'get' if $ENV{UR_DBI_NO_COMMIT};
     return 'load';
+}
+
+sub _cleanup_archive_directory {
+    my ($class, $directory) = @_;
+    my $cmd = "rm -rf $directory";
+    if ($ENV{UR_DBI_NO_COMMIT}) {
+        Genome::Sys->shellcmd(cmd => $cmd);
+    }
+    else {
+        my ($job_id, $status) = Genome::Sys->bsub(
+            queue => $ENV{GENOME_ARCHIVE_LSF_QUEUE},
+            cmd => $cmd,
+        );
+        confess "Failed to execute $cmd via LSF job $job_id, received status $status" unless $status eq 'DONE';
+    }
+    return 1;
 }
 
 # Cleans up directories, useful when no commit is on and the test doesn't clean up its allocation directories

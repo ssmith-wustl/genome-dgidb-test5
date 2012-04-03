@@ -33,7 +33,8 @@ sub bsub_and_wait {
     my $class = shift;
     my %params = @_;
     my $job_id = Genome::Sys->bsub(%params);
-    return Genome::Sys->wait_for_lsf_job($job_id);
+    my $status = Genome::Sys->wait_for_lsf_job($job_id);
+    return ($job_id, $status);
 }
 
 # FIXME This is incomplete and should be expanded to accept more bsub parameters
@@ -43,6 +44,7 @@ sub bsub {
     my $queue = $params{queue} || 'long';
     my $job_group = $params{job_group};
     my $cmd = $params{cmd};
+    my $log_file = $params{log_file};
     unless ($cmd) {
         die "Must be given a command to bsub!";
     }
@@ -50,6 +52,7 @@ sub bsub {
     my $bsub_cmd = "bsub";
     $bsub_cmd .= " -q $queue";
     $bsub_cmd .= " -g $job_group" if $job_group;
+    $bsub_cmd .= " -o $log_file" if $log_file;
     $bsub_cmd .= " $cmd";
 
     my $bsub_output = `$bsub_cmd`;

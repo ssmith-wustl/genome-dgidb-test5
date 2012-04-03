@@ -53,7 +53,7 @@ ok($rv, 'archive successfully executed');
 
 is($allocation->mount_path, $volumes[1]->mount_path, 'allocation moved to archive volume');
 
-my $tar_path = $allocation->archive_path;
+my $tar_path = $allocation->tar_path;
 my $output = `tar -tf $tar_path`;
 my @tar_files = map { chomp $_; basename($_) } split("\n", $output);
 ok((scalar @tar_files) == ((scalar @files) + (scalar @dirs)), 'found expected number of files/dirs in tarball');
