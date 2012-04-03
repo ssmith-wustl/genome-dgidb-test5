@@ -93,19 +93,43 @@ sub validate_instrument_data_and_insert_size {
 
     my @tags;
     for my $instrument_data ( @instrument_data ) {
-        my $library = $instrument_data->library;
-        my $insert_size = $library->fragment_size_range;
-        next if defined $insert_size;
-        $insert_size = eval{ $instrument_data->median_insert_size; };
+        my $insert_size = $self->resolve_average_insert_size_for_instrument_data($instrument_data);
         next if defined $insert_size;
         push @tags, UR::Object::Tag->create(
             properties => [ 'instrument_data' ],
-            desc => 'No insert size for instrument data ('.$instrument_data->id.') or library ('.$library->id.'). Please correct.',
+            desc => 'No insert size for instrument data ('.$instrument_data->id.') or library ('.$instrument_data->library->id.'). Please correct.',
         );
     }
 
     return @tags if @tags;
     return;
+}
+
+sub resolve_average_insert_size_for_instrument_data {
+    my $self = shift;
+    my $instrument_data = shift;
+    my $insert_size;
+
+    if ($instrument_data->median_insert_size) {
+        $insert_size = $instrument_data->median_insert_size;
+    }
+    elsif ($instrument_data->original_est_fragment_size) {
+        $insert_size = $instrument_data->original_est_fragment_size;
+    }
+    elsif ($instrument_data->library->fragment_size_range) {
+        $insert_size = $instrument_data->library->fragment_size_range;
+    }
+    unless ($insert_size and $insert_size =~ /^\d+$/ or $insert_size =~ /^\d+\s+\d+$/ or $insert_size =~ /^\d+-\d+$/ or $insert_size =~ /^\d+\.\d+$/ ) {
+        return;
+    }
+    
+    my @sizes = split( /\s+|-/, $insert_size );
+
+    my $sum = List::Util::sum(@sizes);
+    my $average_insert_size = $sum / scalar(@sizes);
+    $average_insert_size = POSIX::floor($average_insert_size);
+
+    return $average_insert_size;
 }
 
 sub calculate_estimated_kb_usage {
@@ -282,19 +306,13 @@ sub calculate_average_insert_size {
     my @insert_sizes;
     for my $inst_data ( @instrument_data ) { 
         if ( $inst_data->sequencing_platform eq 'solexa' ) {
-            my $insert_size = ( $inst_data->median_insert_size ) ? $inst_data->median_insert_size : $inst_data->library->fragment_size_range;
-            unless ( defined $insert_size ) {
-                Carp::confess(
-                    $self->error_message("Failed to get median insert size from inst data nor frag size range from library for inst data")
-                );
+            my $size = $self->resolve_average_insert_size_for_instrument_data($inst_data);
+            if ($size) {
+                push @insert_sizes, $size;
             }
-            unless ( $insert_size =~ /^\d+$/ or $insert_size =~ /^\d+\s+\d+$/ or $insert_size =~ /^\d+-\d+$/ or $insert_size =~ /^\d+\.\d+$/ ) {
-                Carp::confess(
-                    $self->status_message("Expected a number or two numbers separated by blank space but got: $insert_size")
-                );
+            else {
+                Carp::confess($self->error_message("Failed to get median insert size from inst data nor frag size range from library for inst data"));
             }
-            my @sizes = split( /\s+|-/, $insert_size );
-            @insert_sizes = ( @insert_sizes, @sizes );
         }
         else {
             Carp::confess( 
