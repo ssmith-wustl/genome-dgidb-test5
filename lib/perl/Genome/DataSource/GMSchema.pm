@@ -1,196 +1,34 @@
-package Genome::DataSource::GMSchema;
+#eclark: Ignore table list should be reviewed.  I've seen classes for at few of them.
 
 use strict;
 use warnings;
-use Genome;
-use Carp;
-use File::lockf;
 
+package Genome::DataSource::GMSchema;
+
+use Genome;
+
+use Cwd;
 
 class Genome::DataSource::GMSchema {
     is => ['UR::DataSource::Oracle'],
+    type_name => 'genome datasource gmschema',
 };
-
-sub table_and_column_names_are_upper_case { 1; }
 
 sub server {
     "dwrac";
 }
 
 sub login {
-    "mguser";
-}
+    "mguser";}
 
 sub auth {
-    "mguser_prd";
-}
+    "mguser_prd";}
 
 sub owner {
-    "MG";
-}
-
-our $THIS_COMMIT_ID = 'not within _sync_database';
-
-# This datasource now commits to both Oracle AND postgres. The postgres commit is
-# done within an eval so its result does not in any way affect the Oracle commit.
-sub _sync_database {
-    my $self = shift;
-
-    local $THIS_COMMIT_ID = UR::Object::Type->autogenerate_new_object_id_uuid();
-
-    # Not disconnecting/forking with no commit on to prevent transactions from being
-    # closed, which can cause failures in tests that have multiple commits.
-    if ($ENV{UR_DBI_NO_COMMIT}) {
-        my $oracle_sync_rv = Genome::DataSource::GMSchemaOracle->_sync_database(@_);
-        unless ($oracle_sync_rv) {
-            Carp::confess "Could not sync to oracle!";
-        }
-        return 1;
-    }
+    "MG";}
 
 
-    # fork if we don't skip.
-    my $skip_postgres = (defined $ENV{GENOME_DB_SKIP_POSTGRES} && -e $ENV{GENOME_DB_SKIP_POSTGRES}); 
-    my $pid = ( $skip_postgres ? $$ : UR::Context::Process->fork());
-
-    if ($pid) {
-        my $sync_time_start = Time::HiRes::time();
-        my $oracle_sync_rv = Genome::DataSource::GMSchemaOracle->_sync_database(@_);
-        my $sync_time_duration = Time::HiRes::time() - $sync_time_start;
-        unless ($oracle_sync_rv) {
-            Carp::confess "Could not sync to oracle!";
-        }
-        if (!$skip_postgres) {
-            log_commit_time('oracle',$sync_time_duration);
-            waitpid($pid, -1);
-        }
-        return 1;
-    } elsif (defined $pid) {
-        print "forking.\n";
-        # Fork twice so parent (process doing Oracle commit) doesn't wait for child
-        # to finish.
-        # Ignoring SIG_CHLD prevents "Child process #### reaped" from appearing in logs
-        $SIG{CHLD} = 'IGNORE';
-        my $second_pid = fork();
-        Carp::confess "Can't fork" unless defined $second_pid;
-        if ($second_pid) {
-            # Using POSIX exit prevents END and DESTROY blocks from executing.
-            POSIX::_exit(0);
-        }
-    
-        # Turtles all the way down... the logging logic can potentially bomb and emit warnings that the user
-        # shouldn't see, so eval everything!
-        eval { 
-            my $sync_time_start = Time::HiRes::time();
-            eval {
-                my $pg_sync_rv = Genome::DataSource::Main->_sync_database(@_);
-                my $pg_commit_rv = Genome::DataSource::Main->commit;
-            };
-            my $sync_time_duration = Time::HiRes::time() - $sync_time_start;
-            if ($@) {
-                my $error = $@;
-                my $log_string = create_log_message($error);
-                my $log_fh = open_error_log();
-                # If we can't get a file handle to the log file, no worries. Just continue without making a peep.
-                if ($log_fh) {
-                    my $lock_status = File::lockf::lock($log_fh);
-                    # this returns 0 on success
-                    unless ($lock_status != 0) {
-                        $log_fh->print("$log_string\n");
-                        File::lockf::ulock($log_fh);
-                    }
-                    $log_fh->close;
-                }
-            }
-            log_commit_time('pg',$sync_time_duration);
-        };
-        POSIX::_exit(0);
-    }
-    else {
-        Carp::confess "Problem forking for postgres commit!";
-    }
-
-    return 1;
-}
-
-sub log_commit_time {
-    my($db_name, $time) = @_;
-
-    # See if this process was started from the commandline
-    my @commands;
-    if ($INC{'Command/V2.pm'}) {
-        push @commands, Command::V2->get('original_command_line true' => 1);
-    }
-    if ($INC{'Command/V1.pm'}) {
-        push @commands, Command::V1->get('original_command_line true' => 1);
-    }
-    @commands = sort { $a->id cmp $b->id } @commands;
-    my $original_cmdline = $commands[0] ? $commands[0]->original_command_line : $0;
-    my $execution_id = $ENV{'GENOME_EXECUTION_ID'} || '';
-
-    my $path = _determine_base_log_pathname();
-    $path .= "-${db_name}.timing";
-    my $fh = IO::File->new($path,'>>');
-    unless ($fh) {
-        print STDERR "Couldn't open $path for appending: $!\n";
-        return;
-    }
-    chmod(0666,$path);
-    my $lock_status = File::lockf::lock($fh);
-    # lock gives us a zero return value on success
-    unless ($lock_status != 0) {
-        $fh->print(join("\t",$THIS_COMMIT_ID, $execution_id, $time, $original_cmdline) . "\n");
-        File::lockf::ulock($fh);
-    }
-    $fh->close();
-}
-
-
-sub create_log_message {
-    my $error = shift;
-
-    require DateTime;
-    my $dt = DateTime->now;
-    $dt->set_time_zone('America/Chicago');
-    my $date = $dt->ymd;
-    my $time = $dt->hms;
-    my $user = Genome::Sys->username;
-
-    require Sys::Hostname;
-    my $host = Sys::Hostname::hostname();
-
-    my $string = join("\n", join(',', $date, $time, $host, $user, $THIS_COMMIT_ID), $error);
-    return $string;
-}
-
-sub _determine_base_log_pathname {
-    require DateTime;
-    my $dt = DateTime->now;
-    my $date = $dt->ymd;
-
-    my $base_dir = '/gsc/var/log/genome/postgres/';
-    my $dir = join('/', $base_dir, $dt->year);
-    unless (-d $dir) {
-        mkdir $dir;
-        chmod(0777, $dir);
-    }
-
-    my $file = join('-', $dt->month, $dt->day);
-    return join('/',$dir, $file);
-}
-
-sub open_error_log {
-    my $path = _determine_base_log_pathname();
-    $path .= '.log';
-    my $fh = IO::File->new($path, '>>');
-    unless ($fh) {
-        print STDERR "Couldn't open $path for appending: $!\n";
-        return;
-    }
-    chmod(0666,$path);
-    return $fh;
-}
-
+sub table_and_column_names_are_upper_case { 1; }
 
 sub _init_created_dbh {
     my ($self, $dbh) = @_;
@@ -208,6 +46,20 @@ sub _init_created_dbh {
 
     return $dbh;
 }
+
+sub _sync_database {
+    my $self = shift;
+
+    my $dbh = $self->get_default_handle;
+    unless ($dbh->do("alter session set NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'")
+            and
+            $dbh->do("alter session set NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SSXFF'"))
+    {
+        Carp::croak("Can't set date format: $DBI::errstr");
+    }
+    $self->SUPER::_sync_database(@_);
+}
+
 
 sub _get_sequence_name_for_table_and_column {
     my ($self, $table_name, $column_name) = @_;
@@ -235,6 +87,121 @@ sub _get_sequence_name_for_table_and_column {
     else {
         $self->SUPER::_get_sequence_name_for_table_and_column($table_name, $column_name);
     }
+}
+
+# A list of the old GM schema tables that Genome::Model should ignore
+my @OLD_GM_TABLES = qw(
+ALL_ALLELE_TYPE
+ANALYSIS_METHOD
+CHROMOSOME
+COLLABORATOR
+COLLABORATOR_SAMPLE
+CONSERVATION_SCORE
+EGI_TYPE
+EXTERNAL_GENE_ID
+GENE
+GENE_EXPRESSION
+GENE_GENE_EXPRESSION
+GENE_GENOMIC_FEATURE
+GENE_GENOTYPE
+GENOMIC_FEATURE
+GENOTYPE
+GENOTYPE_VARIATION
+GE_DETECTION
+GE_TECH_TYPE
+GF_FEATURE_TYPE
+GO_XREF
+GROUP_INFO
+GROUP_TYPES
+HISTOLOGY
+IPRO_GENE_TRANSCRIPT_XREF
+IPRO_RESULTS
+MAF
+META_GROUP
+META_GROUP_STATUS
+PF_FEATURE_TYPE
+PP_DETECTION_SOFT
+PP_MAPPING_REFERENCE
+PP_TECH_TYPE
+PROCESS_PROFILE
+PROCESS_PROFILE_SOURCE
+PROTEIN
+PROTEIN_FEATURE
+PROTEIN_VARIATION
+PROTEIN_VARIATION_SCORE
+PVS_SCORE_TYPE
+PVS_SOFTWARE
+READ_GROUP
+READ_GROUP_GENOTYPE
+READ_GROUP_GENOTYPE_OLD
+READ_GROUP_INFO
+READ_INFO
+REPEAT_INFO
+RGGI_INFO_TYPE
+RGG_INFO
+RGG_INFO_OLD
+RI_REPEAT_TYPE
+SAMPLE
+SAMPLE_GENE
+SAMPLE_GENE_EXPRESSION
+SAMPLE_GENOTYPE
+SAMPLE_GROUP_INFO
+SAMPLE_HISTOLOGY
+SAMPLE_SUBTYPE
+SAMPLE_TISSUE
+SAMPLE_TYPE
+SEQUENCE_DIFF
+SEQUENCE_DIFF_EVAL
+SEQUENCE_DIFF_PART
+SGIAM_SCORE_TYPE
+SGI_ANALYSIS_METHOD
+SG_INFO_TYPE
+STRAND
+SUBMITTER
+SUBMITTER_METHOD
+TERM
+TISSUE
+TRANSCRIPT
+TRANSCRIPT_SOURCE
+TRANSCRIPT_STATUS
+TRANSCRIPT_SUB_STRUCTURE
+TRANSCRIPT_VARIATION
+TSS_STRUCTURE_TYPE
+TV_OLD
+TV_TYPE
+VARIANT_REVIEW_DETAIL_OLD
+VARIANT_REVIEW_LIST_FILTER
+VARIANT_REVIEW_LIST_MEMBER
+VARIATION
+VARIATION_FREQUENCY
+VARIATION_GROUP
+VARIATION_INSTANCE
+VARIATION_ORIG
+VARIATION_ORIG_VARIATION_TYPE
+VARIATION_SCORE
+VS_SCORE_TYPE
+VS_SOFTWARE
+);
+
+sub _ignore_table {
+    my($self,$table_name) = @_;
+
+    return 1 if $self->SUPER::_ignore_table($table_name);
+
+    return scalar(grep { $_ eq $table_name } @OLD_GM_TABLES);
+}
+
+sub _resolve_class_name_for_table_name_fixups {
+    my($self,@words) = @_;
+
+    if ($words[0] eq 'Genome') {
+        # Everything is already under Genome
+        shift @words;
+        if ($words[0] eq 'Model') {
+            splice(@words, 1, 0, '::');  # Make it Model::Blah instead of ModelBlah
+        }
+    }
+    return @words;
 }
 
 1;

@@ -52,6 +52,11 @@ class Genome::ModelDeprecated {
 #            calculate_from => ['_auto_build_alignments'],
 #            calculate => q{ $_auto_build_alignments; }
 #        }, # TODO: rename to auto_build
+        _last_complete_build_id => { 
+            is => 'Number', 
+            column_name => 'last_complete_build_id', 
+            doc => 'The last complete build id' ,
+        },
         apipe_cron_status => {
             via => 'notes',
             to => 'body_text',

@@ -13,12 +13,6 @@ BEGIN {
     }
 }
 
-BEGIN {
-    if (!defined $ENV{GENOME_DB_SKIP_POSTGRES}) {
-        $ENV{GENOME_DB_SKIP_POSTGRES} = '/gsc/scripts/opt/genome/run/skip_postgres_sync';
-    }
-}
-
 # this conflicts with all sorts of Finishing/Finfo stuff
 # ironicall it is used by Pcap stuff
 BEGIN { $INC{"UNIVERSAL/can.pm"} = 'no' };
@@ -36,9 +30,6 @@ $ENV{GENOME_SW} ||= '/gsc/pkg/bio';
 # testsuite data
 $ENV{GENOME_TESTSUITE_INPUTS_PATH} = '/gsc/var/cache/testsuite/data';
 
-# configure file that signals that database updates should be paused
-$ENV{GENOME_DB_PAUSE} = '/gsc/var/lock/database/pause_updates';
-
 # configure our local ensembl db
 $ENV{GENOME_DB_ENSEMBL_API_PATH} ||= '/gsc/scripts/share/ensembl-64';
 $ENV{GENOME_DB_ENSEMBL_HOST} ||= 'mysql1';
@@ -47,9 +38,6 @@ $ENV{GENOME_DB_ENSEMBL_PORT} ||= '3306';
 
 # Log directory
 $ENV{GENOME_LOG_DIR} = '/gsc/var/log/genome';
-
-# a unique ID for each program execution.  Used got logging saves to the database
-$ENV{GENOME_EXECUTION_ID} = UR::Object::Type->autogenerate_new_object_id_uuid();
 
 # If running either the genome or gmt command, log the arguments, user,
 # host, etc in a log file
