@@ -42,11 +42,13 @@ sub _copy_fasta_file {
     push(@fastas, $primary_fasta_path);
 
     $self->status_message("Making bases files from fasta.");
-    my $rv = $self->_make_bases_files($primary_fasta_path, $output_directory);
+    unless ($build->skip_bases_files){
+        my $rv = $self->_make_bases_files($primary_fasta_path, $output_directory);
 
-    unless($rv) {
-        $self->error_message('Making bases files failed.');
-        return;
+        unless($rv) {
+            $self->error_message('Making bases files failed.');
+            return;
+        }
     }
 
     if ($build->append_to) {
@@ -54,8 +56,8 @@ sub _copy_fasta_file {
         my $full_fasta_path = File::Spec->catfile($output_directory, 'all_sequences.fa');
         my $cmd = Genome::Model::Tools::Fasta::Concat->create(
             input_files => [
-                $build->append_to->full_consensus_path('fa'),
-                $build->fasta_file,
+            $build->append_to->full_consensus_path('fa'),
+            $build->fasta_file,
             ],
             output_file => $full_fasta_path,
         );
@@ -72,7 +74,7 @@ sub _copy_fasta_file {
 
     for my $fasta (@fastas) {
         my $samtools_cmd = sprintf('%s faidx %s', $samtools_path, $fasta);
-        $rv = Genome::Sys->shellcmd(
+        my $rv = Genome::Sys->shellcmd(
             cmd => $samtools_cmd,
             input_files => [$fasta],
         );
@@ -124,7 +126,7 @@ sub _execute_build {
             return;
         }
     }
-    
+
     #create manifest file
     unless ($self->create_manifest_file($build)){
         $self->error_message("Could not create manifest file");
@@ -180,7 +182,7 @@ sub _make_bases_files {
             next;
         }
         print $file $line;
-        
+
     }
     $file->close;
     $fafh->close;
@@ -189,7 +191,7 @@ sub _make_bases_files {
 sub create_manifest_file {
     my $self = shift;
     my $build = shift;
-    
+
     my $manifest_path = $build->manifest_file_path;
     if (-z $manifest_path){
         $self->warning_message('Manifest file already exists!');
@@ -201,7 +203,7 @@ sub create_manifest_file {
         $self->error_message("Could not open manifest file path, exiting");
         die();
     }
-    
+
     my @files = $self->_list_bases_files($build);
     for my $file (@files){
         $manifest_fh->print($self->_create_manifest_file_line($file), "\n");
@@ -228,7 +230,7 @@ sub _list_bases_files {
     my $fa = $build->fasta_file; 
     my $bases_dir = join('/', $data_dir, 'bases');
     $bases_dir = $data_dir unless -e $bases_dir; #some builds lack a bases directory 
-    
+
     my @bases_files;
 
     if ($fa and -e $fa){
@@ -252,7 +254,7 @@ sub _list_bases_files {
     }else{
         @bases_files = glob($bases_dir . "/*.bases")
     }
-    
+
     return @bases_files;
 } 
 
