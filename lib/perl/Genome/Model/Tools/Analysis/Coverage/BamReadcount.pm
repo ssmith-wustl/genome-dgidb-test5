@@ -129,7 +129,7 @@ sub execute {
     }
 
     #split out the chromosome we're working on, if necessary
-    if (defined $chrom){
+    if (defined($chrom) && ($chrom ne "all")){
         my $cmd = "grep \"" . $chrom . "[[:space:]]\" $snv_file>$tempdir/snvfile";
         my $return = Genome::Sys->shellcmd(
             cmd => "$cmd",
