@@ -14,7 +14,7 @@ class Genome::Model::Tools::Capture::GermlineModelGroupQc {
 
     has_optional => [
         models                 => { is => 'Genome::Model', is_many => 1, shell_args_position => 1, doc => 'names or group of models to work on' },
-        group_id               => { is => 'Genome::Model', doc => 'names or group of models to work on -- deprecated, can now list models/groups without --group_id' },
+        group_id               => { is => 'Genome::ModelGroup', doc => 'names or group of models to work on -- deprecated, can now list models/groups without --group_id' },
         use_external           => { is => 'Boolean', doc => 'Use external data source rather than internal/iscan', default_value => 0 },
         use_default            => { is => 'Boolean', doc => 'Use default data source as defined on sample (if available)', default_value => 0 },
         output_dir             => { is => 'Text', doc => "Outputs qc into directory for each sample", default => cwd() },

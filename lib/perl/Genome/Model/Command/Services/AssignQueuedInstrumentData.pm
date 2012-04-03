@@ -197,8 +197,7 @@ sub execute {
         $self->add_processing_profiles_to_pse($pse);
 
         my @processing_profile_ids = $pse->added_param('processing_profile_id');
-        my ($subject_class_name)   = $pse->added_param('subject_class_name');
-        my ($subject_id)           = $pse->added_param('subject_id');
+        my $subject = $instrument_data->sample;
 
         if($instrument_data->ignored() ) {
             next;
@@ -206,9 +205,7 @@ sub execute {
 
         my @process_errors;
 
-        if ($subject_class_name and $subject_id and @processing_profile_ids) {
-            my $subject      = $subject_class_name->get($subject_id);
-
+        if (@processing_profile_ids) {
             if ( $instrument_data_type =~ /454/i and $subject->name =~ /^n\-cn?trl$/i ) { 
                 # Do not process 454 negative control (n-ctrl, n-cntrl)
                 $self->status_message('Skipping n-ctrl PSE '.$pse->id);
@@ -250,7 +247,7 @@ sub execute {
                 }
 
                 my @models = Genome::Model->get(
-                    subject_id            => $subject_id,
+                    subject_id            => $subject->id,
                     processing_profile_id => $processing_profile->id,
                     auto_assign_inst_data => 1,
                 );
@@ -317,14 +314,7 @@ sub execute {
             #record that the above code was skipped so we could reattempt it if more information gained later
             $pse->add_param('no_model_generation_attempted',1);
             $self->status_message('No model generation attempted for PSE ' . $pse->id);
-        } # done with PSEs which specify a $subject_class_name, $subject_id, and @processing_profile_ids
-
-        if (!$subject_class_name or !$subject_id) {
-            $self->warning_message(
-                "PSE " . $pse->id . " no subject class/id for instrument data $instrument_data_type $instrument_data_id"
-                . " (subject_class_name $subject_class_name subject_id $subject_id)"
-            );
-        }
+        } # done with PSEs which specify @processing_profile_ids
 
         # Handle this instdata for other models besides the default
         {
@@ -716,24 +706,6 @@ sub check_pse {
                 $self->error_message('Unknown/unhandled content-type ' . $fl->content_type . ' on feature-list ' . $fl->name);
                 return;
             }
-        }
-    }
-
-    my ($subject_class_name)   = $pse->added_param('subject_class_name');
-    my ($subject_id)           = $pse->added_param('subject_id');
-
-    my @processing_profile_ids = $pse->added_param('processing_profile_id');
-
-    #If specified, they must exist!
-    if($subject_class_name or $subject_id or @processing_profile_ids) {
-        my $subject = $subject_class_name->get($subject_id);
-        unless (defined $subject) {
-            $self->error_message(
-                'failed to get a subject via subject_class_name'
-                . " '$subject_class_name' with subject_id"
-                . " '$subject_id'"
-            );
-            return;
         }
     }
 

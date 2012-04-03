@@ -41,14 +41,6 @@ ok($flow_cell, 'create flow cell') or die;
 my $solexa_id = Genome::InstrumentData::Solexa->create(flow_cell_id => $flow_cell->id);
 ok($solexa_id, 'create solexa inst data') or die;
 is_deeply([ $flow_cell->lanes ], [ $solexa_id ], 'got lanes from flow cell');
-my $index_illumina = Test::MockObject->new(); # this is a LIMs module, so using mock
-ok($index_illumina, 'create index illumina') or die;
-$index_illumina->set_true('copy_sequence_files_confirmed_successfully');
-ok($index_illumina->copy_sequence_files_confirmed_successfully, 'copy seq files succeeded') or die;
-no warnings qw/once redefine/;
-*Genome::InstrumentData::Solexa::index_illumina = sub{ return $index_illumina; };
-use warnings;
-is_deeply($solexa_id->index_illumina, $index_illumina, 'overload index_illumina') or die;
 
 my ($assign, @assigned_inst_data);
 
@@ -125,11 +117,6 @@ $assign = Genome::Model::Command::InstrumentData::Assign->create(
 );
 ok($assign, 'create to assign by flow cell id');
 $assign->dump_status_messages(1);
-
-# Mock copy sequence files pse and its status
-my $copy_sequence_pse = Test::MockObject->new;
-$copy_sequence_pse->mock('pse_status', sub { 'inprogress' });
-$index_illumina->mock('get_copy_sequence_files_pse', sub { $copy_sequence_pse });
 
 ok($assign->execute, 'execute');
 @assigned_inst_data = $model->instrument_data;

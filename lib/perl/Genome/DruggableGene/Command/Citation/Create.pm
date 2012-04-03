@@ -12,6 +12,7 @@ class Genome::DruggableGene::Command::Citation::Create {
         source_db_name => { is => 'Text', doc => 'The name of the druggable gene source database' },
         source_db_version => { is => 'Text', doc => 'The version identifier of the druggable gene source database' },
         citation_file => { is => 'PATH', doc => 'The path to a file containing a formatted citation' },
+        base_url => {is => 'URL', default => '', doc => 'Partial url used to link back to original source entries'},
     ],
 };
 
@@ -41,9 +42,10 @@ sub execute {
     my $source_db_name = $self->source_db_name;
     my $source_db_version = $self->source_db_version;
     my $citation_file = $self->citation_file;
+    my $base_url = $self->base_url;
 
     my $citation_text = $self->_load_citation($citation_file);
-    my $citation = Genome::DruggableGene::Citation->create(source_db_name => $source_db_name, source_db_version => $source_db_version, citation => $citation_text);
+    my $citation = Genome::DruggableGene::Citation->create(source_db_name => $source_db_name, source_db_version => $source_db_version, citation => $citation_text, base_url => $base_url);
     return $citation;
 }
 

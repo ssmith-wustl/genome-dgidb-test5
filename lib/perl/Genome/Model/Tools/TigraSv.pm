@@ -60,7 +60,7 @@ sub path_for_tigrasv_version {
 }
 
 sub default_tigrasv_version {
-    die "default samtools version: $DEFAULT is not valid" unless $TIGRASV_VERSIONS{$DEFAULT};
+    die "default tigra_sv version: $DEFAULT is not valid" unless $TIGRASV_VERSIONS{$DEFAULT};
     return $DEFAULT;
 }    
     

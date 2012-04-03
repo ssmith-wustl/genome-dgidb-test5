@@ -10,7 +10,7 @@ use warnings;
 
 use above "Genome";
 
-use Test::More;
+use Test::More tests => 31;
 
 use_ok('Genome::ProcessingProfile::Command::Create') or die;
 ok(Genome::ProcessingProfile::Command::Create->sub_command_classes) or die;
@@ -88,6 +88,8 @@ eval "sub Genome::ProcessingProfile::Command::Create::Tester::_target_class_name
 use warnings;
 is(Genome::ProcessingProfile::Command::Create::Tester->_target_class_name, 'Genome::ProcessingProfile::Tester', 'target class is Genome::ProcessingProfile::Tester');
 
+test_based_on_param_value_overrides_default_value();
+
 # Create a pp
 my %params = (
     name => '__TEST__PP__',
@@ -108,23 +110,22 @@ ok(!$creator->execute, 'Failed as expected - tried to create same processing pro
 # success
 $creator = Genome::ProcessingProfile::Command::Create::Tester->create(
     name => 'Tester for ROI UNDEF',
-    based_on => $pp->id,
+    based_on => $pp,
     roi => 'UNDEF',
 );
 ok($creator, 'create w/ based on');
 ok($creator->execute, 'execute - create new pp w/ based on, but changed roi to UNDEF');
 ok($creator->created_processing_profile, "created processing profile stored on create command");
 isa_ok($creator->created_processing_profile, "Genome::ProcessingProfile::Tester", "newly created processing profile is the correct type");
+is($creator->created_processing_profile->roi, undef, 'roi should be undefined');
 
 # w/o changing anything (fails)
 $creator = Genome::ProcessingProfile::Command::Create::Tester->create(
     name => 'FAILS',
-    based_on => 'id='.$pp->id,
+    based_on => $pp,
 );
 ok($creator, 'create w/ based on but no changes');
 ok(!$creator->execute, 'Failed as expected - tried to base on pp w/o changing params');
-
-done_testing();
 
 sub test_command_subclass {
     my $class = 'Genome::ProcessingProfile::Command::Create';
@@ -141,4 +142,53 @@ sub test_processing_profile_class {
         my $expected_processing_profile_class = join('::', 'Genome::ProcessingProfile', $subclass);
         is($class->_processing_profile_class($class_name), $expected_processing_profile_class, '_processing_profile_class works for subclass (' . $subclass . ')');
     }
+}
+
+sub test_based_on_param_value_overrides_default_value {
+    my $transaction = UR::Context::Transaction->begin;
+
+    local $@ = '';
+    eval {
+        my $meta = UR::Object::Type->get('Genome::ProcessingProfile::Tester');
+        ok($meta, 'got "Genome::ProcessingProfile::Tester" class object');
+
+        # We are testing that a default value is not used when basing on an existing profile
+        # so we need to make sure that the following assumptions are changed out from
+        # underneath us.
+        my $dna_source_property = $meta->properties(property_name => 'dna_source');
+        ok($dna_source_property, 'got dna_source property');
+        my $dna_source = 'metagenomic';
+        ok($dna_source_property->{default_value}, 'dna_source has default value');
+        my $default_dna_source = $dna_source_property->{default_value};
+        ok($default_dna_source ne $dna_source, 'make sure our dna_source is not the default value');
+
+        # create the source processing profile that the second will be based on
+        my $create_cmd = Genome::ProcessingProfile::Command::Create::Tester->create(
+            name => 'test_based_on_param_value_overrides_default_value',
+            roi => 'test_based_on_param_value_overrides_default_value', # just to make it unique
+            dna_source => $dna_source,
+            sequencing_platform => 'solexa',
+            append_event_steps => undef,
+        );
+        ok($create_cmd->execute(), "created new processing profile");
+        my $source_pp = $create_cmd->created_processing_profile;
+        ok($source_pp, 'got created_processing_profile');
+
+        # create the processing profile that is based on the above
+        my $create_alternate_cmd = Genome::ProcessingProfile::Command::Create::Tester->create(
+            based_on => $source_pp,
+            name => 'alternate_test_based_on_param_value_overrides_default_value',
+            roi => 'alternate_test_based_on_param_value_overrides_default_value', # just to make it unique
+        );
+        ok($create_alternate_cmd->execute(), "created new processing profile");
+        my $alternate_pp = $create_alternate_cmd->created_processing_profile;
+        ok($alternate_pp, 'got created_processing_profile');
+
+        # make sure it got alternate_pp's dna_source not the default value for dna_source
+        isnt($alternate_pp->dna_source, $default_dna_source, "alternate_pp's dna_source should not match the default value");
+        is($alternate_pp->dna_source, $source_pp->dna_source, "alternate_pp's dna_source matches source_pp");
+    };
+    print "ERROR: $@\n" if ($@);
+
+    $transaction->rollback;
 }

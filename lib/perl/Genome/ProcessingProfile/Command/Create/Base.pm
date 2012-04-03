@@ -16,11 +16,10 @@ class Genome::ProcessingProfile::Command::Create::Base {
             doc => 'Human readable name.',
         },
         based_on => {
-            is => 'Text',
+            is => 'Genome::ProcessingProfile',
             doc => "Another profile which is used to specify default values for this new one. To qualify a the based on profile must have params, and at least one must be different. Use --param-name='UNDEF' to indicate that a param that is defined for the based on profile should not be for the new profile.",
             is_optional => 1,
         },
-        _based_on => { is_transient => 1, },
         supersedes => {
             is => 'Text',
             doc => 'The processing profile name that this replaces',
@@ -67,62 +66,36 @@ sub help_detail {
 
 sub create {
     my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return unless $self;
+    my $bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
 
-    my $based_on = $self->based_on;
-    return $self if not $based_on;
+    if ($bx->specifies_value_for('based_on')) {
+        my $other_profile = $bx->value_for('based_on');
+        return if not $other_profile;
 
-    my $other_profile = $self->_resolve_based_on($based_on);
-    return if not $other_profile;
-
-    my %defaults;
-    if ($other_profile) {
         my @params = $other_profile->params;
+
         if (not @params) {
-            $self->error_message("In order for a processing profile to used as a 'based on', it must have params that can be copied and at least one of them changed. The based on processing profile (".$other_profile->id." ".$other_profile->name.") does not have any params, and cannot be used.");
+            $class->error_message("In order for a processing profile to used as a 'based on', it must have params that can be copied and at least one of them changed. The based on processing profile (".$other_profile->id." ".$other_profile->name.") does not have any params, and cannot be used.");
             return;
         }
+
         for my $param (@params) {
-            my $name = $param->name;
-            if ($self->can($name)) {
-                my $specified_value = $self->$name;
-                if (not defined $specified_value or not length $specified_value) {
-                    $self->$name($other_profile->$name);
+            my $param_name = $param->name;
+            if ($class->can($param_name)) {
+                if ($bx->specifies_value_for($param_name) && $bx->value_for($param_name) eq 'UNDEF') {
+                    $bx = $bx->remove_filter($param_name);
+                    $bx = $bx->add_filter($param_name => undef);
                 }
-                elsif ( $specified_value eq 'UNDEF' ) { # allow the undef-ing of params, cannot be done from the command line
-                    $self->$name(undef);
+                unless ($bx->specifies_value_for($param_name)) {
+                    $bx = $bx->add_filter($param_name => $other_profile->$param_name);
                 }
             } else {
-                $self->warning_message("Skipping parameter '$name'; It does not exist on " . $self->class . " perhaps '$name' was deprecated or replaced.");
+                $class->warning_message("Skipping parameter '$param_name'; It does not exist on " . $class . " perhaps '$param_name' was deprecated or replaced.");
             }
         }
     }
 
-    return $self;
-}
-
-sub _resolve_based_on {
-    my ($self, $based_on) = @_;
-
-    Carp::confess('No based on!') unless $based_on;
-
-    $based_on = 'id='.$based_on if $based_on =~ /^$RE{num}{int}$/;
-    my @other_profiles = $self->resolve_param_value_from_cmdline_text({
-            class => 'Genome::ProcessingProfile',
-            name => 'based_on',
-            value => [ $based_on ],
-        });
-    if ( not @other_profiles ) {
-        $self->error_message('Failed to get based on processing profile for '.$based_on);
-        return;
-    }
-    elsif ( @other_profiles > 1 ) {
-        $self->error_message('Got multiple based on processing profiles for '.$based_on."\n".join("\n", map { $_->id } @other_profiles)."\nPlease use id.");
-        return;
-    }
-
-    return $self->_based_on($other_profiles[0]);
+    return $class->SUPER::create($bx);
 }
 
 sub execute {

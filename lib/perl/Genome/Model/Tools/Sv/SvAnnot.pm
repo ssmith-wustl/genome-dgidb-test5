@@ -24,7 +24,7 @@ class Genome::Model::Tools::Sv::SvAnnot {
     has_optional => [
         repeat_mask => {
             type => 'Boolean',
-            doc  => 'run UCSC repeat masker annotation using mysql DB access for humna build36 only',
+            doc  => 'run UCSC repeat masker annotation using mysql DB access for human build36 only',
             default => 0,
         },
         sv_format => {

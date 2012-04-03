@@ -11,9 +11,24 @@ UR::Context->object_cache_size_highwater($high);
 class Genome::Model::Tools::Dgidb::Import::PubChem {
     is => 'Genome::Model::Tools::Dgidb::Import::Base',
     has => [
-        
+        download_url => {
+            is => 'URL',
+            default => 'ftp://ftp.ncbi.nlm.nih.gov/pubchem/Compound/Extras/CID-Synonym-filtered.gz',
+            doc => 'Location of a 2 columns flat file.  First column is a PubChem CID, the second is a single drug name.  Sorted by CID, then popularity of the single drug name',
+        },
+        tmp_dir => {
+            is => 'Path',
+            default => '/tmp',
+            doc => 'Directory where the pubchem flatfile will be downloaded',
+        },
+        drugs_outfile => {
+            is => 'Path',
+            is_input => 1,
+            default => '/tmp/PubChem_WashU_DRUGS.tsv',
+            doc => 'PATH.  Path to .tsv file for drugs',
+        },
     ],
-    doc => '',
+    doc => 'Download and parse a PubChem flatfile',
 };
 
 
@@ -75,16 +90,48 @@ sub execute {
     return 1;
 }
 
-sub import_tsv {
+sub input_to_tsv {
     my $self = shift;
-    #TODO: write me
+    my $download_url = $self->download_url;
+    my $drugs_outfile = $self->drugs_outfile;
+    my $wget_cmd = "wget $download_url -O $drugs_outfile.gz";
+    system($wget_cmd);
+    system("gunzip $drugs_outfile.gz");
     return 1;
 }
 
-sub input_to_tsv {
+sub import_tsv {
     my $self = shift;
-    #TODO: write me
-    return 1;
+    my $version = $self->version;
+    my $drugs_outfile = $self->drugs_outfile;
+    my @headers = qw/ cid name /;
+    my $parser = Genome::Utility::IO::SeparatedValueReader->create(
+        input => $drugs_outfile,
+        headers => \@headers,
+        separator => "\t",
+        is_regex => 1,
+    );
+
+    my $last_cid = "-1";
+    my $last_drug;
+    my @drugs;
+
+    while(my $pubchem = $parser->next) {
+        my $cid = $pubchem->{'cid'};
+        my $name = $pubchem->{'name'};
+        if ($cid == $last_cid){
+            #alternate_name
+            my $alternate_name = $self->_create_drug_alternate_name_report($last_drug, $name, 'pubchem_alternate_name', '');
+        }else{
+            #new drug, make it so
+            my $drug = $self->_create_drug_name_report($name, 'pubchem_primary_name', 'pubchem', $version, '');
+            push @drugs, $drug;
+            $last_drug = $drug;
+            $last_cid = $cid;
+        }
+    }
+
+    return @drugs;
 }
 
 1;
