@@ -282,6 +282,8 @@ sub dispatch_request {
       sub (GET + /**/* + .* + ?@*) {
         my ( $self, $class, $perspective, $toolkit, $args ) = @_;
 
+        $DB::single = 1;
+
         load_modules();
 
         $class = url_to_type($class);
