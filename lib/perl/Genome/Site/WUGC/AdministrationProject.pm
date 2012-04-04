@@ -23,9 +23,9 @@ class Genome::Site::WUGC::AdministrationProject {
             is_many => 1,
         },
         analysis_projects => {
-            is => 'Genome::Project',
-            is_many => 1,
-            id_by => 'analysis_project_ids'
+            calculate => q {
+                return Genome::Project->get(id => [$self->analysis_project_ids]);
+            }
         }
     ],
     has_optional => [
