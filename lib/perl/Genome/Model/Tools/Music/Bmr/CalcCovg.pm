@@ -19,6 +19,9 @@ class Genome::Model::Tools::Music::Bmr::CalcCovg {
     tumor_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Tumor BAM base as covered", is_optional => 1},
     min_mapq => { is => 'Integer', doc => "The minimum mapping quality of reads to consider towards read depth counts", is_optional => 1},
   ],
+  has_output => [
+    gene_covg_dir => { is => 'Text', doc => "Directory where per-sample gene coverage files are located"},
+  ],
   doc => "Uses calcRoiCovg.c to count covered bases per-gene for each given tumor-normal pair of BAMs."
 };
 
@@ -211,6 +214,8 @@ sub execute {
   my $roi_covg_dir = "$output_dir/roi_covgs"; # Stores output from calcRoiCovg per sample
   my $gene_covg_dir = "$output_dir/gene_covgs"; # Stores per-gene coverages per sample
   my $tot_covg_file = "$output_dir/total_covgs"; # Stores total coverages per sample
+
+  $self->gene_covg_dir($gene_covg_dir);
 
   # Check whether the annotated regions of interest are clumped together by chromosome
   my $roiFh = IO::File->new( $roi_file ) or die "ROI file could not be opened. $!\n";

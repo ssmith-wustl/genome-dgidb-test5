@@ -11,51 +11,27 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         processors => {
             is => 'Integer',
             default_value => 6,
-            doc => 'TODO',
+            doc => "Number of processors to use in SMG (requires 'foreach' and 'doMC' R packages)",
         },
         log_directory => {
             is => 'Text',
-            doc => 'TODO',
+            doc => "Directory to write log files from MuSiC components",
         },
         bam_list => {
             is => 'Text',
-            doc => 'TODO',
+            doc => 'Tab delimited list of BAM files [sample_name normal_bam tumor_bam]',
         },
         maf_file => {
             is => 'Text',
-            doc => 'TODO',
+            doc => 'List of mutations using TCGA MAF specifications v2.2',
         },
         roi_file => {
             is => 'Text',
-            doc => 'TODO',
-        },
-        path_scan_output_file => {
-            is => 'Text',
-            doc => 'TODO',
-        },
-        smg_output_file => {
-            is => 'Text',
-            doc => 'TODO',
-        },
-        mutation_relation_output_file => {
-            is => 'Text',
-            doc => 'TODO',
-        },
-        clinical_correlation_output_file => {
-            is => 'Text',
-            doc => 'TODO',
-        },
-        cosmic_omim_output_file => {
-            is => 'Text',
-            doc => 'TODO',
-        },
-        pfam_output_file => {
-            is => 'Text',
-            doc => 'TODO',
+            doc => 'Tab delimited list of ROIs [chr start stop gene_name]',
         },
         output_dir => {
             is => 'Text',
-            doc => 'TODO',
+            doc => 'Directory where output files and subdirectories will be written',
         },
         reference_build => {
             is => 'Path',
@@ -69,10 +45,6 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         pathway_file => {
             is => 'Text',
             doc => 'Tab-delimited file of pathway information',
-        },
-        gene_covg_dir => {
-            is => 'Path',
-            doc => 'TODO',
         },
     ],
     has_optional_input => [
@@ -136,7 +108,7 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         },
         bmr_modifier_file => {
             is => 'Text',
-            doc => 'Tab delimited list of values per gene that modify BMR before testing [gene_name               bmr_modifier]',
+            doc => 'Tab delimited list of values per gene that modify BMR before testing [gene_name bmr_modifier]',
         },
         max_fdr => {
             is => 'Number',
@@ -199,34 +171,59 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
     has_output => [
         smg_result => {
             is => 'Text',
-            doc => 'TODO',
+            doc => 'Output file from Smg tool',
         },
         pathscan_result => {
             is => 'Text',
-            doc => 'TODO',
+            doc => 'Output file from PathScan tool',
         },
         mr_result => {
             is => 'Text',
-            doc => 'TODO',
+            doc => 'Output file from MutationRelation tool',
         },
         pfam_result => {
             is => 'Text',
-            doc => 'TODO',
+            doc => 'Output file from Pfam tool',
         },
         proximity_result => {
             is => 'Text',
-            doc => 'TODO',
+            doc => 'Output file from Proximity tool',
         },
         cosmic_result => {
             is => 'Text',
-            doc => 'TODO',
+            doc => 'Output file from Cosmic-OMIM tool',
         },
         cct_result => {
             is => 'Text',
-            doc => 'TODO',
+            doc => 'Output file from ClinicalCorrelation tool',
         },
     ],
 };
+
+sub help_synopsis {
+    return <<EOS
+This tool takes as parameters all the information required to run the individual tools.  The tools will be run in parallel in an lsf workflow, with values such as bmr passed between tools.  An example usage is:
+
+... genome model mutational-significance \\
+        --bam-list input/bams_to_analyze.txt \\
+        --numeric-clinical-data-file input/numeric_clinical_data.csv \\
+        --maf-file input/myMAF.tsv \\
+        --output-dir play_output_dir \\
+        --pathway-file input/pathway_db \\
+        --reference-sequence input/refseq/all_sequences.fa \\
+        --roi-file input/all_coding_regions.bed \\
+        --genetic-data-type gene
+        --log-directory play_output_dir \\
+        --reference-build Build37 \\
+
+EOS
+}
+
+sub help_detail {
+    return <<EOS
+This command can be used to run all of the MuSiC analysis tools on a set of data.  Please see the individual tools for further description of the parameters.
+EOS
+}
 
 sub execute {
     my $self = shift;
@@ -239,6 +236,10 @@ sub execute {
     );
     my %properties;
     map {if (defined $self->{$_->property_name}){$properties{$_->property_name} = $self->{$_->property_name}} } @all_params;
+
+    foreach my $module (qw/path_scan smg mutation_relation clinical_correlation cosmic_omim pfam/) {
+        $properties{$module."_output_file"} = $self->output_dir."/$module";
+    }
 
     my @errors = $workflow->validate;
     unless ($workflow->is_valid) {
@@ -460,6 +461,7 @@ sub _play_music_dependencies {
             condense_feature_name => ['input connector', 'condense_roi_feature_name'],
         },
         $names{path_scan_operation} => {
+            gene_covg_dir => [$names{bmr_calc_covg_operation}, 'gene_covg_dir'],
             bmr => [$names{bmr_calc_bmr_operation}, 'bmr_output'],
             output_file => ['input connector', 'path_scan_output_file'],
         },
@@ -472,11 +474,10 @@ sub _play_music_dependencies {
             gene_list => [$names{smg_operation}, 'output_file'],
         },
         $names{bmr_calc_bmr_operation} => {
-            output_dir => [$names{bmr_calc_covg_operation}, 'output_dir'], #TODO: modify to be more specific. 
+            output_dir => [$names{bmr_calc_covg_operation}, 'output_dir'], 
         },
         $names{clinical_correlation_operation} => {
             output_file => ['input connector', 'clinical_correlation_output_file'],
-            #numeric_clinical_data_file => [$names{create_clinical_data_operation}, 'clinical_data_file'],
         },
         $names{cosmic_omim_operation} => {
             output_file => ['input connector', 'cosmic_omim_output_file'],

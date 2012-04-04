@@ -67,9 +67,7 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
 
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
-        input_properties => ['clinical_data_file', 'merged_maf_path', 'create_maf_output_dir', 'bam_list', 'processors', 'pathway_file', 'gene_covg_dir','reference_sequence','reference_build','somatic_variation_builds','annotation_build','pfam_output_file','cosmic_omim_output_file',
-                             'clinical_correlation_output_file','mutation_relation_output_file','smg_output_file','path_scan_output_file','output_dir', 'log_directory', 'roi_flank_size', 'excluded_reference_sequence_patterns',
-                             'included_feature_type_patterns'],
+        input_properties => ['clinical_data_file', 'merged_maf_path', 'create_maf_output_dir', 'bam_list', 'processors', 'pathway_file', 'gene_covg_dir','reference_sequence','reference_build','somatic_variation_builds','annotation_build', 'output_dir', 'log_directory', 'roi_flank_size', 'excluded_reference_sequence_patterns', 'included_feature_type_patterns'],
         output_properties => ['smg_result','pathscan_result','mr_result','pfam_result','proximity_result',
                               'cosmic_result','cct_result'],
     );
@@ -463,12 +461,6 @@ sub _map_workflow_inputs {
     push @inputs, reference_build => "Build37";
     push @inputs, somatic_variation_builds => \@builds;
     push @inputs, annotation_build => $build->annotation_build;
-    push @inputs, pfam_output_file => $base_dir."/pfam";
-    push @inputs, cosmic_omim_output_file => $base_dir."/cosmic_omim";
-    push @inputs, clinical_correlation_output_file => $base_dir."/clinical_correlation";
-    push @inputs, mutation_relation_output_file => $base_dir."/mutation_relation";
-    push @inputs, smg_output_file => $base_dir."/smg";
-    push @inputs, path_scan_output_file => $base_dir."/path_scan";
     push @inputs, output_dir => $base_dir;
     push @inputs, bam_list => $base_dir."/bam_list.txt";
     push @inputs, clinical_data_file => $base_dir."/clinical_data.txt";
