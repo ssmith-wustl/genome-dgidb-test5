@@ -76,26 +76,6 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         },
     ],
     has_optional_input => [
-        excluded_reference_sequence_patterns => {
-            is => 'Text',
-            doc => 'TODO',
-        },
-        included_feature_type_patterns => {
-            is => 'Text',
-            doc => 'TODO',
-        },
-        condense_roi_feature_name => {
-            is => 'Boolean',
-            doc => 'TODO',
-        },
-        roi_flank_size => {
-            is => 'Integer',
-            doc => 'TODO',
-        },
-        is_one_based_roi => {
-            is => 'Boolean',
-            doc => 'TODO',
-        },
         numeric_clinical_data_file => {
             is => 'Text',
             doc => 'Table of samples (y) vs. numeric clinical data category (x)',
@@ -277,6 +257,14 @@ sub execute {
         }
         return;
     }
+
+    $self->smg_result($output->{smg_result});
+    $self->pathscan_result($output->{pathscan_result});
+    $self->mr_result($output->{mr_result});
+    $self->pfam_result($output->{pfam_result});
+    $self->proximity_result($output->{proximity_result});
+    $self->cosmic_result($output->{cosmic_result});
+    $self->cct_result($output->{cct_result});
 
     return 1;
 }
