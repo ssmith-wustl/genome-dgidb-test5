@@ -625,7 +625,7 @@ sub _archive {
         else {
             my ($job_id, $status) = Genome::Sys->bsub_and_wait(
                 queue => $ENV{GENOME_ARCHIVE_LSF_QUEUE},
-                cmd => $cmd,
+                cmd => "\"$cmd\"",
             );
             confess "LSF job $job_id failed to execute command $cmd, exited with status $status" unless $status eq 'DONE';
         }
@@ -709,7 +709,7 @@ sub _unarchive {
         else {
             my ($job_id, $status) = Genome::Sys->bsub_and_wait(
                 queue => $ENV{GENOME_ARCHIVE_LSF_QUEUE},
-                cmd => $cmd,
+                cmd => "\"$cmd\"",
             );
             unless ($status eq 'DONE') {
                 confess "Could not execute command $cmd via LSF job $job_id, received status $status";
@@ -735,7 +735,7 @@ sub _unarchive {
         }
     };
     if (my $error = $@) {
-        Genome::Sys->unlock_resource($allocation_lock);
+        Genome::Sys->unlock_resource($allocation_lock) if $allocation_lock;
         confess "Could not unarchive, received error:\n$error";
     }
 
