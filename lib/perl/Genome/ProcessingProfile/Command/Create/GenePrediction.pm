@@ -10,6 +10,7 @@ class Genome::ProcessingProfile::Command::Create::GenePrediction {
 };
 
 sub _sub_commands_from { 'Genome::ProcessingProfile::GenePrediction' };
+sub _target_base_class { 'Genome::ProcessingProfile::GenePrediction' };
 
 1;
 

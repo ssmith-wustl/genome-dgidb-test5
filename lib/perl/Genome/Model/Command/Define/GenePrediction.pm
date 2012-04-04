@@ -13,6 +13,7 @@ class Genome::Model::Command::Define::GenePrediction {
 
 # All subclasses of this class have a model define command generated
 sub _sub_commands_from { 'Genome::ProcessingProfile::GenePrediction' };
+sub _target_base_class { 'Genome::ProcessingProfile::GenePrediction' };
 
 # All generated subcommands inherit from this class
 sub _sub_commands_inherit_from { 'Genome::Model::Command::Define::GenePrediction::Helper' };
