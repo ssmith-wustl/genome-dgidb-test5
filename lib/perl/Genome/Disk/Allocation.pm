@@ -659,8 +659,10 @@ sub _archive {
 
         $volume->unallocated_kb($volume->unallocated_kb + $self->kilobytes_requested);
         $self->_create_observer($self->_unlock_closure($volume_lock));
-        unless (Genome::Sys->remove_directory_tree($current_allocation_path)) {
-            confess "Could not remove current allocation path $current_allocation_path";
+        unless ($ENV{UR_DBI_NO_COMMIT}) {
+            unless (Genome::Sys->remove_directory_tree($current_allocation_path)) {
+                confess "Could not remove current allocation path $current_allocation_path";
+            }
         }
 
         unless (UR::Context->commit) {
@@ -739,7 +741,7 @@ sub _unarchive {
         confess "Could not unarchive, received error:\n$error";
     }
 
-    # TODO Should I remove the stuff on the archive volume, or leave it there?
+    $self->_cleanup_archive_directory($archive_path);
     return 1;
 }
 
@@ -1038,10 +1040,7 @@ sub _retrieve_mode {
 sub _cleanup_archive_directory {
     my ($class, $directory) = @_;
     my $cmd = "rm -rf $directory";
-    if ($ENV{UR_DBI_NO_COMMIT}) {
-        Genome::Sys->shellcmd(cmd => $cmd);
-    }
-    else {
+    unless ($ENV{UR_DBI_NO_COMMIT}) {
         my ($job_id, $status) = Genome::Sys->bsub(
             queue => $ENV{GENOME_ARCHIVE_LSF_QUEUE},
             cmd => $cmd,
