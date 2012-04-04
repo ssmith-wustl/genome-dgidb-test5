@@ -847,7 +847,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     }
 
     $DB::single = $DB::stopper;
-    if ( $capture_target and not $regular_model->isa('Genome::Model::RnaSeq')){
+    if ( $capture_target and $regular_model->can('reference_sequence_build') and not $regular_model->isa('Genome::Model::RnaSeq')){
         my $roi_list;
         #FIXME This is a lame hack for these capture sets
         my %build36_to_37_rois = get_build36_to_37_rois();
