@@ -275,19 +275,20 @@ sub _parse_targets_file {
             next;
         }elsif($line =~ m/^TTD\w+/){
             my ($id, $key, $value, @extra_fields) = split("\t", $line); 
+            $key = 'drugs' if $key eq 'Drug(s)';
             if(!$targets->{$id}){
                 $targets->{$id} = {};
             }
             if(!$targets->{$id}{$key}){
-                if($key eq 'Drug(s)'){
-                    $targets->{$id}{'drugs'} = {};
+                if($key eq 'drugs'){
+                    $targets->{$id}{'key'} = {};
                 }else{
                     $targets->{$id}{$key} = [];
                 }
             }
-            if($key eq 'Drug(s)'){
+            if($key eq 'drugs'){
                 my $drug_id = shift @extra_fields;
-                $targets->{$id}{'drugs'}{$drug_id} = join("\t", $drug_id, $value, @extra_fields);
+                $targets->{$id}{$key}{$drug_id} = join("\t", $drug_id, $value, @extra_fields);
             }else{
                 push(@{$targets->{$id}{$key}}, join("\t", $value, @extra_fields));
             }
