@@ -226,7 +226,7 @@ sub preload_objects {
     my @gene_names = Genome::DruggableGene::GeneNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
     for my $gene_name (@gene_names){
         $gene_name->gene_alt_names;
-        $gene_name->gene_name_category_report_associations;
+        $gene_name->gene_categories;
     }
     my @drug_names = Genome::DruggableGene::DrugNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
     for my $drug_name (@drug_names){
