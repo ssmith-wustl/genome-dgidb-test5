@@ -26,6 +26,82 @@ use File::Find;
 require MIME::Lite;
 
 #####
+# Methods useful for bsubbing jobs and checking their status
+#####
+
+sub bsub_and_wait {
+    my $class = shift;
+    my %params = @_;
+    my $job_id = Genome::Sys->bsub(%params);
+    my $status = Genome::Sys->wait_for_lsf_job($job_id);
+    return ($job_id, $status);
+}
+
+# FIXME This is incomplete and should be expanded to accept more bsub parameters
+sub bsub {
+    my $class = shift;
+    my %params = @_;
+    my $queue = $params{queue} || 'long';
+    my $job_group = $params{job_group};
+    my $cmd = $params{cmd};
+    my $log_file = $params{log_file};
+    unless ($cmd) {
+        die "Must be given a command to bsub!";
+    }
+
+    my $bsub_cmd = "bsub";
+    $bsub_cmd .= " -q $queue";
+    $bsub_cmd .= " -g $job_group" if $job_group;
+    $bsub_cmd .= " -o $log_file" if $log_file;
+    $bsub_cmd .= " $cmd";
+
+    my $bsub_output = `$bsub_cmd`;
+    my ($job_id) = $bsub_output =~ /Job <(\d+)> is submitted to/;
+    unless ($job_id) {
+        die "Could not get job id from bsub output!";
+    }
+    return $job_id;
+}
+
+sub get_lsf_job_status {
+    my ($class, $job_id) = @_;
+    unless ($job_id) {
+        die "Must be given a job id!";
+    }
+    my $cmd = "bjobs -aw $job_id 2>&1";
+
+    my $status;
+    for (1..3) {
+        my $output = `$cmd`;
+        my ($headers, $line) = split("\n", $output);
+        if ($headers and $headers =~ /^JOBID/ and $line) {
+            (undef, undef, $status) = split(/\s+/, $line); 
+            last if $status;
+        }
+        sleep 10;
+    }
+    unless ($status) {
+        die "Could not get status for job $job_id";
+    }
+    return $status;
+}
+
+sub wait_for_lsf_job {
+    my ($class, $job_id) = @_;
+    unless ($job_id) {
+        die "Must be given job id!";
+    }
+
+    my $status;
+    while (1) {
+        $status = Genome::Sys->get_lsf_job_status($job_id);
+        last unless $status eq 'RUN' or $status eq 'PEND';
+        sleep 10;
+    }
+    return $status;
+}
+
+#####
 # API for accessing software and data by version
 #####
 
