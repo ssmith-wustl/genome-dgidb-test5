@@ -383,53 +383,5 @@ sub _output_genotypes {
     return 1;
 }
 
-sub _annotate_genotypes_with_lims {
-    my ($self, $genotypes) = @_;
-
-    Carp::confess('No genotypes!') if not $genotypes;
-
-    my $variation_list_build = $self->variation_list_build;
-    $self->status_message('Variant list name: '.$variation_list_build->model_name);
-    $self->status_message('Variant list version: '.$variation_list_build->version);
-
-    my $feature_list_file = ( $variation_list_build->version eq 130 )
-    ? '/gsc/var/gsc/production/iscan/cache/41_reference_4'
-    : '/gsc/var/gsc/production/iscan/cache/41_GRCh37_14';
-    if ( not -e $feature_list_file ) {
-        $self->error_message('Feature list file does not exist: '.$feature_list_file);
-        return;
-    }
-    $self->status_message('Feature list file: '.$feature_list_file);
-
-    my $dbsnp_fh = eval{ Genome::Sys->open_file_for_reading($feature_list_file); };
-    if ( not $dbsnp_fh ) {
-        $self->error_message("Failed to open file: $feature_list_file");
-        return;
-    }
-
-    $self->status_message("Annotate genotypes...");
-    my %annotated_genotypes;
-    my $cnt = 0;
-    while ( my $line = $dbsnp_fh->getline and %$genotypes ) {
-        chomp $line;
-        my ($variant_id, $chrom, $pos) = split(/,/, $line);
-        if ( exists $annotated_genotypes{$variant_id} ) {
-            if ( $annotated_genotypes{$variant_id}->{position} != $pos ) {
-                $annotated_genotypes{$variant_id}->{ignore} = 1;
-            }
-            next;
-        }
-        my $genotype = delete $genotypes->{$variant_id};
-        next if not $genotype;
-        $genotype->{chromosome} = $chrom;
-        $genotype->{position} = $pos;
-        $genotype->{order} = $cnt++;
-        $annotated_genotypes{$variant_id} = $genotype;
-    }
-
-    $self->status_message("Annotate ".keys(%annotated_genotypes)." genotypes...OK");
-    return \%annotated_genotypes;
-}
-
 1;
 
