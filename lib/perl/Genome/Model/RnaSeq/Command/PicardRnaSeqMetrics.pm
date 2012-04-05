@@ -44,7 +44,7 @@ sub execute {
     my $seqdict_file = $reference_build->get_sequence_dictionary('sam',$reference_build->species_name,$self->picard_version);
 
     my $annotation_build = $self->model->annotation_build;
-    unless ($annotation_buld) {
+    unless ($annotation_build) {
         $self->status_message('Skipping PicardRnaSeqMetrics since annotation_build is not defined');
         return 1;
     }
