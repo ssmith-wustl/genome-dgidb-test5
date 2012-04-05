@@ -22,6 +22,12 @@ class Genome::InstrumentData::Command::Microarray::Extract {
             valid_values => [qw/ chromosome position alleles id sample_id log_r_ratio gc_score cnv_value cnv_confidence allele1 allele2 /],
             doc => 'The fields to output in the genotype file.',
         },
+        headers => {
+            is => 'Boolean',
+            is_optional => 1,
+            default_value => 0,
+            doc => 'Add the fields to the top of the genotype file.',
+        },
         separator => {
             is => 'Text',
             default_value => 'tab',
@@ -371,6 +377,8 @@ sub _output_genotypes {
     my $sep = ( $self->separator eq 'tab' ? "\t" : $self->separator );
     my @fields = $self->fields;
     my $output_fh = $self->_output_fh;
+    $output_fh->print( join($sep, @fields)."\n" ) if $self->headers;
+
     my $cnt = 0;
     for my $genotype ( sort { $a->{order} <=> $b->{order} } values %$genotypes ) {
         next if $genotype->{ignore};
