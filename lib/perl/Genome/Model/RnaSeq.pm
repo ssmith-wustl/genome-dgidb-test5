@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 use version;
+use Genome::Utility::Text;
 
 class Genome::Model::RnaSeq {
     is => 'Genome::ModelDeprecated',
@@ -137,10 +138,13 @@ sub _resolve_workflow_for_build {
         $lsf_project = 'build' . $build->id;
     }
 
+    my $output_properties = ['coverage_result','expression_result','metrics_result'];
+    push(@$output_properties, 'fusion_result') if $self->fusion_detection_strategy;
+
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
         input_properties => ['build_id',],
-        output_properties => ['coverage_result','expression_result','metrics_result']
+        output_properties => $output_properties,
     );
 
     my $log_directory = $build->log_directory;
@@ -218,6 +222,37 @@ sub _resolve_workflow_for_build {
         right_operation => $cufflinks_operation,
         right_property => 'build_id'
     );
+
+    #Fusion Detection
+    if($self->fusion_detection_strategy){
+        my ($detector, $version) = split(/\s+/, $self->fusion_detection_strategy);
+
+        my $fusion_detection_operation = $workflow->add_operation(
+            name => "RnaSeq Fusion Detection ($detector $version)",
+            operation_type => Workflow::OperationType::Command->create(
+                command_class_name => 'Genome::Model::RnaSeq::Command::DetectFusions::' . Genome::Utility::Text::string_to_camel_case($detector,"-"),
+            )
+        );
+
+        $fusion_detection_operation->operation_type->lsf_queue($lsf_queue);
+        $fusion_detection_operation->operation_type->lsf_project($lsf_project);
+
+        $workflow->add_link(
+            left_operation => $tophat_operation,
+            left_property => 'build_id',
+            right_operation => $fusion_detection_operation,
+            right_property => 'build_id'
+        );
+
+        #output connector
+        $workflow->add_link(
+            left_operation => $fusion_detection_operation,
+            left_property => 'result',
+            right_operation => $output_connector,
+            right_property => 'fusion_result'
+        );
+
+    }
 
     # Define output connector results from coverage and expression
     $workflow->add_link(
