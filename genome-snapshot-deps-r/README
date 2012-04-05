@@ -1,0 +1,6 @@
+This meta-package represents all of the externally developed R libraries required to run the snapshot.
+
+It is currently under-development.
+
+If you have an R package you use, please add it to the "base-list" file in alphabetical order.  Contact Scott Smith or Matt Callaway for help.
+
