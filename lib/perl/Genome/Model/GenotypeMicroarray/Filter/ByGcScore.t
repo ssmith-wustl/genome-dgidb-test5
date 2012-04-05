@@ -7,14 +7,14 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::InstrumentData::Command::Microarray::FilterByGcScore') or die;
+use_ok('Genome::Model::GenotypeMicroarray::Filter::ByGcScore') or die;
 
-my $filter = Genome::InstrumentData::Command::Microarray::FilterByGcScore->create();
+my $filter = Genome::Model::GenotypeMicroarray::Filter::ByGcScore->create();
 ok(!$filter, 'create failed w/o min');
-$filter = Genome::InstrumentData::Command::Microarray::FilterByGcScore->create(min => -0.1);
+$filter = Genome::Model::GenotypeMicroarray::Filter::ByGcScore->create(min => -0.1);
 ok(!$filter, 'create failed w/ invalid min');
 
-$filter = Genome::InstrumentData::Command::Microarray::FilterByGcScore->create(min => 0.7);
+$filter = Genome::Model::GenotypeMicroarray::Filter::ByGcScore->create(min => 0.7);
 ok($filter, 'create filter');
 ok($filter->filter({gc_score => undef}), 'did not filter undef');
 ok($filter->filter({gc_score => -1}), 'did not filter -1');

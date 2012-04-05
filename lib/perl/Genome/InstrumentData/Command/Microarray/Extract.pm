@@ -193,7 +193,7 @@ sub _create_filters {
         my ($name, $config) = split(':', $filter_string, 2);
         my %params;
         %params = map { split('=') } split(':', $config) if $config;
-        my $filter_class = 'Genome::InstrumentData::Command::Microarray::FilterBy'.Genome::Utility::Text::string_to_camel_case($name);
+        my $filter_class = 'Genome::Model::GenotypeMicroarray::Filter::By'.Genome::Utility::Text::string_to_camel_case($name);
         my $filter = $filter_class->create(%params);
         if ( not $filter ) {
             $self->error_message("Failed to create fitler for $filter_string");

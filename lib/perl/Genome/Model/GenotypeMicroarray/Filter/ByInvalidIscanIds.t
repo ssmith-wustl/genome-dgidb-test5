@@ -7,9 +7,9 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::InstrumentData::Command::Microarray::FilterByInvalidIscanIds') or die;
+use_ok('Genome::Model::GenotypeMicroarray::Filter::ByInvalidIscanIds') or die;
 
-my $filter = Genome::InstrumentData::Command::Microarray::FilterByInvalidIscanIds->create();
+my $filter = Genome::Model::GenotypeMicroarray::Filter::ByInvalidIscanIds->create();
 ok($filter, 'create filter');
 ok($filter->filter({id => 'nathan'}), 'did not filter id not in list');
 ok(!$filter->filter({id => 'rs1010408'}), 'filter id in list');

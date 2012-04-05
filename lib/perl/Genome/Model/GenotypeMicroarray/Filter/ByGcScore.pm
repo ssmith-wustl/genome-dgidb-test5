@@ -1,11 +1,11 @@
-package Genome::InstrumentData::Command::Microarray::FilterByGcScore;
+package Genome::Model::GenotypeMicroarray::Filter::ByGcScore;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::InstrumentData::Command::Microarray::FilterByGcScore {
+class Genome::Model::GenotypeMicroarray::Filter::ByGcScore {
     has => [
         min => {
             is => 'Text',

@@ -1,11 +1,11 @@
-package Genome::InstrumentData::Command::Microarray::FilterByWhitelist;
+package Genome::Model::GenotypeMicroarray::Filter::ByWhitelist;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::InstrumentData::Command::Microarray::FilterByWhitelist {
+class Genome::Model::GenotypeMicroarray::Filter::ByWhitelist {
     has => [
         whitelist_snps_file => { is => 'Text' },
     ],

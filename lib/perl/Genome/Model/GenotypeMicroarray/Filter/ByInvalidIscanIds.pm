@@ -1,11 +1,11 @@
-package Genome::InstrumentData::Command::Microarray::FilterByInvalidIscanIds;
+package Genome::Model::GenotypeMicroarray::Filter::ByInvalidIscanIds;
         
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::InstrumentData::Command::Microarray::FilterByInvalidIscanIds {
+class Genome::Model::GenotypeMicroarray::Filter::ByInvalidIscanIds {
 };
 
 my %varints_to_skip = (
