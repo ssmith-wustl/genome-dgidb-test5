@@ -353,10 +353,7 @@ sub _chunk_in_clause_list{
         return $boolexpr;
     }
 
-    my @chunked_values;
-    while(@values) {
-        push @chunked_values, [splice(@values,0,249)];
-    }
+    my @chunked_values = [@values];
 
     my $filter_bx;
     if($filter) {
@@ -370,22 +367,13 @@ sub _chunk_in_clause_list{
     my $boolexpr;
     my @filter_params = ($filter_bx? $filter_bx->params_list : ());
     if(@filter_params and $filter_params[0] eq '-or') {
-        #This should be unnecessary, but UR's handling of "or"s is currently inelegant
         $boolexpr = $target_class->define_boolexpr(
             '-or' => [
-                map {
-                    my $filter_param = $_;
-                    map([$property_name => $_, @$filter_param], @chunked_values);
-                } @{$filter_params[1]},
+                map { [$property_name => \@values, @$_] } @{$filter_params[1]},
             ]
         );
-
     } else {
-        $boolexpr = $target_class->define_boolexpr(
-            '-or' => [
-            map([$property_name => $_, @filter_params], @chunked_values)
-            ],
-        );
+        $boolexpr = $target_class->define_boolexpr($property_name => \@values, @filter_params);
     }
 
     return $boolexpr;
