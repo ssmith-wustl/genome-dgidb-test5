@@ -42,6 +42,7 @@ my $samtools_version = Genome::Model::Tools::Sam->default_samtools_version;
 # Currently cannot use the default version because we need at least 1.29 to use gmt picard reset-sam
 my $picard_version = '1.29';
 my $aligner_version = '1.3.0';
+my $bowtie_version = '0.12.7';
 
 my $FAKE_INSTRUMENT_DATA_ID=-123456;
 
@@ -69,7 +70,7 @@ my @params = (
      samtools_version=>$samtools_version,
      picard_version=>$picard_version,
      reference_build => $reference_build,
-
+     bowtie_version => $bowtie_version,
      instrument_data_id => [map($_->id, @instrument_data)],
      test_name => 'tophat_unit_test',
 );
