@@ -987,17 +987,11 @@ sub _compute_alignment_metrics {
         $self->warning_message('Given picard version: '.$self->picard_version.' not compatible to CollectMultipleMetrics. Use default: '.$picard_version);
     }
 
-    #Only collect insert size metrics for paired-end reads
-    my $program_list = 'CollectAlignmentSummaryMetrics';
-    if ($self->instrument_data->is_paired_end) {
-        $program_list .= ',CollectInsertSizeMetrics';
-    }
-
     my $cmd = Genome::Model::Tools::Picard::CollectMultipleMetrics->create(
         input_file         => $bam,
         output_basename    => $out_base,
         reference_sequence => $ref_seq,
-        program_list       => $program_list,
+        program_list       => 'CollectAlignmentSummaryMetrics,CollectInsertSizeMetrics',
         use_version        => $picard_version,
     );
 
@@ -1008,47 +1002,45 @@ sub _compute_alignment_metrics {
     my $align_metrics_file = $out_base.'.alignment_summary_metrics';
     my $align_data = Genome::Model::Tools::Picard::CollectAlignmentSummaryMetrics->parse_file_into_metrics_hashref($align_metrics_file);
 
-    if ($self->instrument_data->is_paired_end) {
-        my ($r1_pct_aligned, $r2_pct_aligned, $r1_mismatch, $r2_mismatch);
+    my ($r1_pct_aligned, $r2_pct_aligned, $r1_mismatch, $r2_mismatch);
 
-        if ($align_data->{FIRST_OF_PAIR}) {
-            $r1_pct_aligned = sprintf("%.2f", $align_data->{FIRST_OF_PAIR}->{PCT_PF_READS_ALIGNED} * 100);
-            $r1_mismatch    = sprintf("%.2f", $align_data->{FIRST_OF_PAIR}->{PF_MISMATCH_RATE} * 100);
-        }
-        else {
-            $self->warning_message("Failed to parse read_1_pct_aligned and read_1_pct_mismatch from $align_metrics_file");
-            ($r1_pct_aligned, $r1_mismatch) = (0, 0);
-        }
-
-        if ($align_data->{SECOND_OF_PAIR}) {
-            $r2_pct_aligned = sprintf("%.2f", $align_data->{SECOND_OF_PAIR}->{PCT_PF_READS_ALIGNED} * 100);
-            $r2_mismatch    = sprintf("%.2f", $align_data->{SECOND_OF_PAIR}->{PF_MISMATCH_RATE} * 100);
-        }
-        else {
-            $self->warning_message("Failed to parse read_2_pct_aligned and read_2_pct_mismatch from $align_metrics_file");
-            ($r2_pct_aligned, $r2_mismatch) = (0, 0);
-        }
-        $self->read_1_pct_aligned($r1_pct_aligned);
-        $self->read_2_pct_aligned($r2_pct_aligned);
-        $self->read_1_pct_mismatch($r1_mismatch);
-        $self->read_2_pct_mismatch($r2_mismatch);
-
-        my $is_metrics_file = $out_base.'.insert_size_metrics';
-
-        if (-s $is_metrics_file) { #sometimes (like unit tests) the insert_size_metrics will not be generated because < 0.01 of the total aligned paired data
-            my $is_data = Genome::Model::Tools::Picard::CollectInsertSizeMetrics->parse_file_into_metrics_hashref($is_metrics_file);
-
-            if ($is_data->{FR}) {
-                $self->median_insert_size($is_data->{FR}->{MEDIAN_INSERT_SIZE});
-                $self->sd_insert_size($is_data->{FR}->{STANDARD_DEVIATION});
-                return 1;
-            }
-        }
-
-        $self->warning_message("Failed to parse median_insert_size and sd_insert_size from $is_metrics_file");
-        $self->median_insert_size(0);
-        $self->sd_insert_size(0);
+    if ($align_data->{FIRST_OF_PAIR}) {
+        $r1_pct_aligned = sprintf("%.2f", $align_data->{FIRST_OF_PAIR}->{PCT_PF_READS_ALIGNED} * 100);
+        $r1_mismatch    = sprintf("%.2f", $align_data->{FIRST_OF_PAIR}->{PF_MISMATCH_RATE} * 100);
     }
+    else {
+        $self->warning_message("Failed to parse read_1_pct_aligned and read_1_pct_mismatch from $align_metrics_file");
+        ($r1_pct_aligned, $r1_mismatch) = (0, 0);
+    }
+
+    if ($align_data->{SECOND_OF_PAIR}) {
+        $r2_pct_aligned = sprintf("%.2f", $align_data->{SECOND_OF_PAIR}->{PCT_PF_READS_ALIGNED} * 100);
+        $r2_mismatch    = sprintf("%.2f", $align_data->{SECOND_OF_PAIR}->{PF_MISMATCH_RATE} * 100);
+    }
+    else {
+        $self->warning_message("Failed to parse read_2_pct_aligned and read_2_pct_mismatch from $align_metrics_file");
+        ($r2_pct_aligned, $r2_mismatch) = (0, 0);
+    }
+    $self->read_1_pct_aligned($r1_pct_aligned);
+    $self->read_2_pct_aligned($r2_pct_aligned);
+    $self->read_1_pct_mismatch($r1_mismatch);
+    $self->read_2_pct_mismatch($r2_mismatch);
+
+    my $is_metrics_file = $out_base.'.insert_size_metrics';
+
+    if (-s $is_metrics_file) { #sometimes (like unit tests) the insert_size_metrics will not be generated because < 0.01 of the total aligned paired data
+        my $is_data = Genome::Model::Tools::Picard::CollectInsertSizeMetrics->parse_file_into_metrics_hashref($is_metrics_file);
+
+        if ($is_data->{FR}) {
+            $self->median_insert_size($is_data->{FR}->{MEDIAN_INSERT_SIZE});
+            $self->sd_insert_size($is_data->{FR}->{STANDARD_DEVIATION});
+            return 1;
+        }
+    }
+    
+    $self->warning_message("Failed to parse median_insert_size and sd_insert_size from $is_metrics_file");
+    $self->median_insert_size(0);
+    $self->sd_insert_size(0);
 
     return 1;
 }
