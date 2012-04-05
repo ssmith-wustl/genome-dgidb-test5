@@ -80,7 +80,7 @@ sub import_interactions {
         my $gene_name = $self->_import_gene($interaction);
         my $drug_gene_interaction = $self->_create_interaction_report($drug_name, $gene_name, 'TTD', $version, '');
         push @interactions, $drug_gene_interaction;
-        my @interaction_types = split('; ', $interaction->{interaction_type});
+        my @interaction_types = split('; ', $interaction->{interaction_types});
         for my $interaction_type (@interaction_types){
             my $type_attribute = $self->_create_interaction_report_attribute($drug_gene_interaction, 'interaction_type', $interaction_type);
         }
