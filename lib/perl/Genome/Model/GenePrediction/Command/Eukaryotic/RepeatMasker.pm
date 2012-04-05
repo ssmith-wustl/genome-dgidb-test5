@@ -101,6 +101,12 @@ class Genome::Model::GenePrediction::Command::Eukaryotic::RepeatMasker {
             default => 0,
             doc => 'If set, masking is skipped',
         },
+        maximum_percent_masked => {
+            is => 'Number',
+            is_input => 1,
+            default => 80,
+            doc => 'Sequences with an N content greater than this are omitted. Value is a percent',
+        },
     ], 
 };
 
@@ -250,7 +256,13 @@ sub _move_files_from_working_directory {
         my $property = delete $suffix_to_property_mapping{$suffix};
         my $target = $self->$property;
         next unless defined $target;
+
         Genome::Sys->copy_file($output_file, $self->$property);
+
+        # Filter out sequences from fasta file that are more than X% masked
+        if ($property eq 'masked_fasta' and defined $self->maximum_percent_masked and -e $self->$property) {
+            $self->_filter_masked_sequences_from_fasta_file;
+        };
     }
 
     if (%suffix_to_property_mapping) {
@@ -258,6 +270,47 @@ sub _move_files_from_working_directory {
         $self->warning_message("Found no output files in working directory $working_dir " .
             "with suffixes: " . join(" ", @missing));
     }
+
+    return 1;
+}
+
+# Filter sequences that are greater than X% masked from output fasta, where X
+# is whatever maximum_percent_masked was set to. 
+sub _filter_masked_sequences_from_fasta_file {
+    my $self = shift;
+    my $max_percent = $self->maximum_percent_masked;
+
+    my $temp_file_fh = File::Temp->new();
+    my $temp_file = $temp_file_fh->filename;
+    $temp_file_fh->close;
+
+    my $input_fasta_io = Bio::SeqIO->new(
+        -format => 'fasta',
+        -file => $self->masked_fasta,
+    );
+    my $output_fasta_io = Bio::SeqIO->new(
+        -format => 'fasta',
+        -file => ">$temp_file",
+    );
+
+    while (my $seq_obj = $input_fasta_io->next_seq()) {
+        my $seq = $seq_obj->seq;
+        my $n_count = $seq =~ tr/n|N//;
+        my $total_length = length($seq);
+        my $n_percent = ($n_count / $total_length) * 100;
+        # Need some record of what was excluded
+        if ($n_percent > $self->maximum_percent_masked) {
+            $self->status_message("Sequence " . $seq_obj->display_name . " $n_percent % masked, excluding from masked fasta file");
+            next;
+        }
+        $output_fasta_io->write_seq($seq_obj);
+    }
+    $input_fasta_io->close;
+
+    # Replace original fasta file with filtered fasta
+    unlink $self->masked_fasta or die "Could not remove " . $self->masked_fasta;
+    Genome::Sys->copy_file($temp_file, $self->masked_fasta);
+    $output_fasta_io->close;
 
     return 1;
 }
