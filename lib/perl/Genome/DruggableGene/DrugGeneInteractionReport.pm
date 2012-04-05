@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::DruggableGene::DrugGeneInteractionReport {
-    is => 'Genome::Searchable',
+    is => 'UR::Object',
     id_generator => '-uuid',
     table_name => 'dgidb.drug_gene_interaction_report',
     schema_name => 'dgidb',
@@ -91,30 +91,6 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
 sub __display_name__ {
     my $self = shift;
     return $self->drug->human_readable_name. ' as ' .  join(' and ',$self->interaction_types) .  ' for ' . $self->gene->human_readable_name;
-}
-
-if ($INC{"Genome/Search.pm"}) {
-    __PACKAGE__->create_subscription(
-        method => 'commit',
-        callback => \&add_to_search_index_queue,
-    );
-    __PACKAGE__->create_subscription(
-        method => 'delete',
-        callback => \&add_to_search_index_queue,
-    );
-}
-
-sub add_to_search_index_queue {
-    my $self = shift;
-    my $set = Genome::DruggableGene::DrugGeneInteractionReport->define_set(
-        drug_name => $self->drug->name,
-        gene_name => $self->gene->name,
-    );
-    Genome::Search::Queue->create(
-        subject_id => $set->id,
-        subject_class => $set->class,
-        priority => 9,
-    );
 }
 
 1;
