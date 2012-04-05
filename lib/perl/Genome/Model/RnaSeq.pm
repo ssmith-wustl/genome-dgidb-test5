@@ -302,6 +302,7 @@ sub params_for_alignment {
         samtools_version => undef, #unused
         filter_name => undef, #unused
         test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
+        bowtie_version => $self->bowtie_version
     );
     #$self->status_message('The AlignmentResult parameters are: '. Data::Dumper::Dumper(%params));
     my @param_set = (\%params);
