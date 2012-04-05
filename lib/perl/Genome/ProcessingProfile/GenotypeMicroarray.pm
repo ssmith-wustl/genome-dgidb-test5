@@ -57,31 +57,59 @@ sub _execute_build {
     }
     $self->status_message("Reference fasta file: $fasta_file");
 
-    $self->status_message('Create genotype file...');
-    my $genotype_file = $build->genotype_file_path;
-    $self->status_message('Genotype file: '.$genotype_file);
-    # FIXME move filters to profile params
-    my @filters = (qw/ gc_score:min=0.7 /); 
-    push @filters, 'invalid_iscan_ids' if $reference_sequence_build->version eq '36';
+    # Original genotype file - has all the info and headers, with positions from this dbsnp
+    $self->status_message('Create original genotype file...');
+    my $original_genotype_file = $build->original_genotype_file_path;
+    $self->status_message('Original genotype file: '.$original_genotype_file);
     my $extract = Genome::InstrumentData::Command::Microarray::Extract->create(
         instrument_data => $instrument_data,
         variation_list_build => $dbsnp_build,
+        fields => [qw/ chromosome position alleles id sample_id log_r_ratio gc_score cnv_value cnv_confidence allele1 allele2 /],
+        headers => 1,
+        separator => 'tab',
+        output => $original_genotype_file,
+    );
+    if ( not $extract ) {
+        $self->error_message('Failed to create command to create original genotype file!');
+        return;
+    }
+    $extract->dump_status_messages(1);
+    if ( not $extract->execute ) {
+        $self->error_message('Failed to execute command to create original genotype file!');
+        return;
+    }
+    if ( not -s $original_genotype_file ) {
+        $self->error_message('Executed command to create original genotype file, but file is empty! '.$original_genotype_file);
+        return;
+    }
+    $self->status_message('Create original genotype file...OK');
+
+    # Filters for extracting from the above original file
+    my @filters = (qw/ gc_score:min=0.7 /); 
+    push @filters, 'invalid_iscan_ids' if $reference_sequence_build->version eq '36';
+
+    # Genotype file. No headers, tab sep with chrom, pos and alleles
+    $self->status_message('Create genotype file...');
+    my $genotype_file = $build->genotype_file_path;
+    $self->status_message('Genotype file: '.$genotype_file);
+    my $extract_genotypes = Genome::Model::GenotypeMicroarray::Command::Extract->create(
+        build => $build,
         fields => [qw/ chromosome position alleles /],
         separator => 'tab',
         filters => \@filters,
         output => $genotype_file,
     );
-    if ( not $extract ) {
-        $self->error_message('Failed to create microarray extract for instrument data! '.$instrument_data->id);
+    if ( not $extract_genotypes ) {
+        $self->error_message('Failed to create command to create genotype file!');
         return;
     }
-    $extract->dump_status_messages(1);
-    if ( not $extract->execute ) {
-        $self->error_message('Failed to execute microarray extract for instrument data! '.$instrument_data->id);
+    $extract_genotypes->dump_status_messages(1);
+    if ( not $extract_genotypes->execute ) {
+        $self->error_message('Failed to execute command to create genotype file!');
         return;
     }
     if ( not -s $genotype_file ) {
-        $self->error_message('Executed microarray extract for instrument data, but genotype file is empty! '.$genotype_file);
+        $self->error_message('Executed command to create genotype file, but file is empty! '.$genotype_file);
         return;
     }
     $self->status_message('Create genotype file...OK');
@@ -98,28 +126,28 @@ sub _execute_build {
     }
     $self->status_message('Link genotpe file to gold2geno file...OK');
 
+    # Copy number file. No headers, tab sep with chrom, pos and log r ratio
     $self->status_message('Create copy number file...');
     my $copy_number_file = $build->copy_number_file_path;
     $self->status_message('Copy number file: '.$copy_number_file);
-    $extract = Genome::InstrumentData::Command::Microarray::Extract->create(
-        instrument_data => $instrument_data,
-        variation_list_build => $dbsnp_build,
+    my $extract_copy_number = Genome::Model::GenotypeMicroarray::Command::Extract->create(
+        build => $build,
         fields => [qw/ chromosome position log_r_ratio /],
         separator => 'tab',
         filters => \@filters,
         output => $copy_number_file,
     );
-    if ( not $extract ) {
-        $self->error_message('Failed to create microarray extract for instrument data! '.$instrument_data->id);
+    if ( not $extract_copy_number ) {
+        $self->error_message('Failed to create command to create copy number file!');
         return;
     }
-    $extract->dump_status_messages(1);
-    if ( not $extract->execute ) {
-        $self->error_message('Failed to execute microarray extract for instrument data! '.$instrument_data->id);
+    $extract_copy_number->dump_status_messages(1);
+    if ( not $extract_copy_number->execute ) {
+        $self->error_message('Failed to execute command to create copy number file!');
         return;
     }
     if ( not -s $copy_number_file ) {
-        $self->error_message('Executed microarray extract for instrument data, but copy number file is empty! '.$copy_number_file);
+        $self->error_message('Executed command to create copy number file, but file is empty! '.$copy_number_file);
         return;
     }
     $self->status_message('Create copy number file...OK');

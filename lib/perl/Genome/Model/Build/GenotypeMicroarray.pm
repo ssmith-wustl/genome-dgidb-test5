@@ -130,6 +130,11 @@ sub gold2geno_file_path {
     shift->formatted_genotype_file_path . '.gold2geno';
 }
 
+sub original_genotype_file_path {
+    my $self = shift;
+    return $self->data_directory.'/'.$self->model->subject->id.'.original';
+}
+
 sub genotype_file_path {
     my $self = shift;
     return $self->data_directory.'/'.$self->model->subject->id.'.genotype';
