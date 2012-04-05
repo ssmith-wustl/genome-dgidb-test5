@@ -22,7 +22,7 @@ class Genome::Model::RnaSeq::Command::PicardRnaSeqMetrics {
     has_param => [
         lsf_resource => { default_value => $DEFAULT_LSF_RESOURCE },
     ],
-    doc => 'generate metrics on pipeline results' 
+    doc => 'generate metrics on pipeline results'
 };
 
 sub sub_command_category { 'pipeline' }
@@ -35,43 +35,24 @@ sub execute {
     unless ($self->picard_version) {
         $self->picard_version($self->build->model->picard_version);
     }
-    
+
     my $alignment_result = $self->build->alignment_result;
     my $bam_file = $alignment_result->bam_file;
 
     my $reference_build = $self->build->model->reference_sequence_build;
     my $reference_path = $reference_build->full_consensus_path('fa');
     my $seqdict_file = $reference_build->get_sequence_dictionary('sam',$reference_build->species_name,$self->picard_version);
-    
-    my $annotation_reference_transcripts = $self->build->model->annotation_reference_transcripts;
-    my $annotation_build;
-    if ($annotation_reference_transcripts) {
-        my ($annotation_name,$annotation_version) = split(/\//, $annotation_reference_transcripts);
-        my $annotation_model = Genome::Model->get(name => $annotation_name);
-        unless ($annotation_model){
-            $self->error_message('Failed to get annotation model for annotation_reference_transcripts: ' . $annotation_reference_transcripts);
-            return;
-        }
 
-        unless (defined $annotation_version) {
-            $self->error_message('Failed to get annotation version from annotation_reference_transcripts: '. $annotation_reference_transcripts);
-            return;
-        }
-
-        $annotation_build = $annotation_model->build_by_version($annotation_version);
-        unless ($annotation_build){
-            $self->error_message('Failed to get annotation build from annotation_reference_transcripts: '. $annotation_reference_transcripts);
-            return;
-        }
-    } else {
-        $self->status_message('Skipping PicardRnaSeqMetrics since annotation_reference_transcripts is not defined');
+    my $annotation_build = $self->model->annotation_build;
+    unless ($annotation_buld) {
+        $self->status_message('Skipping PicardRnaSeqMetrics since annotation_build is not defined');
         return 1;
     }
     my $metrics_directory = $self->build->metrics_directory;
     unless (-d $metrics_directory) {
         Genome::Sys->create_directory($metrics_directory);
     }
-    
+
     my $rRNA_MT_gtf_file = $annotation_build->rRNA_MT_file('gtf',$reference_build->id,0);
     unless (Genome::Model::Tools::Gtf::ToIntervals->execute(
         gtf_file => $rRNA_MT_gtf_file,
@@ -81,7 +62,7 @@ sub execute {
         $self->error_message('Failed to convert the rRNA_MT GTF file to intervals: '. $rRNA_MT_gtf_file);
         return;
     }
-    
+
     my $mRNA_gtf_file = $annotation_build->annotation_file('gtf',$reference_build->id,0);
     unless (Genome::Model::Tools::Gtf::ToRefFlat->execute(
         input_gtf_file => $mRNA_gtf_file,

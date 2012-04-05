@@ -38,28 +38,9 @@ sub execute {
     my $reference_build = $self->model->reference_sequence_build;
     my $reference_path = $reference_build->full_consensus_path('fa');
 
-    my $annotation_reference_transcripts = $self->model->annotation_reference_transcripts;
-    my $annotation_build;
-    if ($annotation_reference_transcripts) {
-        my ($annotation_name,$annotation_version) = split(/\//, $annotation_reference_transcripts);
-        my $annotation_model = Genome::Model->get(name => $annotation_name);
-        unless ($annotation_model){
-            $self->error_message('Failed to get annotation model for annotation_reference_transcripts: ' . $annotation_reference_transcripts);
-            return;
-        }
-
-        unless (defined $annotation_version) {
-            $self->error_message('Failed to get annotation version from annotation_reference_transcripts: '. $annotation_reference_transcripts);
-            return;
-        }
-
-        $annotation_build = $annotation_model->build_by_version($annotation_version);
-        unless ($annotation_build){
-            $self->error_message('Failed to get annotation build from annotation_reference_transcripts: '. $annotation_reference_transcripts);
-            return;
-        }
-    } else {
-        $self->status_message('Coverage requires annotation_reference_transcripts to be set as a processing profile param. SKIPPING COVERAGE!');
+    my $annotation_build = $self->model->annotation_build;
+    unless($annotation_build) {
+        $self->status_message('Coverage requires annotation_build to be set as a model input. SKIPPING COVERAGE!');
         return 1;
     }
     my $coverage_directory = $self->build->coverage_directory;

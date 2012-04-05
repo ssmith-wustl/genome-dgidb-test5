@@ -19,6 +19,9 @@ class Genome::Model::RnaSeq {
         reference_sequence_build => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
         },
+        annotation_build => {
+            is => "Genome::Model::Build::ImportedAnnotation",
+        }
     ],
     has_param => [
         sequencing_platform => {
@@ -247,26 +250,12 @@ sub params_for_alignment {
     my $reference_build_id = $reference_build->id;
 
     my $read_aligner_params = $self->read_aligner_params || undef;
-    my $annotation_reference_transcripts = $self->annotation_reference_transcripts;
-    if ($annotation_reference_transcripts) {
-        my ($annotation_name,$annotation_version) = split(/\//, $annotation_reference_transcripts);
-        my $annotation_model = Genome::Model->get(name => $annotation_name);
-        unless ($annotation_model){
-            $self->error_message('Failed to get annotation model for annotation_reference_transcripts: ' . $annotation_reference_transcripts);
-            return;
-        }
-        unless (defined $annotation_version) {
-            $self->error_message('Failed to get annotation version from annotation_reference_transcripts: '. $annotation_reference_transcripts);
-            return;
-        }
-        my $annotation_build = $annotation_model->build_by_version($annotation_version);
-        unless ($annotation_build){
-            $self->error_message('Failed to get annotation build from annotation_reference_transcripts: '. $annotation_reference_transcripts);
-            return;
-        }
+
+    if ($self->annotation_build) {
+        my $annotation_build = $self->annotation_build;
         my $gtf_path = $annotation_build->annotation_file('gtf',$reference_build_id);
         unless (defined($gtf_path)) {
-            die('There is no annotation GTF file defined for annotation_reference_transcripts build: '. $annotation_reference_transcripts);
+            die('There is no annotation GTF file defined for annotation_reference_transcripts build: '. $annotation_build->__display_name__);
         }
 
         # Test to see if this is version 1.4.0 or greater
@@ -277,9 +266,9 @@ sub params_for_alignment {
             }
             $read_aligner_params .= ' --transcriptome-index '. $transcriptome_index_prefix;
         }
-        
+
         if ($read_aligner_params =~ /-G/) {
-            die ('This processing_profile is requesting annotation_reference_transcripts \''. $annotation_reference_transcripts .'\', but there seems to be a GTF file already defined in the read_aligner_params: '. $read_aligner_params);
+            die ('This processing_profile is requesting annotation_reference_transcripts \''. $annotation_build->__display_name__ .'\', but there seems to be a GTF file already defined in the read_aligner_params: '. $read_aligner_params);
         }
         if (defined($read_aligner_params)) {
             $read_aligner_params .= ' -G '. $gtf_path;
@@ -307,33 +296,6 @@ sub params_for_alignment {
     #$self->status_message('The AlignmentResult parameters are: '. Data::Dumper::Dumper(%params));
     my @param_set = (\%params);
     return @param_set;
-}
-
-
-sub annotation_build {
-    my $self = shift;
-    
-    my $annotation_reference_transcripts = $self->annotation_reference_transcripts;
-    unless ($annotation_reference_transcripts) { return; }
-
-    my ($annotation_name,$annotation_version) = split(/\//, $annotation_reference_transcripts);
-    my $annotation_model = Genome::Model->get(name => $annotation_name);
-    unless ($annotation_model){
-        $self->error_message('Failed to get annotation model for annotation_reference_transcripts: ' . $annotation_reference_transcripts);
-        return;
-    }
-    
-    unless (defined $annotation_version) {
-        $self->error_message('Failed to get annotation version from annotation_reference_transcripts: '. $annotation_reference_transcripts);
-        return;
-    }
-    
-    my $annotation_build = $annotation_model->build_by_version($annotation_version);
-    unless ($annotation_build){
-        $self->error_message('Failed to get annotation build from annotation_reference_transcripts: '. $annotation_reference_transcripts);
-        return;
-    }
-    return $annotation_build;
 }
 
 1;
