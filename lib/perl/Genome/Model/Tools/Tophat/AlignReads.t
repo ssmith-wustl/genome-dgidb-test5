@@ -39,6 +39,7 @@ my $aligner = Genome::Model::Tools::Tophat::AlignReads->create(
    reference_path => $reference_path,
    insert_size => '50',
    use_version => '1.3.0',
+   bowtie_version => '0.12.7',
 );
 
 isa_ok($aligner,'Genome::Model::Tools::Tophat::AlignReads');
