@@ -38,6 +38,10 @@ class Genome::Model::Tools::Tophat::AlignReads {
         alignment_directory => {
             doc => 'The output directory where Tophat will write both temporary and final output files',
         },
+        bowtie_version => {
+            is => 'Text',
+            doc => "the version of bowtie for tophat to run internally"
+        }
     ],
     has_output => [
         aligner_output_file => {
@@ -140,7 +144,7 @@ sub create {
     }
     unless ( $self->tophat_path ) {
         my $msg =
-            'No path found for bwa version '
+            'No path found for tophat version '
           . $self->use_version
           . ".  Available versions are:\n";
         $msg .= join( "\n", $self->available_tophat_versions );
@@ -159,7 +163,6 @@ sub create {
 sub execute {
     my $self = shift;
 
-    
     my $alignment_directory = $self->alignment_directory;
     $self->status_message("OUTPUT PATH: $alignment_directory\n");
 
@@ -226,6 +229,15 @@ sub execute {
     if (version->parse($self->use_version) < version->parse('1.1.0')) {
         $aligner_output_files = [$self->sam_file];
     }
+    my $bowtie_path = Genome::Model::Tools::Bowtie->path_for_bowtie_version($self->bowtie_version);
+    unless($bowtie_path){
+        die($self->error_message("unable to find a path for the bowtie version specified!"));
+    }
+
+    #put the desired version of bowtie in the path for tophat to run internally
+    $bowtie_path =~ s/bowtie$//;
+    $ENV{PATH} = $bowtie_path . ":" . $ENV{PATH};
+
     Genome::Sys->shellcmd(
                                           cmd                         => $cmdline,
                                           input_files                 => \@input_files,

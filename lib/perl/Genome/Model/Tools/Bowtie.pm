@@ -32,6 +32,7 @@ EOS
 }
 
 my %BOWTIE_VERSIONS = (
+    '0.12.7' => '/gsc/pkg/bio/bowtie/bowtie-0.12.7',
     '0.12.5' => '/gsc/pkg/bio/bowtie/bowtie-0.12.5',
     '0.12.1' => '/gsc/pkg/bio/bowtie/bowtie-0.12.1',
     '0.10.0.2' => '/gsc/pkg/bio/bowtie/bowtie-0.10.0.2',

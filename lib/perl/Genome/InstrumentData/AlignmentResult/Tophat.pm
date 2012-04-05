@@ -424,6 +424,7 @@ sub _run_aligner {
         aligner_params => $self->aligner_params,
         alignment_directory => $self->temp_staging_directory,
         use_version => $self->aligner_version,
+        bowtie_version => $self->bowtie_version,
     );
 
     # If these are paired-end reads, then don't forget the second fastq file

@@ -74,6 +74,7 @@ class Genome::Model::RnaSeq {
         annotation_reference_transcripts => {
             doc => 'The reference transcript set used for splice junction annotation',
             is_optional => 1,
+            is_deprecated => 1,
         },
         annotation_reference_transcripts_mode => {
             doc => 'The mode to use annotation_reference_transcripts for expression analysis',
@@ -84,6 +85,11 @@ class Genome::Model::RnaSeq {
             doc => 'The mask level to ignore transcripts located in these annotation features',
             is_optional => 1,
             valid_values => ['rRNA','MT','pseudogene','rRNA_MT','rRNA_MT_pseudogene'],
+        },
+        fusion_detection_strategy => {
+            is_optional => 1,
+            is => 'Text',
+            doc => 'program, version and params to use for fusion detection ex: chimerascan 0.4.3 [-v]'
         },
         bowtie_version => {
             is_optional => 1,
@@ -142,14 +148,13 @@ sub _resolve_workflow_for_build {
     my $output_connector = $workflow->get_output_connector;
 
     # Tophat
-
     my $tophat_operation = $workflow->add_operation(
         name => 'RnaSeq Tophat Alignment',
         operation_type => Workflow::OperationType::Command->create(
             command_class_name => 'Genome::Model::RnaSeq::Command::AlignReads::Tophat',
         )
     );
-    
+
     $tophat_operation->operation_type->lsf_queue($lsf_queue);
     $tophat_operation->operation_type->lsf_project($lsf_project);
 
@@ -176,7 +181,7 @@ sub _resolve_workflow_for_build {
         right_operation => $picard_operation,
         right_property => 'build_id'
     );
-    
+
     # RefCov
     my $coverage_operation = $workflow->add_operation(
         name => 'RnaSeq Coverage',
@@ -193,10 +198,8 @@ sub _resolve_workflow_for_build {
         right_operation => $coverage_operation,
         right_property => 'build_id'
     );
-    
 
     # Cufflinks
-    
     my $cufflinks_operation = $workflow->add_operation(
         name => 'RnaSeq Cufflinks Expression',
         operation_type => Workflow::OperationType::Command->create(
@@ -205,7 +208,7 @@ sub _resolve_workflow_for_build {
     );
     $cufflinks_operation->operation_type->lsf_queue($lsf_queue);
     $cufflinks_operation->operation_type->lsf_project($lsf_project);
-    
+
     $workflow->add_link(
         left_operation => $tophat_operation,
         left_property => 'build_id',
@@ -284,6 +287,7 @@ sub params_for_alignment {
             $read_aligner_params = ' -G '. $gtf_path;
         }
     }
+
     my %params = (
         instrument_data_id => [map($_->value_id, @inputs)],
         aligner_name => 'tophat',
