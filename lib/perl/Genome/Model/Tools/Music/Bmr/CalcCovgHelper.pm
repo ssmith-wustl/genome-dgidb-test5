@@ -11,12 +11,26 @@ class Genome::Model::Tools::Music::Bmr::CalcCovgHelper {
   has_input => [
     roi_file => { is => 'Text', doc => "Tab delimited list of ROIs [chr start stop gene_name] (See Description)" },
     reference_sequence => { is => 'Text', doc => "Path to reference sequence in FASTA format" },
-    normal_bam => { is => 'Text', doc => "Path to normal bam file (See Description)" },
-    tumor_bam => { is => 'Text', doc => "Path to tumor bam file (See Description)" },
-    output_file => { is => 'Text', doc => "Output file path", is_output => 1},
+    normal_tumor_bam_pair => { is => 'Text', doc => "Tab delimited line with sample name, path to normal bam file, and path to tumor bam file (See Description)" },
+    output_dir => { is => 'Text', doc => "Output directory file path"},
     normal_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Normal BAM base as covered", is_optional => 1,  default => 6},
     tumor_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Tumor BAM base as covered", is_optional => 1, default => 8},
     min_mapq => { is => 'Integer', doc => "The minimum mapping quality of reads to consider towards read depth counts", is_optional => 1, default => 20},
+  ],
+  has_calculated => [
+    output_file => {
+        is_output => 1,
+        calculate_from => ['normal_tumor_bam_pair', 'output_dir'],
+        calculate => q {my @bams = split /\t/, $normal_tumor_bam_pair; return $output_dir."/".$bams[0].".covg"},
+    },
+    normal_bam => {
+        calculate_from => 'normal_tumor_bam_pair',
+        calculate => q {my @bams = split /\t/, $normal_tumor_bam_pair; return $bams[1];},
+    },
+    tumor_bam => {
+        calculate_from => 'normal_tumor_bam_pair',
+        calculate => q {my @bams = split /\t/, $normal_tumor_bam_pair; return $bams[2];},
+    },
   ],
   doc => "Uses calcRoiCovg.c to count covered bases per-gene for a tumor-normal pair of BAMs."
 };
@@ -26,9 +40,9 @@ sub help_synopsis {
 General usage:
 
  ... music bmr calc-covg-helper \\
-    --normal-bam path/to/normal_bam \\
-    --tumor-bam path/to/tumor_bam \\
+    --normal-tumor-bam-pair "sample-name path/to/normal_bam path/to/tumor_bam" \\
     --reference-sequence input_dir/all_sequences.fa \\
+    --output-dir output_dir \\
     --roi-file input_dir/all_coding_exons.tsv
 
 HELP

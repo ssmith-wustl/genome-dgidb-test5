@@ -270,7 +270,7 @@ sub execute {
     next unless( -e $normal_bam && -e $tumor_bam );
 
     # Construct the command that calculates coverage per ROI
-    my $calcRoiCovg_cmd = "perl -e \'use above 'Genome'; my \$cmd = Genome::Model::Tools::Music::Bmr::CalcCovgHelper->create( normal_bam =>  \"$normal_bam\", tumor_bam =>  \"$tumor_bam\", roi_file =>  \"$roi_file\", reference_sequence =>  \"$ref_seq\", output_file =>  \"$roi_covg_dir/$sample.covg\" $optional_params); \$cmd->execute\'";
+    my $calcRoiCovg_cmd = "perl -e \'use above 'Genome'; my \$cmd = Genome::Model::Tools::Music::Bmr::CalcCovgHelper->create( normal_tumor_bam_pair => \"$line\", roi_file =>  \"$roi_file\", reference_sequence =>  \"$ref_seq\", output_dir =>  \"$roi_covg_dir\" $optional_params); \$cmd->execute\'";
 
     # If user only wants the calcRoiCovg commands, write them to file and skip running calcRoiCovg
     if( defined $cmd_list_file )
@@ -288,11 +288,10 @@ sub execute {
     # Run the calcRoiCovg command on this tumor-normal pair. This could take a while
     else {
       my %params = (
-        normal_bam => $normal_bam,
-        tumor_bam => $tumor_bam,
+        normal_tumor_bam_pair => $line,
         roi_file => $roi_file,
         reference_sequence => $ref_seq, 
-        output_file => "$roi_covg_dir/$sample.covg",
+        output_dir => $roi_covg_dir,
       );
       if ($normal_min_depth) {
         $params{"normal_min_depth"} = $normal_min_depth;

@@ -227,6 +227,14 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    my $roi_covg_dir = $self->output_dir."/roi_covg";
+    my $gene_covg_dir = $self->output_dir."/gene_covg";
+
+    # Create the output directories unless they already exist
+    mkdir $roi_covg_dir unless( -e $roi_covg_dir );
+    mkdir $gene_covg_dir unless( -e $gene_covg_dir );
+
     my $workflow = $self->_create_workflow;
 
     my $meta = $self->__meta__;
@@ -236,6 +244,17 @@ sub execute {
     );
     my %properties;
     map {if (defined $self->{$_->property_name}){$properties{$_->property_name} = $self->{$_->property_name}} } @all_params;
+
+    my $bam_list = Genome::Sys->open_file_for_reading($self->bam_list);
+    my @normal_tumor_pairs;
+    while(my $line = <$bam_list>) {
+        chomp $line;
+        push @normal_tumor_pairs, $line;
+    }
+
+    $properties{normal_tumor_pairs} = \@normal_tumor_pairs;
+
+    $properties{roi_covg_dir} = $roi_covg_dir;
 
     foreach my $module (qw/path_scan smg mutation_relation clinical_correlation cosmic_omim pfam/) {
         $properties{$module."_output_file"} = $self->output_dir."/$module";
@@ -281,6 +300,13 @@ sub _create_workflow {
     my @input_properties;
     map {if (defined $self->{$_->property_name}){push @input_properties, $_->property_name}} @input_params;
 
+    foreach my $module (qw/path_scan smg mutation_relation clinical_correlation cosmic_omim pfam/) {
+        push @input_properties, $module."_output_file";
+    }
+
+    push @input_properties, "normal_tumor_pairs";
+    push @input_properties, "roi_covg_dir";
+
     my @output_params = $meta->properties(
         class_name => __PACKAGE__,
         is_output => 1,
@@ -301,6 +327,65 @@ sub _create_workflow {
     my $input_connector = $workflow->get_input_connector;
     my $output_connector = $workflow->get_output_connector;
 
+    my $command_module = 'Genome::Model::Tools::Music::Bmr::CalcCovgHelper';
+    my $calc_covg_operation = $workflow->add_operation(
+        name => $self->_get_operation_name_for_module($command_module),
+        operation_type => Workflow::OperationType::Command->create(
+            command_class_name => $command_module,
+        ),
+        parallel_by => 'normal_tumor_bam_pair',
+    );
+
+    my $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'normal_tumor_pairs',
+        right_operation => $calc_covg_operation,
+        right_property => 'normal_tumor_bam_pair',
+    );
+
+    $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'roi_covg_dir',
+        right_operation => $calc_covg_operation,
+        right_property => 'output_dir',
+    );
+
+    $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'reference_sequence',
+        right_operation => $calc_covg_operation,
+        right_property => 'reference_sequence',
+    );
+
+    $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'roi_file',
+        right_operation => $calc_covg_operation,
+        right_property => 'roi_file',
+    );
+
+    $command_module = 'Genome::Model::MutationalSignificance::Command::MergeCalcCovg';
+    my $merge_calc_covg_operation = $workflow->add_operation(
+        name => $self->_get_operation_name_for_module($command_module),
+        operation_type => Workflow::OperationType::Command->create(
+            command_class_name => $command_module,
+        ),
+    );
+
+    $link = $workflow->add_link(
+        left_operation => $calc_covg_operation,
+        left_property => 'output_file',
+        right_operation => $merge_calc_covg_operation,
+        right_property => 'output_files',
+    );
+
+    $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'output_dir',
+        right_operation => $merge_calc_covg_operation,
+        right_property => 'output_dir',
+    );
+
     my @no_dependencies = ('Proximity', 'ClinicalCorrelation', 'CosmicOmim', 'Pfam');
     my @bmr = ('Bmr::CalcCovg', 'Bmr::CalcBmr');
     my @depend_on_bmr = ('PathScan', 'Smg');
@@ -310,7 +395,7 @@ sub _create_workflow {
                     or return;
     }
 
-    my $link = $workflow->add_link(
+    $link = $workflow->add_link(
         left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::Proximity'),                                                            $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
@@ -445,21 +530,16 @@ sub _play_music_dependencies {
         bmr_calc_bmr_operation => 'Genome::Model::Tools::Music::Bmr::CalcBmr',
         bmr_calc_covg_operation => 'Genome::Model::Tools::Music::Bmr::CalcCovg',
         smg_operation => 'Genome::Model::Tools::Music::Smg',
-        create_roi_operation => 'Genome::Model::MutationalSignificance::Command::CreateROI',
         path_scan_operation => 'Genome::Model::Tools::Music::PathScan',
         mutation_relation_operation => 'Genome::Model::Tools::Music::MutationRelation',
         proximity_operation => 'Genome::Model::Tools::Music::Proximity',
         clinical_correlation_operation => 'Genome::Model::Tools::Music::ClinicalCorrelation',
         cosmic_omim_operation => 'Genome::Model::Tools::Music::CosmicOmim',
         pfam_operation => 'Genome::Model::Tools::Music::Pfam',
+        merge_calc_covg_operation => 'Genome::Model::MutationalSignificance::Command::MergeCalcCovg',
     );
     my %names = map {$_ => $self->_get_operation_name_for_module($operation_names{$_})} keys %operation_names;
     my %links = (
-        $names{create_roi_operation} => {
-            one_based => ['input connector', 'is_roi_one_based'],
-            flank_size => ['input connector', 'roi_flank_size'],
-            condense_feature_name => ['input connector', 'condense_roi_feature_name'],
-        },
         $names{path_scan_operation} => {
             gene_covg_dir => [$names{bmr_calc_covg_operation}, 'gene_covg_dir'],
             bmr => [$names{bmr_calc_bmr_operation}, 'bmr_output'],
@@ -484,6 +564,9 @@ sub _play_music_dependencies {
         },
         $names{pfam_operation} => {
             output_file => ['input connector', 'pfam_output_file'],
+        },
+        $names{bmr_calc_covg_operation} => {
+            output_dir => [$names{merge_calc_covg_operation}, 'output_dir'],
         },
     );
     return %links;

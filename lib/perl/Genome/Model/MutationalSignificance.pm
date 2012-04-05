@@ -209,90 +209,6 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
         right_property => 'bam_list',
     );
 
-    $command_module = 'Genome::Model::MutationalSignificance::Command::CalcCovg';
-    my $calc_covg_operation = $workflow->add_operation(
-        name => $self->_get_operation_name_for_module($command_module),
-        operation_type => Workflow::OperationType::Command->create(
-            command_class_name => $command_module,
-        ),
-        parallel_by => 'somatic_variation_build',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'somatic_variation_builds',
-        right_operation => $calc_covg_operation,
-        right_property => 'somatic_variation_build',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'output_dir',
-        right_operation => $calc_covg_operation,
-        right_property => 'output_dir',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'reference_sequence',
-        right_operation => $calc_covg_operation,
-        right_property => 'reference_sequence',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $roi_operation,
-        left_property => 'roi_path',
-        right_operation => $calc_covg_operation,
-        right_property => 'roi_file',
-    );
-
-=cut
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'normal_min_depth',
-        right_operation => $calc_covg_operation,
-        right_property => 'normal_min_depth',
-    );
-
-    
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'tumor_min_depth',
-        right_operation => $calc_covg_operation,
-        right_property => 'tumor_min_depth',
-    );
-
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'min_mapq',
-        right_operation => $calc_covg_operation,
-        right_property => 'min_mapq',
-    );
-=cut
-
-    $command_module = 'Genome::Model::MutationalSignificance::Command::MergeCalcCovg';
-    my $merge_calc_covg_operation = $workflow->add_operation(
-        name => $self->_get_operation_name_for_module($command_module),
-        operation_type => Workflow::OperationType::Command->create(
-            command_class_name => $command_module,
-        ),
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $calc_covg_operation,
-        left_property => 'output_file',
-        right_operation => $merge_calc_covg_operation,
-        right_property => 'output_files',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'output_dir',
-        right_operation => $merge_calc_covg_operation,
-        right_property => 'output_dir',
-    );
-
     $workflow = $self->_append_command_to_workflow('Genome::Model::MutationalSignificance::Command::PlayMusic',
                                                     $workflow, $lsf_project, $lsf_queue);
 
@@ -428,7 +344,6 @@ sub _play_music_dependencies {
         create_clinical_data_operation => 'Genome::Model::MutationalSignificance::Command::CreateClinicalData',
         create_roi_operation => 'Genome::Model::MutationalSignificance::Command::CreateROI',
         play_music_operation => 'Genome::Model::MutationalSignificance::Command::PlayMusic',
-        merge_calc_covg_operation => 'Genome::Model::MutationalSignificance::Command::MergeCalcCovg',
     );
     my %names = map {$_ => $self->_get_operation_name_for_module($operation_names{$_})} keys %operation_names;
     my %links = (
@@ -436,7 +351,6 @@ sub _play_music_dependencies {
             bam_list => [$names{create_bam_list_operation}, 'bam_list'],
             maf_file => [$names{merge_maf_files_operation}, 'maf_path'],
             roi_file => [$names{create_roi_operation}, 'roi_path'],
-            output_dir => [$names{merge_calc_covg_operation}, 'output_dir'],
         },
     ); 
     return %links;
