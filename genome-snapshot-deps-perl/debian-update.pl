@@ -1,4 +1,4 @@
-!/usr/bin/env perl
+#!/usr/bin/env perl
 use strict;
 use warnings;
 use FindBin;
@@ -10,8 +10,9 @@ my $path = $FindBin::Bin . "/$dir-list";
 my $fh = IO::File->new($path);
 $fh or die "failed to open file $path: $!";
 my @list = $fh->getlines;
+my $list = join('',@list);
 
-my $new_content = <<EOS 
+my $new_content = <<EOS; 
 Source: genome-snapshot-deps-perl
 Section: science
 Priority: optional
@@ -23,9 +24,8 @@ Standards-Version: 3.8.3
 Package: genome-snapshot-deps-perl
 Architecture: all
 Provides: genome
-Depends: ${misc:Depends}, ${perl:Depends}, 
-EOS
-@list
+Depends: \${misc:Depends}, \${perl:Depends}, 
+$list
 Description: This meta-package installs all dependencies of the current internal TGI software snapshot
 EOS
 
