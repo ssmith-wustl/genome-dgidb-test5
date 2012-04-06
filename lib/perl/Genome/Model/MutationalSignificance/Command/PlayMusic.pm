@@ -181,7 +181,8 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         input_clinical_correlation_matrix_file => {
             is => 'Text',
             is_optional => 1,
-            doc => "Instead of calculating this from the MAF, input the sample-vs-gene matrix used internally during     calculations.",
+            doc => "Instead of calculating this from the MAF, input the sample-vs-gene matrix used internally during calculations.",
+        },
     ],
 
 
