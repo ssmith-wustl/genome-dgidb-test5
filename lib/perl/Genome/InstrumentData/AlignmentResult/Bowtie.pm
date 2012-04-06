@@ -55,7 +55,6 @@ sub _run_aligner {
 	my $temp_unaligned_sam_file = $self->temp_scratch_directory . "/temp_unaligned_sequences.sam";
 
     if ( @input_pathnames == 1 ) {
-
         my $cmdline = "$path_to_bowtie $aligner_params --sam-nohead --un $temp_unaligned_fq_file $reference_bowtie_index_path $input_pathnames[0] --sam $temp_aligned_sequences_file >> $log_file && cat $temp_aligned_sequences_file >> $output_file";
 
         Genome::Sys->shellcmd(
@@ -64,16 +63,14 @@ sub _run_aligner {
             output_files                => [$output_file],
             skip_if_output_is_present   => 0,
         );
-
     }
     elsif ( @input_pathnames == 2 ) {
-
         # pass insert size into bowtie
-        my $insert_sd = $self->instrument_data->sd_above_insert_size;
-        my $insert_size = $self->instrument_data->median_insert_size;
+        my $insert_sd   = $self->instrument_data->resolve_sd_insert_size;
+        my $insert_size = $self->instrument_data->resolve_median_insert_size;
 
         if ($insert_size && $insert_sd) {
-                   $aligner_params .= ' --minins '. ($insert_size - $insert_sd) .' --maxins '. ($insert_size + $insert_sd);
+            $aligner_params .= ' --minins '. ($insert_size - $insert_sd) .' --maxins '. ($insert_size + $insert_sd);
         } 
 	
         my $cmdline = "$path_to_bowtie $aligner_params --sam-nohead --un $temp_unaligned_fq_file $reference_bowtie_index_path -1 $input_pathnames[0] -2 $input_pathnames[1] --sam $temp_aligned_sequences_file >>$log_file && cat $temp_aligned_sequences_file >> $output_file";
@@ -113,18 +110,14 @@ sub _run_aligner {
 		);
     }
     else {
-
         $self->error_message("Input pathnames shouldn't have more than 2...: " . Data::Dumper::Dumper(\@input_pathnames) );
         die $self->error_message;
-
     }
     
-
     Genome::Model::Tools::Sam::FastqToSam->execute(
 			fastq_file => $temp_unaligned_fq_file,
 			sam_file   => $temp_unaligned_sam_file,
 	);
-
 
     my $cat_unaligned_to_output_cmd = "cat $temp_unaligned_sam_file >> $output_file";
     Genome::Sys->shellcmd(
@@ -132,7 +125,7 @@ sub _run_aligner {
             input_files                => [$temp_unaligned_sam_file],
             output_files               => [$output_file],
             skip_if_output_is_present  => 0,
-    );    
+    );   
 
     return 1;
 }
@@ -171,7 +164,6 @@ sub prepare_reference_sequence_index {
         $class->error_message('bowtie-build failed.');
         return;
     }
-
 
     return 1;
 }

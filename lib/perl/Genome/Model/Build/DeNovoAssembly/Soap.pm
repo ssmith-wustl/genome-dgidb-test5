@@ -152,8 +152,8 @@ sub libraries_with_existing_assembler_input_files {
         elsif ( $library and $library->fragment_size_range ) {
             $insert_size = $library->fragment_size_range;
         }
-        elsif ( $instrument_data->median_insert_size ) {
-            $insert_size = $instrument_data->median_insert_size;
+        elsif ( $instrument_data->resolve_median_insert_size ) {
+            $insert_size = $instrument_data->resolve_median_insert_size;
         }
         else {
             Carp::confess("Failed to get insert size from processing profile assembler params, library ($library_id) or instrument data ('.$instrument_data->id.')");

@@ -30,7 +30,7 @@ class Genome::Model::Tools::Music::Bmr::CalcBmr {
     skip_silent => { is => 'Boolean', doc => "Skip silent mutations from the provided MAF file", is_optional => 1, default => 1 },
   ],
   has_output => [
-    bmr_output => { is => 'Text', doc => "TODO"
+    bmr_output => { is => 'Number', doc => "TODO"
     },
     gene_mr_file => { is => 'Text', doc => "TODO"
     },

@@ -29,38 +29,30 @@ my $gsc_project = Test::MockObject->new();
 $gsc_project->set_isa('Genome::Site::WUGC::SetupProjectResearch');
 $gsc_project->set_always(id => -444);
 $gsc_project->set_always(setup_id => -444);
-$gsc_project->set_always(name => '__TEST_PROJECT__');
-$gsc_project->set_always(setup_name => '__TEST_PROJECT__');
+$gsc_project->set_always(name => 'PCGP__TEST_PROJECT__');
+$gsc_project->set_always(setup_name => 'PCGP__TEST_PROJECT__');
 my $gsc_workorder = Test::MockObject->new();
 $gsc_workorder->set_isa('Genome::Site::WUGC::SetupWorkOrder');
 $gsc_workorder->set_always(id => -222);
 $gsc_workorder->set_always(name => '__TEST_WORKORDER__');
 $gsc_workorder->set_always(setup_name => '__TEST_WORKORDER__');
 $gsc_workorder->set_always(get_project => $gsc_project);
+$gsc_workorder->set_always(project_id => -12345);
+$gsc_workorder->set_always(research_project_name => "PCGP TEST"); #this is what determines the pp
 
 my $genome_project = Genome::Project->create( id => $gsc_project->setup_id, name => $gsc_project->setup_name );
 ok( $genome_project, 'Define genome project' );
-my $pp_id = 2682126;
-$genome_project->add_part( label => 'default_processing_profiles', entity_id => $pp_id, entity_class_name => 'Genome::ProcessingProfile');
-my $part = $genome_project->parts( label => 'default_processing_profiles' );
-is ($part->entity_id, $pp_id, 'set pp id on project');
+my $pp_id = 2644306;
 
 my $bac_source = Genome::Individual->__define__(
-    name => '__TEST_BAC_SOURCE__', 
-    taxon => Genome::Taxon->__define__(name => 'bacteria', domain => 'Bacteria', species_latin_name => 'T. bacteria'),
+    name => '__TEST_SOURCE__', 
+    taxon => Genome::Taxon->__define__(name => 'human', domain => 'Human', species_latin_name => 'Homo sapiens'),
 );
-ok($bac_source, 'define bacteria source');
-ok($bac_source->taxon, 'define bacteria taxon');
-my $unknown_source = Genome::Individual->__define__(
-    name => '__TEST_UNKNOWN__SOURCE_',
-    taxon => Genome::Taxon->__define__(name => 'unknown', domain=> 'unknown', species_latin_name => 'unknown'),
-);
-ok($unknown_source, 'define unknown source');
-ok($unknown_source->taxon, 'define unknown taxon');
-my $pp = Genome::ProcessingProfile->get(2658559);
-ok($pp, 'got de novo pp');
-ok(_qidfgm($bac_source), 'create qidfgm for bacteria taxon');
-ok(_qidfgm($unknown_source), 'create qidfgm for unknown');
+ok($bac_source, 'define pcgp source');
+ok($bac_source->taxon, 'define pcgp taxon');
+my $pp = Genome::ProcessingProfile->get($pp_id);
+ok($pp, 'got pcgp pp');
+ok(_qidfgm($bac_source), 'create qidfgm for pcgp taxon');
 is(@instrument_data, $qidfgm_cnt, "create $qidfgm_cnt inst data");
 is(@pses, $qidfgm_cnt, "create $qidfgm_cnt pses");
 
@@ -78,16 +70,10 @@ my %existing_models = _model_hash(@existing_models);
 is_deeply(
     \%new_models,
     {
-        "AQID-testsample1.bacteria.prod-denovo.wugc" => {
+        "AQID-testsample1.human.prod-refalign" => {
             subject => $samples[0]->name,
-            processing_profile_id => Genome::Model::Command::Services::AssignQueuedInstrumentData->_default_de_novo_assembly_bacterial_processing_profile_id,
+            processing_profile_id => $pp_id,
             inst => [ $instrument_data[0]->id ],
-            auto_assign_inst_data => 1,
-        },
-        "AQID-testsample2.unknown.prod-denovo.wugc" => {
-            subject => $samples[1]->name,
-            processing_profile_id => Genome::Model::Command::Services::AssignQueuedInstrumentData->_default_de_novo_assembly_bacterial_processing_profile_id,
-            inst => [ $instrument_data[1]->id ],
             auto_assign_inst_data => 1,
         },
     },
@@ -131,10 +117,12 @@ sub _qidfgm {
     my $index_illumina = Test::MockObject->new();
     push @index_illumina, $index_illumina;
     $index_illumina->set_always(id => $instrument_data->id);
+    $index_illumina->set_always(copy_sequence_files_confirmed_successfully => 1);
     $index_illumina->set_always(get_research_projects => $gsc_project);
     $index_illumina->set_always(get_work_orders => $gsc_workorder);
-    ok($instrument_data, 'created instrument data '.$qidfgm_cnt);
+    ok($index_illumina, 'created index illumina '.$qidfgm_cnt);
 
+    my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(name => 'NCBI-human-build36');
     my $pse = Test::MockObject->new();
     $pse->set_always(pse_status => 'inprogress');
     $pse->set_always(id => $qidfgm_cnt - 10000);
@@ -142,12 +130,6 @@ sub _qidfgm {
     $pse->set_always(ps_id => 3733);
     $pse->set_always(ei_id => '464681');
     ok($pse, 'create pse '.$qidfgm_cnt);
-    my %params = (
-        instrument_data_type => 'solexa',
-        instrument_data_id => $instrument_data->id,
-        subject_class_name => 'Genome::Sample',
-        subject_id => $sample->id,
-    );
     $pse->mock(
         add_param => sub{
             my ($pse, $key, $value) = @_;
@@ -159,9 +141,6 @@ sub _qidfgm {
             return $param;
         }
     );
-    for my $key ( keys %params ) {
-        $pse->add_param($key, $params{$key});
-    }
     $pse->mock(
         added_param => sub{
             my ($pse, $key) = @_;
@@ -181,6 +160,25 @@ sub _qidfgm {
             return @a;
         },
     );
+    $pse->mock(
+        add_reference_sequence_build_param_for_processing_profile => sub {
+            return 1;
+        },
+    );
+    $pse->mock(
+       reference_sequence_build_param_for_processing_profile => sub {
+            return $ref_seq_build->id;
+       },
+    );
+    my %params = (
+        instrument_data_type => 'solexa',
+        instrument_data_id => $instrument_data->id,
+        subject_class_name => 'Genome::Sample',
+        subject_id => $sample->id,
+    );
+    for my $key ( keys %params ) {
+        $pse->add_param($key, $params{$key});
+    }
     push @pses, $pse;
     return 1;
 }

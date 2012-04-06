@@ -1,4 +1,3 @@
-
 Setting up a working R environment.
 
 We want to pull R packages from two main APT repositories, CRAN and Bioconductor.  The following apt list files represent those repositories.  Note that the deb-src lines are only required to apt-get source for development, not for runtime locations.
@@ -47,4 +46,3 @@ cd ..
 cp r-cran-xtable-1.5.5-1_all.deb $USER@$WORKSTATION # transfer the deb to your workstation
 
 Then publish the deb to TGI apt repository and install in your runtime.  This should make your error go away.
-

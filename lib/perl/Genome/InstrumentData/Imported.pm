@@ -275,6 +275,9 @@ no warnings 'once';
 *read2_fastq_name = \&Genome::InstrumentData::Solexa::read2_fastq_name;
 *dump_trimmed_fastq_files = \&Genome::InstrumentData::Solexa::dump_trimmed_fastq_files;
 *_get_trimq2_params = \&Genome::InstrumentData::Solexa::_get_trimq2_params;
+*resolve_median_insert_size = \&Genome::InstrumentData::Solexa::resolve_median_insert_size;
+*resolve_sd_insert_size = \&Genome::InstrumentData::Solexa::resolve_sd_insert_size;
+*get_default_alignment_metrics = \&Genome::InstrumentData::Solexa::get_default_alignment_metrics;
 }
 
 sub dump_sanger_fastq_files {

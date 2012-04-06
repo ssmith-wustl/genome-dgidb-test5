@@ -1031,5 +1031,50 @@ sub run_identifier {
     return $self->flow_cell_id;
 }
 
+sub resolve_median_insert_size {
+    my $self = shift;
+
+    #try eland metrics first
+    if ($self->median_insert_size) {
+        return $self->median_insert_size;
+    }
+    else {
+        #try bwa metrics second    
+        return $self->get_default_alignment_metrics('median_insert_size');
+        #Need try fragment_size_range, aka, library_insert_size last ?
+    }
+}
+
+sub resolve_sd_insert_size {
+    my $self = shift;
+
+    if ($self->sd_above_insert_size) {
+        return $self->sd_above_insert_size;
+    }
+    else {
+        return $self->get_default_alignment_metrics('sd_insert_size');
+    }
+}
+
+sub get_default_alignment_metrics { #means BWA
+    my ($self, $metric_name) = @_;
+    my $pp = Genome::ProcessingProfile::ReferenceAlignment->default_profile;
+
+    my @sr = Genome::InstrumentData::AlignmentResult->get(
+        instrument_data_id => $self->id,
+        aligner_name       => $pp->read_aligner_name,
+        aligner_version    => $pp->read_aligner_version,  
+    );
+
+    for my $sr (@sr) {
+        my ($metric) = grep{$_->metric_name eq $metric_name}$sr->metrics;
+        if ($metric and $metric->metric_value) {
+            return $metric->metric_value;
+        }
+    }
+    return;
+}
+
+
 1;
 

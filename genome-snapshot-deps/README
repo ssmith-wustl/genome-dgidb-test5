@@ -1,0 +1,17 @@
+This meta-package should install all software required for the genome snapshot to function.  
+Because the snapshot includes UR and Workflow, those are not included in this package. 
+
+It depends on several other meta-packages which represent several categories of software used at TGI:
+genome-snapshot-deps-perl           Externally developed Perl modules.
+genome-snapshot-deps-r              Externally developed R packages.
+genome-snapshot-deps-apps-external  Other externally developed applications.
+genome-snapshot-deps-apps-internal  Internally developed independent applications and libraries.
+
+This meta-package, and those above, are versioned with YYYY.MM.DD-N.
+
+Updates to anything under those meta-packages should result in those packages being rebuild (eventually automatically).  
+That should in turn result in this package being rebuilt automatically with a new version/date.
+
+TGI Sytems will ensure that updates to this package are propagated to the internal computer cluster.
+Currently, this process is manual, so put in a ticket as this needs to occur.
+

@@ -1,0 +1,13 @@
+This meta-package represents all externally developed Perl modules required for the snapshot to run.
+
+Because UR and Workflow are part of the snapshot, they are not in the dependency list.
+
+To begin depending on a new Perl module:
+- determine the name of the Debian package (Foo::Bar::Baz is libfoo-bar-baz-perl)
+- install it locally to make sure it works
+- put the name(s) in the "debian-list" file in alphabetical positions
+- commit and push the change
+
+The apipe-ci server will run debian-update.pl to update the package for the changes, 
+and will push out a new package, along with a new genome-snapshot-deps master package.
+

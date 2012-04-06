@@ -63,6 +63,10 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
     ],
 };
 
+sub _default_ref_align_processing_profile_id {
+    return Genome::ProcessingProfile::ReferenceAlignment->default_profile_id;
+}
+
 sub _default_mc16s_processing_profile_id {
     # RT66900 was 2278045
     return 2571784;
@@ -676,19 +680,6 @@ sub check_pse {
     $pse->{_instrument_data} = $instrument_data;
 
     if ( $instrument_data_type eq 'solexa' ) {
-        # solexa inst data nee to have the copy sequence file pse successful
-        my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
-        if ( not $index_illumina ) {
-            $self->error_message('No index illumina for solexa instrument data '.$instrument_data_id);
-            return;
-        }
-        if ( not $index_illumina->copy_sequence_files_confirmed_successfully ) {
-            $self->error_message(
-                'Solexa instrument data ('.$instrument_data_id.') does not have a successfully confirmed copy sequence files pse. This means it is not ready or may be corrupted.'
-            );
-            return;
-        }
-
         if($instrument_data->target_region_set_name) {
             my $fl = Genome::FeatureList->get(name => $instrument_data->target_region_set_name);
             unless($fl) {
@@ -1440,7 +1431,7 @@ sub add_processing_profiles_to_pse {
                     }
                 }
                 else {
-                    my $pp_id = '2635769';
+                    my $pp_id = $self->_default_ref_align_processing_profile_id;
                     push @processing_profile_ids_to_add, $pp_id;
 
                     # NOTE: this is the _fixed_ build 37 with a correct external URI
@@ -1448,7 +1439,7 @@ sub add_processing_profiles_to_pse {
                 }
             }
             elsif ($taxon->species_latin_name =~ /mus musculus/i){
-                my $pp_id = 2635769;
+                my $pp_id = $self->_default_ref_align_processing_profile_id;
                 push @processing_profile_ids_to_add, $pp_id;
                 $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
             }
@@ -1633,8 +1624,10 @@ sub _is_pcgp {
 
     foreach my $work_order (@work_orders) {
         my $project_id = $work_order->project_id;
+        my $project_name = $work_order->research_project_name;
 
-        if ( grep($project_id eq $_, (2230523, 2230525, 2259255, 2342358)) ) {
+        if ( grep($project_id eq $_, (2230523, 2230525, 2259255, 2342358)) or 
+             grep($project_name =~ /$_/, ('^PCGP','^Pediatric Cancer'))) {
             return 1;
         }
     }

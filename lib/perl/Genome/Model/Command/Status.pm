@@ -17,23 +17,25 @@ class Genome::Model::Command::Status {
             shell_args_position => 1,
         },
     ],
+    has_optional => [
+        summary_only => {
+            is => 'Boolean',
+            doc => "Only print the summary of the models' status.",
+        },
+    ],
 };
 
 sub execute {
     my $self = shift;
 
-    my %status;
+    my (%status, $total);
     for my $model ($self->models) {
         my $model_name = $model->name;
         my ($status, $build) = $model->status_with_build;
         my $build_id = ($build ? $build->id : 'N/A');
         $status{$status}++;
-        print join("\t", $model_name, $build_id, $status) . "\n";
-    }
-
-    my $total;
-    for my $key (sort keys %status) {
-        $total += $status{$key};
+        $total++;
+        print join("\t", $model_name, $build_id, $status) . "\n" if not $self->summary_only;
     }
 
     for my $key (sort keys %status) {
@@ -45,3 +47,4 @@ sub execute {
 }
 
 1;
+

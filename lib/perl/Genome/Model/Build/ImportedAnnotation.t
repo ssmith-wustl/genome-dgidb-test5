@@ -7,7 +7,7 @@ BEGIN {
 }
 
 use above "Genome";
-use Test::More tests => 34;
+use Test::More tests => 43;
 use Data::Dumper;
 use_ok('Genome::Model::Build::ImportedAnnotation');
 
@@ -78,14 +78,24 @@ my @errs = $abuild->validate_for_start;
 is(scalar @errs, 1, "attempting to specify a reference build from the wrong model is an error");
 like($errs[0]->desc, qr/is not a build of model/, "error string looks correct");
 
-my $roi_data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Build-ImportedAnnotation";
+my $roi_data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Build-ImportedAnnotation/v2";
 my $roi_expected_file = $roi_data_dir."/expected.bed";
+my $roi_expected_file2 = $roi_data_dir."/expected2.bed";
+my $roi_expected_file3 = $roi_data_dir."/expected3.bed";
+
+my $sn = 'alien';
+my $t = Genome::Taxon->__define__(name => $sn);
+my $p = Genome::Individual->create(name => "test-$sn-patient", common_name => 'testpatient', taxon => $t);
+my $s = Genome::Sample->create(name => "test-$sn-patient", common_name => 'tumor', source => $p);
+
+my $roi_ref_build = create_roi_build($s);
+
 my $roi_model = Genome::Model::ImportedAnnotation->create(
     name                => "test_roi",
     processing_profile  => $ann_pp,
-    subject_class_name  => ref($samples{'human'}),
-    subject_id          => $samples{'human'}->id,
-    reference_sequence  => $rbuilds{'human'}->[0]->model,
+    subject_class_name  => ref($s),
+    subject_id          => $s->id,
+    reference_sequence  => $roi_ref_build->model,
     );
 
 ok ($roi_model, 'Model to test roi created');
@@ -95,7 +105,7 @@ my $roi_build = Genome::Model::Build::ImportedAnnotation->create(
     model => $roi_model,
     data_directory => $roi_data_dir,
     version             => $versions[0],
-    reference_sequence  => $rbuilds{'human'}->[0],
+    reference_sequence  => $roi_ref_build,
     );
 
 ok ($roi_build,'Build to test roi created');
@@ -103,7 +113,6 @@ my $roi_feature_list = $roi_build->get_or_create_roi_bed;
 
 ok ($roi_feature_list, 'ROI feature list created');
 isa_ok($roi_feature_list, 'Genome::FeatureList', 'is a FeatureList');
-is($roi_feature_list->reference, $rbuilds{'human'}->[0], 'FeatureList has the same reference as the build');
 
 ok(-s $roi_feature_list->file_path, 'ROI file exists at '.$roi_feature_list->file_path);
 
@@ -113,6 +122,33 @@ my $roi_diff = Genome::Sys->diff_file_vs_file($roi_feature_list->file_path, $roi
 
 ok(!$roi_diff, 'Content of ROI was as expected');
 
+my $roi_feature_list2 = $roi_build->get_or_create_roi_bed(excluded_reference_sequence_patterns => ["^HS","^Un","^MT","^LRG"],
+                                                          included_feature_type_patterns => ["cds_exon","rna"],
+                                                          condense_feature_name => 1,
+                                                          );
+
+ok ($roi_feature_list2, 'ROI feature list created');
+isa_ok($roi_feature_list2, 'Genome::FeatureList', 'is a FeatureList');
+ok(-s $roi_feature_list2->file_path, 'ROI file exists at '.$roi_feature_list2->file_path);
+
+$file_path = $roi_feature_list2->file_path;
+$roi_diff = Genome::Sys->diff_file_vs_file($roi_feature_list2->file_path, $roi_expected_file2);
+
+ok(!$roi_diff, 'Content of customized ROI was as expected');
+my $roi_feature_list3 = $roi_build->get_or_create_roi_bed(excluded_reference_sequence_patterns => ["^HS","^Un","^MT","^LRG"],
+                                                          included_feature_type_patterns => ["cds_exon","rna"],
+                                                          condense_feature_name => 1,
+                                                          flank_size => 2,
+                     );
+ok ($roi_feature_list3, 'ROI feature list created');
+isa_ok($roi_feature_list3, 'Genome::FeatureList', 'is a FeatureList');
+
+ok(-s $roi_feature_list3->file_path, 'ROI file exists at '.$roi_feature_list3->file_path);
+
+$file_path = $roi_feature_list3->file_path;
+$roi_diff = Genome::Sys->diff_file_vs_file($roi_feature_list3->file_path, $roi_expected_file3);
+
+ok(!$roi_diff, 'Content of customized ROI with flanking bp was as expected');
 done_testing();
 
 sub create_reference_builds {
@@ -133,6 +169,7 @@ sub create_reference_builds {
         for my $v (@$versions) {
             $v =~ /.*_([0-9]+)/;
             my $short_version = $1;
+            my $sequence_uri = "http://genome.wustl.edu/foo/bar/test.fa.gz";
             my $rs = Genome::Model::Build::ImportedReferenceSequence->create(
                 name            => "ref_sequence_${sn}_$short_version",
                 model           => $ref_model,
@@ -145,4 +182,37 @@ sub create_reference_builds {
         }
     }
     return %rbuilds;
+}
+
+sub create_roi_build {
+    my $sample = shift;
+    my $pp = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_ref_pp2');
+
+    my $sequence_uri = "http://genome.wustl.edu/foo/bar/test.fa.gz";
+
+    my $fasta_file1 = "$data_dir/data.fa";
+    my $fasta_fh = new IO::File(">$fasta_file1");
+    $fasta_fh->write(">HI\nNACTGACTGNNACTGN\n");
+    $fasta_fh->close();
+
+
+    my $command = Genome::Model::Command::Define::ImportedReferenceSequence->create(
+        fasta_file => $fasta_file1,
+        model_name => 'test-import-anno-1',
+        processing_profile => $pp,
+        species_name => $sample->taxon->name,
+        subject => $s,
+        version => 42,
+        sequence_uri => $sequence_uri
+    );
+
+    ok($command, 'created command');
+
+    ok($command->execute(), 'executed command');
+
+    my $build_id = $command->result_build_id;
+
+    my $build = Genome::Model::Build->get($build_id);
+
+    return $build;
 }
