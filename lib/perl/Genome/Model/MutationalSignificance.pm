@@ -67,7 +67,7 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
 
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
-        input_properties => ['clinical_data_file', 'merged_maf_path', 'create_maf_output_dir', 'bam_list', 'processors', 'pathway_file', 'gene_covg_dir','reference_sequence','reference_build','somatic_variation_builds','annotation_build', 'output_dir', 'log_directory', 'roi_flank_size', 'excluded_reference_sequence_patterns', 'included_feature_type_patterns'],
+        input_properties => ['clinical_data_file', 'merged_maf_path', 'create_maf_output_dir', 'bam_list', 'processors', 'pathway_file', 'reference_sequence','reference_build','somatic_variation_builds','annotation_build', 'output_dir', 'log_directory', 'roi_flank_size', 'excluded_reference_sequence_patterns', 'included_feature_type_patterns'],
         output_properties => ['smg_result','pathscan_result','mr_result','pfam_result','proximity_result',
                               'cosmic_result','cct_result'],
     );
@@ -370,7 +370,6 @@ sub _map_workflow_inputs {
     push @inputs, create_maf_output_dir => $base_dir;
     push @inputs, pathway_file => '/gscmnt/gc2108/info/medseq/tcga_ucec/music/endometrioid_grade_1or2_input/pathway_dbs/KEGG_120910'; #TODO: move to params
     push @inputs, processors => $self->processors;
-    push @inputs, gene_covg_dir => $base_dir."/gene_covgs";
     push @inputs, reference_sequence => $builds[0]->reference_sequence_build->fasta_file;
     push @inputs, reference_build => "Build37";
     push @inputs, somatic_variation_builds => \@builds;
