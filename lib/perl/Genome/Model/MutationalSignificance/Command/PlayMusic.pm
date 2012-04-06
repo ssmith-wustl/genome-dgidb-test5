@@ -13,10 +13,6 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
             default_value => 6,
             doc => "Number of processors to use in SMG (requires 'foreach' and 'doMC' R packages)",
         },
-        log_directory => {
-            is => 'Text',
-            doc => "Directory to write log files from MuSiC components",
-        },
         bam_list => {
             is => 'Text',
             doc => 'Tab delimited list of BAM files [sample_name normal_bam tumor_bam]',
@@ -48,6 +44,10 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         },
     ],
     has_optional_input => [
+        log_directory => {
+            is => 'Text',
+            doc => "Directory to write log files from MuSiC components",
+        },
         numeric_clinical_data_file => {
             is => 'Text',
             doc => 'Table of samples (y) vs. numeric clinical data category (x)',
@@ -55,6 +55,22 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         categorical_clinical_data_file => {
             is => 'Text',
             doc => 'Table of samples (y) vs. categorical clinical data category (x)',
+        },
+        numerical_data_test_method => {
+            is => 'Text',
+            doc => "Either 'cor' for Pearson Correlation or 'wilcox' for the Wilcoxon Rank-Sum Test for numerical        clinical data.",
+        },
+        glm_model_file => {
+            is => 'Text',
+            doc => 'File outlining the type of model, response variable, covariants, etc. for the GLM analysis. (See     DESCRIPTION).',
+        },
+        glm_clinical_data_file => {
+            is => 'Text',
+            doc => 'Clinical traits, mutational profiles, other mixed clinical data (See DESCRIPTION).',
+        },
+        use_maf_in_glm => {
+            is => 'Boolean',
+            doc => 'Set this flag to use the variant matrix created from the MAF file as variant input to GLM analysis.',
         },
         omimaa_dir => {
             is => 'Path',
@@ -69,7 +85,7 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
             doc => 'turn on to display larger working output',
             default => 1,
         },
-        matrix_file => {
+        mutation_relation_matrix_file => {
             is => 'Text',
             doc => 'Define this argument to store a mutation matrix',
         },
@@ -92,15 +108,14 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         show_skipped => {
             is => 'Boolean',
             doc => 'Report each skipped mutation, not just how many',
-            default => 0,
+        },
+        show_known_hits => {
+            is => 'Boolean',
+            doc => "When a finding is novel, show known AA in that gene",
         },
         genes_to_ignore => {
             is => 'Text',
             doc => 'Comma-delimited list of genes to ignore for background mutation rates',
-        },
-        bmr => {
-            is => 'Number',
-            doc => 'Background mutation rate in the targeted regions',
         },
         max_proximity => {
             is => 'Text',
@@ -125,27 +140,22 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         bmr_groups => {
             is => 'Integer',
             doc => 'Number of clusters of samples with comparable BMRs',
-            default_value => 1,
         },
         separate_truncations => {
             is => 'Boolean',
             doc => 'Group truncational mutations as a separate category',
-            default => 0,
         },
         merge_concurrent_muts => {
             is => 'Boolean',
             doc => 'Multiple mutations of a gene in the same sample are treated as 1',
-            default => 0,
         },
         skip_non_coding => {
             is => 'Boolean',
             doc => 'Skip non-coding mutations from the provided MAF file',
-            default_value => 1,
         },
         skip_silent => {
             is => 'Boolean',
             doc => 'Skip silent mutations from the provided MAF file',
-            default_value => 1,
         },
         min_mut_genes_per_path => {
             is => 'Number',
@@ -158,13 +168,20 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         aa_range => {
             is => 'Text',
             doc => "Set how close a 'near' match is when searching for amino acid near hits",
-            default => '2',
         },
         nuc_range => {
             is => 'Text',
             doc => "Set how close a 'near' match is when searching for nucleotide position near hits",
-            default => '5',
         },
+        clinical_correlation_matrix_file => {
+            is => 'Text',
+            is_optional => 1,
+            doc => "Optionally store the sample-vs-gene matrix used internally during calculations.",
+        },
+        input_clinical_correlation_matrix_file => {
+            is => 'Text',
+            is_optional => 1,
+            doc => "Instead of calculating this from the MAF, input the sample-vs-gene matrix used internally during     calculations.",
     ],
 
 
@@ -321,7 +338,14 @@ sub _create_workflow {
         output_properties =>\@output_properties,
     );
 
-    my $log_directory = $self->log_directory;
+    my $log_directory;
+    if ($self->log_directory) {
+        $log_directory = $self->log_directory;
+    }
+    else {
+        $log_directory = $self->output_dir;
+    }
+
     $workflow->log_dir($log_directory);
 
     my $input_connector = $workflow->get_input_connector;
