@@ -371,8 +371,8 @@ sub _run_aligner {
 
     my ($sum_insert_sizes, $sum_insert_size_std_dev, $sum_read_length, $reads);
     for my $instrument_data ($self->instrument_data) {
-        my $median_insert_size = $instrument_data->median_insert_size;
-        my $sd_above_insert_size = $instrument_data->sd_above_insert_size;
+        my $median_insert_size   = $instrument_data->resolve_median_insert_size;
+        my $sd_above_insert_size = $instrument_data->resolve_sd_insert_size;
         # Use the number of reads to somewhat normalize the averages we will calculate later
         # This is not the best approach, any ideas?
         my $clusters = $instrument_data->clusters;

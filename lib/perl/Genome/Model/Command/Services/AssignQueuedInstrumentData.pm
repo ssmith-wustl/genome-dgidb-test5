@@ -63,6 +63,10 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
     ],
 };
 
+sub _default_ref_align_processing_profile_id {
+    return Genome::ProcessingProfile::ReferenceAlignment->default_profile_id;
+}
+
 sub _default_mc16s_processing_profile_id {
     # RT66900 was 2278045
     return 2571784;
@@ -1440,7 +1444,7 @@ sub add_processing_profiles_to_pse {
                     }
                 }
                 else {
-                    my $pp_id = '2635769';
+                    my $pp_id = $self->_default_ref_align_processing_profile_id;
                     push @processing_profile_ids_to_add, $pp_id;
 
                     # NOTE: this is the _fixed_ build 37 with a correct external URI
@@ -1448,7 +1452,7 @@ sub add_processing_profiles_to_pse {
                 }
             }
             elsif ($taxon->species_latin_name =~ /mus musculus/i){
-                my $pp_id = 2635769;
+                my $pp_id = $self->_default_ref_align_processing_profile_id;
                 push @processing_profile_ids_to_add, $pp_id;
                 $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
             }

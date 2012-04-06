@@ -119,10 +119,13 @@ sub _run_aligner {
         $paired_end = 1;
 
         # get the instrument-data so we can calculate the minimum and maximum insert size
-        my $instrument_data = $self->instrument_data();
-        my $median_insert_size = $instrument_data->median_insert_size();
-        my $sd_above_insert_size = $instrument_data->sd_above_insert_size();
+        my $instrument_data      = $self->instrument_data();
+        my $median_insert_size   = $instrument_data->resolve_median_insert_size();
+        my $sd_above_insert_size = $instrument_data->resolve_sd_insert_size();
         my $sd_below_insert_size = $instrument_data->sd_below_insert_size();
+        #TODO need replace sd_below_insert_size with sd_insert_size when calculating 
+        #$min_insert_size, sd_below_insert_size is from eland and will become null soon. 
+        #Fix it when this dies on next line with the OK from the original code owner.  
         
         die $self->error_message("Unable to get insert size info from instrument data")
             unless (defined($median_insert_size) && defined($sd_above_insert_size) && defined($sd_below_insert_size));

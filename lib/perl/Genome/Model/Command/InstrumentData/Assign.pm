@@ -225,8 +225,23 @@ sub _assign_all_within_maximum_allowed_error {
         my $flowcell    = $instdata->flow_cell_id;
         my $lane        = $instdata->subset_name;
         my $libname     = $instdata->library_name;
-        my $reverr      = $instdata->filt_error_rate_avg; #this is intentionally not rev_filt_error_rate_avg
-        my $fwderr      = $instdata->fwd_filt_error_rate_avg;
+
+        my ($fwderr, $reverr);
+
+        if ($instdata->fwd_filt_error_rate_avg) {
+            $fwderr = $instdata->fwd_filt_error_rate_avg;
+        }
+        else {
+            $fwderr = $instdata->get_default_alignment_metrics('read_1_pct_mismatch');
+        }
+
+        if ($instdata->filt_error_rate_avg) {
+            $reverr = $instdata->filt_error_rate_avg; #this is intentionally not rev_filt_error_rate_avg
+        }
+        else {
+            $reverr = $instdata->get_default_alignment_metrics('read_2_pct_mismatch');
+        }
+    
         if($instdata->ignored() ) {
             next;
         }
