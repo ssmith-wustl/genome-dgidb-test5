@@ -1,0 +1,50 @@
+
+Setting up a working R environment.
+
+We want to pull R packages from two main APT repositories, CRAN and Bioconductor.  The following apt list files represent those repositories.  Note that the deb-src lines are only required to apt-get source for development, not for runtime locations.
+
+- CRAN
+
+cat > /etc/apt/sources.list.d/r-cran.list <<EOF
+deb http://cran.wustl.edu/bin/linux/ubuntu lucid/
+deb-src http://cran.wustl.edu/bin/linux/ubuntu lucid/
+EOF
+
+The signing key for CRAN appears to be as follows:
+
+gpg --keyserver keyserver.ubuntu.com --recv 51716619E084DAB9
+gpg --export --armor E084DAB9 > E084DAB9.asc
+sudo apt-get add E084DAB9.asc
+
+- Bioconductor
+
+cat > /etc/apt/sources.list.d$ cat r-bioconductor.list <<EOF
+deb http://bioinformatics.rri.sari.ac.uk/cran2deb/rep testing main
+deb-src http://bioinformatics.rri.sari.ac.uk/cran2deb/rep testing main
+EOF
+
+There is a signing key for Bioconductor too, BUT it appears to have expired, and so is useless to us.  If you want it for whatever reason (historical purposes?) get it like this:
+
+gpg --keyserver keyserver.ubuntu.com --recv 545DE9BCD912350D
+gpg --export --armor D912350D > D912350D.asc
+sudo apt-key add D912350D.asc
+
+Now that you have the repositories set up you can:
+
+sudo apt-get update
+sudo apt-get install r-base
+
+From time to time we've seen that some packages on CRAN install properly, but fail at runtime because the module was built with an older R interpreter than is available.  For example:
+
+Error : package ‘xtable’ was built before R 2.10.0: please re-install it
+
+To work around this, you rebuild xtable on a development host like this:
+
+apt-get source r-cran-xtable # Sometimes you have to hunt for the right package name
+cd r-cran-xtable-1.5.5
+dpkg-buildpackage
+cd ..
+cp r-cran-xtable-1.5.5-1_all.deb $USER@$WORKSTATION # transfer the deb to your workstation
+
+Then publish the deb to TGI apt repository and install in your runtime.  This should make your error go away.
+
