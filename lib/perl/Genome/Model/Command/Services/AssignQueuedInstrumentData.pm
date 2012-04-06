@@ -1624,8 +1624,10 @@ sub _is_pcgp {
 
     foreach my $work_order (@work_orders) {
         my $project_id = $work_order->project_id;
+        my $project_name = $work_order->research_project_name;
 
-        if ( grep($project_id eq $_, (2230523, 2230525, 2259255, 2342358)) ) {
+        if ( grep($project_id eq $_, (2230523, 2230525, 2259255, 2342358)) or 
+             grep($project_name =~ /$_/, ('^PCGP','^Pediatric Cancer'))) {
             return 1;
         }
     }
