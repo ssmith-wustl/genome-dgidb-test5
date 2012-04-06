@@ -131,7 +131,6 @@ sub _qidfgm {
     my $index_illumina = Test::MockObject->new();
     push @index_illumina, $index_illumina;
     $index_illumina->set_always(id => $instrument_data->id);
-    $index_illumina->set_always(copy_sequence_files_confirmed_successfully => 1);
     $index_illumina->set_always(get_research_projects => $gsc_project);
     $index_illumina->set_always(get_work_orders => $gsc_workorder);
     ok($instrument_data, 'created instrument data '.$qidfgm_cnt);

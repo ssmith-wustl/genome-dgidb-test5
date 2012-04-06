@@ -680,19 +680,6 @@ sub check_pse {
     $pse->{_instrument_data} = $instrument_data;
 
     if ( $instrument_data_type eq 'solexa' ) {
-        # solexa inst data nee to have the copy sequence file pse successful
-        my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
-        if ( not $index_illumina ) {
-            $self->error_message('No index illumina for solexa instrument data '.$instrument_data_id);
-            return;
-        }
-        if ( not $index_illumina->copy_sequence_files_confirmed_successfully ) {
-            $self->error_message(
-                'Solexa instrument data ('.$instrument_data_id.') does not have a successfully confirmed copy sequence files pse. This means it is not ready or may be corrupted.'
-            );
-            return;
-        }
-
         if($instrument_data->target_region_set_name) {
             my $fl = Genome::FeatureList->get(name => $instrument_data->target_region_set_name);
             unless($fl) {
