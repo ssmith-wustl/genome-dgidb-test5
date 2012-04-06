@@ -1,7 +1,14 @@
+DNAcopy
 RColorBrewer
+doMC
+foreach
+fpc      
 gcrma
 genefilter
 ggplot2
+methylumi
+mixtools
+multicore
 plotrix
 preprocessCore
 scatterplot3d

@@ -1,7 +1,14 @@
+r-bioc-dnacopy
 r-bioc-gcrma
 r-bioc-genefilter
+r-bioc-methylumi
 r-bioc-preprocesscore
+r-cran-domc
+r-cran-foreach
+r-cran-fpc
 r-cran-ggplot2
+r-cran-mixtools
+r-cran-multicore
 r-cran-plotrix
 r-cran-rcolorbrewer
 r-cran-scatterplot3d
