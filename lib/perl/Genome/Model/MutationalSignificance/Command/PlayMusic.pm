@@ -228,8 +228,8 @@ EOS
 sub execute {
     my $self = shift;
 
-    my $roi_covg_dir = $self->output_dir."/roi_covg";
-    my $gene_covg_dir = $self->output_dir."/gene_covg";
+    my $roi_covg_dir = $self->output_dir."/roi_covgs";
+    my $gene_covg_dir = $self->output_dir."/gene_covgs";
 
     # Create the output directories unless they already exist
     mkdir $roi_covg_dir unless( -e $roi_covg_dir );

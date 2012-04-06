@@ -302,7 +302,7 @@ sub execute {
       if ($min_mapq) {
         $params{"min_mapq"} = $min_mapq;
       }
-      my $cmd = Genome::Model::Tools::Music::Bmr::CalcBmrHelper->create(%params);
+      my $cmd = Genome::Model::Tools::Music::Bmr::CalcCovgHelper->create(%params);
       my $rv = $cmd->execute;
       if(!$rv)
       {
