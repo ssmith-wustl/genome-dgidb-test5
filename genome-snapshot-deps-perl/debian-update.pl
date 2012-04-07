@@ -79,21 +79,23 @@ for my $change (@diff) {
 my $msg = join("\n",@msg);
 print "MSG:\n---\n$msg\n---\n";
 
-use Date::Format;
-my $t = time();
-
-# construct determine the version number, which will be the date, with an incrementing integer for multiple builds on the same day 
-my $date1 = Date::Format::time2str(q|%Y.%m.%d|,$t);
-my $n = 1;
+# note the last changelog entry
 my $old_changelog_path = $FindBin::Bin . "/$dir/changelog";
 my $latest_entry = `head -n 1 $old_changelog_path`;
+print "Latest changelog entry is: $latest_entry\n";
+
+# construct determine the version number, which will be the date, with an incrementing integer for multiple builds on the same day 
+use Date::Format;
+my $t = time();
+my $date1 = Date::Format::time2str(q|%Y.%m.%d|,$t);
+my $n = 1;
 for (1) {
     my @conflicts = `grep "^$name ($date1-$n)" '$old_changelog_path'`;
     if (@conflicts) {
-        print "FOUND: @conflicts\n";
+        print "FOUND PREVIOUS BUILD FROM TODAY: @conflicts\n";
         $n++;
-        if ($n > 10) {
-            die "this script is tired of your sloppyness";
+        if ($n > 100) {
+            die "this script is tired of rebuilding this package today";
         }
         redo;
     }
@@ -104,7 +106,6 @@ for (1) {
 
 # create the new changelog entry
 my $date2 = Date::Format::time2str(q|%a, %d %b %Y %H:%M:%S %z|,$t);
-
 my $changelog_addition = <<EOS;
 $name ($date1-$n) unstable; urgency=low
 
@@ -113,21 +114,21 @@ $msg
  -- The Genome Institute <gmt\@genome.wustl.edu>  $date2
 
 EOS
-
-my $new_changelog_path = $old_changelog_path . '.new';
-
 my $new_changelog_addition_path = $old_changelog_path . '.new-entry';
 my $new_changelog_addition_fh = IO::File->new('>' . $new_changelog_addition_path);
 $new_changelog_addition_fh or die "failed to open $new_changelog_addition_path for writing! $!";
 $new_changelog_addition_fh->print($changelog_addition);
 $new_changelog_addition_fh->close;
 
+my $new_changelog_path = $old_changelog_path . '.new';
+
 for my $cmd (
     "cat $new_control_path >| $old_control_path",
     "rm $new_control_path",
     "cat $new_changelog_addition_path $old_changelog_path > $new_changelog_path",
     "rm $new_changelog_addition_path",
-    "cat $new_changelog_path >| $old_changelog_path"
+    "cat $new_changelog_path >| $old_changelog_path",
+    "rm $new_changelog_path",
 ) {
     print "RUN: $cmd\n";
     my $rv = system $cmd; 
