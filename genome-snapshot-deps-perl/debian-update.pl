@@ -4,14 +4,24 @@ use warnings;
 use FindBin;
 use IO::File;
 
+# find the package name from the parent directory name
+my $name = $FindBin::Bin;
+chop($name) if $name =~ /\/$/;
+$name =~ s|^.*/||;
+
+# the subdirectory to update is "debian" by default
+# we may loop through a config for several distributions
 my $dir = 'debian';
 
+# the debian-list file should contain the list of all packages to install in alpha order
 my $path = $FindBin::Bin . "/$dir-list";
 my $fh = IO::File->new($path);
 $fh or die "failed to open file $path: $!";
-my @list = $fh->getlines;
-my $list = join('',@list);
+my @lines = $fh->getlines;
+chomp @lines;
+my $list = join(",\n", map { '    ' . $_ } @lines);
 
+# re-construct the debian/control file content
 my $new_content = <<EOS; 
 Source: genome-snapshot-deps-perl
 Section: science
@@ -29,36 +39,102 @@ $list
 Description: This meta-package installs all dependencies of the current internal TGI software snapshot
 EOS
 
-my $prev_control_path = $FindBin::Bin . "/$dir/control";
-my $prev_fh = IO::File->new($previous_control_path);
-$prev_fh or die "failed to open temp file $prev_control_path: $!";
-my $prev_content = join('',$prev_fh->getlines);
+# see if the control file needs to be updated
+my $old_control_path = $FindBin::Bin . "/$dir/control";
+my $old_fh = IO::File->new($old_control_path);
+$old_fh or die "failed to open temp file $old_control_path: $!";
+my $old_content = join('',$old_fh->getlines);
 
-if ($prev_content eq $new_content) {
+if ($old_content eq $new_content) {
     print "Content matches for " . scalar(@lines) . " packages.  No updates.\n";
     exit;
 }
-else {
-    print "Updated packages...\n";
 
-    my $new_control_path = $prev_control_path . '.new';
-    my $new_fh = IO::File->new('>' . $new_control_path);
-    $new_fh or die "failed to open temp file $new_control_path: $!";
-    $new_fh->print($new_content);
-    $new_fh->close;
+# we only proceed if we need to change the control file
+print "Updated packages...\n";
 
-    my $rv = system "diff $prev_control_path $new_control_path";
-    $rv /= 256;
-    if ($rv) {
-        die "error diffing $prev_control_path and $new_control_path: $!"
+my $new_control_path = $old_control_path . '.new';
+my $new_fh = IO::File->new('>' . $new_control_path);
+$new_fh or die "failed to open temp file $new_control_path: $!";
+$new_fh->print($new_content);
+$new_fh->close;
+
+# determine what message to put in the changelog 
+my @diff = `sdiff -s $old_control_path $new_control_path`;
+my @msg;
+for my $change (@diff) {
+    my ($old,$type,$new) = ($change =~ /^\s*(.*?)\s+([\<\|\>])\s+(.*)/);
+    $old =~ s/,\s*$//;
+    $new =~ s/,\s*$//;
+    if ($type eq '<') {
+        push @msg, "  * removed: $old";
     }
-
-    my $rv = system "cat $new_control_path > $prev_control_path";
-    $rv /= 256;
-    if ($rv) {
-        die "error rewriting $prev_control_path from $new_control_path: $!"
+    elsif ($type eq '>') {
+        push @msg, "  * added: $new";
     }
-
-    print "Update complete for $prev_control_path.\n";
+    else {
+        push @msg, "  * changed: $old to $new"
+    }
 }
+my $msg = join("\n",@msg);
+print "MSG:\n---\n$msg\n---\n";
+
+use Date::Format;
+my $t = time();
+
+# construct determine the version number, which will be the date, with an incrementing integer for multiple builds on the same day 
+my $date1 = Date::Format::time2str(q|%Y.%m.%d|,$t);
+my $n = 1;
+my $old_changelog_path = $FindBin::Bin . "/$dir/changelog";
+my $latest_entry = `head -n 1 $old_changelog_path`;
+for (1) {
+    my @conflicts = `grep "^$name ($date1-$n)" '$old_changelog_path'`;
+    if (@conflicts) {
+        print "FOUND: @conflicts\n";
+        $n++;
+        if ($n > 10) {
+            die "this script is tired of your sloppyness";
+        }
+        redo;
+    }
+    else {
+        print "No changelog entry found for $date1-$n.  Latest entry is $latest_entry"
+    }
+}
+
+# create the new changelog entry
+my $date2 = Date::Format::time2str(q|%a, %d %b %Y %H:%M:%S %z|,$t);
+
+my $changelog_addition = <<EOS;
+$name ($date1-$n) unstable; urgency=low
+
+$msg
+
+ -- The Genome Institute <gmt\@genome.wustl.edu>  $date2
+
+EOS
+
+my $new_changelog_path = $old_changelog_path . '.new';
+
+my $new_changelog_addition_path = $old_changelog_path . '.new-entry';
+my $new_changelog_addition_fh = IO::File->new('>' . $new_changelog_addition_path);
+$new_changelog_addition_fh or die "failed to open $new_changelog_addition_path for writing! $!";
+$new_changelog_addition_fh->print($changelog_addition);
+$new_changelog_addition_fh->close;
+
+for my $cmd (
+    "cat $new_control_path >| $old_control_path",
+    "rm $new_control_path",
+    "cat $new_changelog_addition_path $old_changelog_path > $new_changelog_path",
+    "rm $new_changelog_addition_path",
+    "cat $new_changelog_path >| $old_changelog_path"
+) {
+    print "RUN: $cmd\n";
+    my $rv = system $cmd; 
+    $rv /= 256;
+    if ($rv) {
+        die "ERROR: $!"
+    }
+}
+
 
