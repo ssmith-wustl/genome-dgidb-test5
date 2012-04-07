@@ -22,22 +22,8 @@ chomp @lines;
 my $list = join(",\n", map { '    ' . $_ } @lines);
 
 # re-construct the debian/control file content
-my $new_content = <<EOS; 
-Source: genome-snapshot-deps-perl
-Section: science
-Priority: optional
-Maintainer: The Genome Institute <gmt\@genome.wustl.edu>
-Build-Depends: debhelper (>= 7)
-Build-Depends-Indep: perl
-Standards-Version: 3.8.3
-
-Package: genome-snapshot-deps-perl
-Architecture: all
-Provides: genome
-Depends: \${misc:Depends}, \${perl:Depends}, 
-$list
-Description: This meta-package installs all dependencies of the current internal TGI software snapshot
-EOS
+my $template = `cat $dir-control-template`;
+my $new_content = eval '"' . $template . '"';
 
 # see if the control file needs to be updated
 my $old_control_path = $FindBin::Bin . "/$dir/control";
@@ -129,6 +115,8 @@ for my $cmd (
     "rm $new_changelog_addition_path",
     "cat $new_changelog_path >| $old_changelog_path",
     "rm $new_changelog_path",
+    "git diff $old_control_path",
+    "git diff $old_changelog_path",
 ) {
     print "RUN: $cmd\n";
     my $rv = system $cmd; 
