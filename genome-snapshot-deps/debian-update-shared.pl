@@ -30,11 +30,14 @@ my $fh = IO::File->new($path);
 $fh or die "failed to open file $path: $!";
 my @lines = $fh->getlines;
 chomp @lines;
-my $list = join(",\n", map { '    ' . $_ } @lines);
+my $list = join(",\n", map { '    ' . $_ } grep { /\S/ } @lines);
 
 # re-construct the debian/control file content
-my $template = `cat $dir-control-template`;
+my $template = join('',IO::File->new("$dir-control-template")->getlines);
 my $new_content = eval '"' . $template . '"';
+if ($@) {
+    die "error processing template $dir-control-template.  Ensure it can eval into a string in Perl when surrounded by double quotes.  i.e. don't use double quotes, and escape variable sigils: $@\n"
+}
 
 # see if the control file needs to be updated
 my $old_control_path = $FindBin::Bin . "/$dir/control";
