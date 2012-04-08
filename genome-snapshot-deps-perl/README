@@ -1,9 +1,15 @@
 This meta-package represents all externally developed Perl modules required for the GMS snapshot to run.
-NOTE: Because UR and Workflow are part of the snapshot, they are not in the dependency list.
 
-To add or remove *external* Perl modules from the TGI cluster, edit the "ubuntu-lucid-list".  It contains the names of all required Perl Debian packages in alphabetical order. 
+To add or remove *external* Perl modules from the TGI cluster, edit the "ubuntu-lucid-list". 
+It contains the names of all required Perl Debian packages in alphabetical order.
 
-By convention Foo::Bar::Baz will have the Debian package name "libfoo-bar-baz-perl".
+NOTE: These are the packages which work with /usr/bin/perl.  
+Until the final changes are made to transition to /usr/bin/perl, any modules changed here also require a hardware ticket to install the module for the /gsc/bin/perl 5.8 interpreter.
+
+ALSO NOTE: Because UR and Workflow are part of the snapshot, they are not in the dependency list.
+
+Finding the Debian package for a Perl module is pretty easy.  By convention Foo::Bar::Baz will have the Debian package name:
+ libfoo-bar-baz-perl
 
 If you are adding a dependency should make sure that the Debian package for the Perl module in question exists:
  apt-cache search libfoo-bar-baz-perl
