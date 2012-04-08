@@ -1,1 +1,1 @@
-debian-update-shared.pl
+../genome-snapshot-deps/debian-update-shared.pl
