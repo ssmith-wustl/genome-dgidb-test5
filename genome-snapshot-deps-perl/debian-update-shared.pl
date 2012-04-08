@@ -2,16 +2,27 @@
 use strict;
 use warnings;
 use FindBin;
+use File::Basename;
 use IO::File;
 
+# this is typically run from the top-level directory of a package
+# just in case, chdir there
+my $pkgdir = $FindBin::Bin;
+chdir $pkgdir;
+
 # find the package name from the parent directory name
-my $name = $FindBin::Bin;
+my $name = $pkgdir;
 chop($name) if $name =~ /\/$/;
 $name =~ s|^.*/||;
 
-# the subdirectory to update is "debian" by default
-# we may loop through a config for several distributions
-my $dir = 'debian';
+# find the packaging directory from the script name
+my $script = File::Basename::basename($FindBin::Script);
+my $dir = $script;
+$dir =~ s/-update.pl//;
+unless (-d $dir) {
+    die "no $dir found under $pkgdir!";
+}
+print "updating packaging in $dir\n";
 
 # the debian-list file should contain the list of all packages to install in alpha order
 my $path = $FindBin::Bin . "/$dir-list";
