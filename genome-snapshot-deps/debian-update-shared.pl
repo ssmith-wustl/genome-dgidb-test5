@@ -129,8 +129,8 @@ for my $cmd (
     "rm $new_changelog_addition_path",
     "cat $new_changelog_path >| $old_changelog_path",
     "rm $new_changelog_path",
-    "git diff $old_control_path",
-    "git diff $old_changelog_path",
+    "echo ****************; git diff $old_control_path | cat - ",
+    "echo ****************; git diff $old_changelog_path | cat - ",
 ) {
     print "RUN: $cmd\n";
     my $rv = system $cmd; 
@@ -140,4 +140,49 @@ for my $cmd (
     }
 }
 
+# For now, everything which is under the deps package will also update the top-level deps package.
+# What we'll do in the next iteration is have each package check for new versions of its subordinates and update itself.
+# This will work for the top-level package, and other packages, and the deps will be coincidental.
+my $parent_path = "$pkgdir/$dir-parent";
+if (-e $parent_path) {
+    my $parent_meta_package = IO::File->new($parent_path)->getline;
+    chomp $parent_meta_package;
+
+    print "\nUpdating $parent_meta_package to require the new version of this package...\n";
+
+    my $base_pkgdir = $pkgdir . '/../' . $parent_meta_package;
+    unless (-d $base_pkgdir) {
+        die "Failed to find $base_pkgdir to update the genome-snapshot-deps dep list!";
+    }
+
+    my $base_list = $base_pkgdir . "/$dir-list";
+    unless (-e $base_list) {
+        die "Failed to find the top-level deps file: $base_list";
+    }
+
+    my $new_version = "$date1-$n";
+    my @base_list = join('',IO::File->new($base_list)->getlines());
+    my $found = 0;
+    for my $dep (@base_list) {
+        if ($dep =~ /^$name\s+\((\>\=|)\s*(.*)\)/) {
+            $found++;
+            my $old_version = $2;
+            if ($old_version eq $new_version) {
+                print "already at $new_version\n";
+            }
+            else {
+                print "updating from $old_version to $new_version\n";
+            }
+        }
+        else {
+            print "ignoring other dep: $dep\n";
+        }
+    }
+
+    if ($found == 0) {
+        die "Failed to find $name in the base list in $base_list!\n";
+    }
+
+    IO::File->new(">$base_list")->print(@base_list);
+}
 
