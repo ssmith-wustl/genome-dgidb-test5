@@ -1,0 +1,26 @@
+Source: genome-snapshot-deps-r
+Section: science
+Priority: optional
+Maintainer: The Genome Institute <gmt@genome.wustl.edu>
+Build-Depends: debhelper (>= 7)
+Build-Depends-Indep: r-base 
+Standards-Version: 3.8.3
+
+Package: genome-snapshot-deps-r
+Architecture: all
+Depends: ${misc:Depends},
+    r-bioc-dnacopy,
+    r-bioc-gcrma,
+    r-bioc-genefilter,
+    r-bioc-methylumi,
+    r-bioc-preprocesscore,
+    r-cran-domc,
+    r-cran-foreach,
+    r-cran-fpc,
+    r-cran-ggplot2,
+    r-cran-mixtools,
+    r-cran-multicore,
+    r-cran-plotrix,
+    r-cran-rcolorbrewer,
+    r-cran-scatterplot3d
+Description: This meta-package installs all external R dependencies of the current internal TGI Genome Modeling System software snapshot.

@@ -1,0 +1,13 @@
+#!/usr/bin/make -f
+
+unexport PERL_MM_OPT
+unexport PERL_MB_OPT
+
+%:
+	export PATH="/bin:/usr/bin:/sbin:/usr/sbin"; \
+	dh $@
+
+override_dh_auto_test:
+override_dh_auto_build:
+	dh_auto_build
+
