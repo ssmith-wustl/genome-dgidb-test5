@@ -10,6 +10,7 @@ class Genome::Model::Command::Define::GenePrediction::Eukaryotic {
     has => [
         repeat_library => {
             is => 'Text',
+            is_optional => 1,
             doc => 'Path to repeat library used by repeat masker',
         },
         snap_models => {
@@ -68,15 +69,16 @@ sub execute {
 
 sub type_specific_parameters_for_create {
     my $self = shift;
-    return (
+    my %params = (
         assembly_contigs_file => $self->assembly_contigs_file,
         create_assembly_model => $self->create_assembly_model, 
         start_assembly_build => $self->start_assembly_build,
         assembly_processing_profile_name => $self->assembly_processing_profile_name,
-        repeat_library => $self->repeat_library,
         snap_models => $self->snap_models,
         fgenesh_model => $self->fgenesh_model,
     );
+    $params{repeat_library} = $self->repeat_library if $self->repeat_library;
+    return %params;
 }
 
 1;

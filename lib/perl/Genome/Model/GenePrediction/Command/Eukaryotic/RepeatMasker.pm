@@ -168,7 +168,7 @@ sub _generate_params {
 
     $params{'dir'} = $self->temp_working_directory;
 
-    if ($self->repeat_library) {
+    if ($self->repeat_library and $self->repeat_library ne '') {
         $params{'lib'} = $self->repeat_library;
     }
     if ($self->species) {
@@ -361,14 +361,14 @@ sub _check_input_fasta {
 
 sub _validate_species_and_library {
     my $self = shift;
-    if (not defined $self->repeat_library and not defined $self->species) {
+    if ((not defined $self->repeat_library or $self->repeat_library eq '') and not defined $self->species) {
         confess "Either repeat library or species must be defined!";
     }
-    elsif (defined $self->repeat_library and defined $self->species) {
+    elsif ((defined $self->repeat_library and $self->repeat_library ne '') and defined $self->species) {
         $self->warning_message("Both repeat library and species are specified, choosing repeat library!");
     }
 
-    if (defined $self->repeat_library) {
+    if (defined $self->repeat_library and $self->repeat_library ne '') {
         my $rv = eval { Genome::Sys->validate_file_for_reading($self->repeat_library) };
         if ($@ or not $rv) {
             confess "Could not validate repeat library " . $self->repeat_library . " for reading!";
