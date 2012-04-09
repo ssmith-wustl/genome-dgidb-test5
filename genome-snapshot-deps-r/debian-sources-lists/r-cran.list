@@ -1,0 +1,4 @@
+# R cran repository
+deb http://cran.wustl.edu/bin/linux/ubuntu lucid/
+deb-src http://cran.wustl.edu/bin/linux/ubuntu lucid/
+

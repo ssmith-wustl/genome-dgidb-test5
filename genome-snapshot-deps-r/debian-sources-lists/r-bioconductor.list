@@ -1,0 +1,3 @@
+deb http://bioinformatics.rri.sari.ac.uk/cran2deb/rep testing main
+deb-src http://bioinformatics.rri.sari.ac.uk/cran2deb/rep testing main
+
