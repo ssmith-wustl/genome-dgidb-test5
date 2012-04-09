@@ -1,3 +1,24 @@
+genome-snapshot-deps-r (2012.04.09-4) unstable; urgency=low
+
+  * changed: r-bioc-dnacopy to r-bioc-dnacopy (>= 1.24.0-1cran1)
+  * changed: r-bioc-gcrma to r-bioc-gcrma (>= 2.22.0-1cran1)
+  * changed: r-bioc-genefilter to r-bioc-genefilter (>= 1.32.0-1cran1)
+  * changed: r-bioc-methylumi to r-bioc-methylumi (>= 1.6.1-1cran1)
+  * changed: r-bioc-preprocesscore to r-bioc-preprocesscore (>= 1.12.0-1cran1)
+  * changed: r-cran-domc to r-cran-domc (>= 1.2.0-2)
+  * changed: r-cran-foreach to r-cran-foreach (>= 1.3.0-2)
+  * changed: r-cran-fpc to r-cran-fpc (>= 2.0-3)
+  * changed: r-cran-ggplot2 to r-cran-ggplot2 (>= 0.8.9-1cran1)
+  * changed: r-cran-mixtools to r-cran-mixtools (>= 0.4.5-1)
+  * changed: r-cran-multicore to r-cran-multicore (>= 0.1-3-2)
+  * changed: r-cran-plotrix to r-cran-plotrix (>= 3.1-1cran1)
+  * changed: r-cran-rcolorbrewer to r-cran-rcolorbrewer (>= 1.0-2-2)
+  * changed: r-cran-scatterplot3d to r-cran-scatterplot3d (>= 0.3-31-1cran1)
+  * added: r-base-core (>= 2.15.0-1lucid0)
+  * added: r-cran-proto (>= 0.3-9.2)
+
+ -- The Genome Institute <gmt@genome.wustl.edu>  Mon, 09 Apr 2012 18:52:55 -0500
+
 genome-snapshot-deps-r (2012.04.09-3) unstable; urgency=low
 
   * Test rebuild. 
