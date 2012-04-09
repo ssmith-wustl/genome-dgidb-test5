@@ -1,3 +1,10 @@
+genome-snapshot-deps (2012.04.09-1) unstable; urgency=low
+
+  * changed: genome-snapshot-deps-perl to genome-snapshot-deps-perl (>= 2012.04.09-1)
+  * changed: Description: This meta-package installs all dependencies of t to Description: This meta-package installs all dependencies of t
+
+ -- The Genome Institute <gmt@genome.wustl.edu>  Mon, 09 Apr 2012 10:47:06 -0500
+
 genome-snapshot-deps (2012.03.29-1) unstable; urgency=low
 
   * Initial package to represent all requirements to run the genome.git
