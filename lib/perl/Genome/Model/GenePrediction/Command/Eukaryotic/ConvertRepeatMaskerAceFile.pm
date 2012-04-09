@@ -55,14 +55,17 @@ sub execute {
 
     unless (-e $self->ace_file) {
         $self->status_message("Found no ace file at " . $self->ace_file . ", cannot convert!");
+        $self->converted_ace_file($self->ace_file);
         return 1;
     }
     unless (-e $self->gff_file) {
         $self->status_message("Found no gff file at " . $self->gff_File . ", cannot convert!");
+        $self->converted_ace_file($self->ace_file);
         return 1;
     }
     unless (-e $self->fasta_file) {
-        $self->status_message("Found no repeat masked fasta file at " . $self->fasta_file . ", cannot conver!");
+        $self->status_message("Found no repeat masked fasta file at " . $self->fasta_file . ", cannot convert!");
+        $self->converted_ace_file($self->ace_file);
         return 1;
     }
 
