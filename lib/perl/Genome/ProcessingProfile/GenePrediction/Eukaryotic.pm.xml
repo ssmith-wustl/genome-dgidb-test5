@@ -12,6 +12,8 @@
     <link fromOperation="input connector"          fromProperty="domain"                            toOperation="contig_predict_genes"     toProperty="domain" />
     <link fromOperation="input connector"          fromProperty="raw_output_directory"              toOperation="contig_predict_genes"     toProperty="raw_output_directory" />
     <link fromOperation="input connector"          fromProperty="repeat_library"                    toOperation="contig_predict_genes"     toProperty="repeat_library" />
+    <link fromOperation="input connector"          fromProperty="maximum_percent_masked"            toOperation="contig_predict_genes"     toProperty="maximum_percent_masked" />
+    <link fromOperation="input connector"          fromProperty="exclude_overly_masked"             toOperation="contig_predict_genes"     toProperty="exclude_overly_masked" />
     <link fromOperation="input connector"          fromProperty="xsmall"                            toOperation="contig_predict_genes"     toProperty="xsmall" />
     <link fromOperation="input connector"          fromProperty="snap_models"                       toOperation="contig_predict_genes"     toProperty="snap_models" />
     <link fromOperation="input connector"          fromProperty="fgenesh_model"                     toOperation="contig_predict_genes"     toProperty="fgenesh_model" />
@@ -97,6 +99,8 @@
         <link fromOperation="input connector"           fromProperty="xsmall"                       toOperation="repeat_masker"             toProperty="xsmall" />
         <link fromOperation="input connector"           fromProperty="repeat_library"               toOperation="repeat_masker"             toProperty="repeat_library" />
         <link fromOperation="input connector"           fromProperty="skip_repeat_masker"           toOperation="repeat_masker"             toProperty="skip_masking" />
+        <link fromOperation="input connector"           fromProperty="exclude_overly_masked"        toOperation="repeat_masker"             toProperty="exclude_overly_masked" />
+        <link fromOperation="input connector"           fromProperty="maximum_percent_masked"       toOperation="repeat_masker"             toProperty="maximum_percent_masked" />
 
         <link fromOperation="input connector"           fromProperty="fasta_file"                   toOperation="convert_repeat_masker_ace" toProperty="fasta_file" />
         <link fromOperation="repeat_masker"             fromProperty="ace_file_location"            toOperation="convert_repeat_masker_ace" toProperty="ace_file" />
@@ -213,6 +217,8 @@
 
         <operationtype typeClass="Workflow::OperationType::Model">
             <inputproperty>skip_repeat_masker</inputproperty>
+            <inputproperty>exclude_overly_masked</inputproperty>
+            <inputproperty>maximum_percent_masked</inputproperty>
             <inputproperty>rnammer_version</inputproperty>
             <inputproperty>rfamscan_version</inputproperty>
             <inputproperty>snap_version</inputproperty>
@@ -254,6 +260,8 @@
         <inputproperty>snap_version</inputproperty>
         <inputproperty>skip_masking_if_no_rna</inputproperty>
         <inputproperty>repeat_library</inputproperty>
+        <inputproperty>exclude_overly_masked</inputproperty>
+        <inputproperty>maximum_percent_masked</inputproperty>
         <inputproperty>xsmall</inputproperty>
         <inputproperty>domain</inputproperty>
         <inputproperty>contig_fasta</inputproperty>
