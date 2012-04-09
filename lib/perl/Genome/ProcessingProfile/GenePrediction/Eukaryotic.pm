@@ -59,6 +59,18 @@ class Genome::ProcessingProfile::GenePrediction::Eukaryotic {
             default => 0,
             doc => 'If set, the repeat masker step is skipped',
         },
+        exclude_overly_masked => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 1,
+            doc => 'If set, sequences that have N content greater than maximum_percent_masked are not included in masked fasta file',
+        },
+        maximum_percent_masked => {
+            is => 'Number',
+            is_optional => 1,
+            default => 80,
+            doc => 'If exclude_overly_masked is set, sequences with N percentage greater than this value are excluded from output file',
+        },
         skip_rnammer => {
             is => 'Boolean',
             is_optional => 1,
@@ -108,6 +120,14 @@ sub _resolve_type_name_for_class {
     return "gene prediction";
 }
 
+sub help_detail_for_create {
+    return "create a eukaryotic gene prediction processing profile";
+}
+
+sub help_synopsis_for_create {
+    return "create a eukaryotic gene prediction processing profile";
+}
+
 sub _resolve_workflow_for_build { 
     my ($self, $build) = @_;
 
@@ -148,6 +168,8 @@ sub _map_workflow_inputs {
         raw_output_directory => $build->raw_output_directory,
         prediction_directory => $build->prediction_directory,
         skip_repeat_masker => $self->skip_repeat_masker,
+        exclude_overly_masked => $self->exclude_overly_masked,
+        maximum_percent_masked => $self->maximum_percent_masked,
         repeat_masker_ace_file => $build->repeat_masker_ace_file,
         repeat_masker_gff_file => $build->repeat_masker_gff_file,
         remove_merged_files => 1, # Don't want to keep the small unmerged files, they're 
