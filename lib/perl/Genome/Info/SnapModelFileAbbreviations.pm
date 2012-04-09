@@ -24,7 +24,7 @@ my %model_files = (
 	'Acaninum.9.3.2.cgv2.hmm'	=>	'sn_accg932v2',
 	'Acaninum.9.3.2.mkv2.hmm'	=>	'sn_acmk932v2',
 	'D_viviparus_9.3.1.ec.cgmkv2.hmm'	=> 'sn_dv931cgmkv2',
-	'D_viviparus_9.3.1.ec.mkv2.hmm '	=> 'sn_dv931mkv2',
+	'D_viviparus_9.3.1.ec.mkv2.hmm'	=> 'sn_dv931mkv2',
 );
 
 sub abbreviation_for_model_file {
