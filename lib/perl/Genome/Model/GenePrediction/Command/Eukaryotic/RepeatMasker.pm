@@ -101,10 +101,15 @@ class Genome::Model::GenePrediction::Command::Eukaryotic::RepeatMasker {
             default => 0,
             doc => 'If set, masking is skipped',
         },
+        exclude_overly_masked => {
+            is => 'Boolean',
+            is_input => 1,
+            default => 0,
+            doc => 'If set, sequences with N content greater than maximum_percent_masked are excluded from output fasta',
+        },
         maximum_percent_masked => {
             is => 'Number',
             is_input => 1,
-            default => 80,
             doc => 'Sequences with an N content greater than this are omitted. Value is a percent',
         },
     ], 
@@ -260,7 +265,7 @@ sub _move_files_from_working_directory {
         Genome::Sys->copy_file($output_file, $self->$property);
 
         # Filter out sequences from fasta file that are more than X% masked
-        if ($property eq 'masked_fasta' and defined $self->maximum_percent_masked and -e $self->$property) {
+        if ($property eq 'masked_fasta' and -e $self->$property) {
             $self->_filter_masked_sequences_from_fasta_file;
         };
     }
@@ -278,7 +283,9 @@ sub _move_files_from_working_directory {
 # is whatever maximum_percent_masked was set to. 
 sub _filter_masked_sequences_from_fasta_file {
     my $self = shift;
+    return 1 unless $self->exclude_overly_masked;
     my $max_percent = $self->maximum_percent_masked;
+    return 1 unless defined $max_percent;
 
     my $temp_file_fh = File::Temp->new();
     my $temp_file = $temp_file_fh->filename;
