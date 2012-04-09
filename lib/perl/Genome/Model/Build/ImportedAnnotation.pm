@@ -415,12 +415,11 @@ sub generate_transcript_info_file {
             species => $species_name,
             use_version => $version,
         );
-        my $transcript_info = Genome::Model::Tools::Ensembl::TranscriptInfo->create(%params);
-        unless ($transcript_info) {
-            die('Failed to load transcript info gmt command with params: '. Data::Dumper::Dumper(%params));
-        }
-        unless ($transcript_info->execute) {
-            die('Failed to execute gmt command: '. $transcript_info->command_name);
+
+        my $command = "gmt ensembl transcript-info --reference-build $reference_sequence_id --transcript-info-file $file_name --species $species_name --use-version $version";
+
+        unless($self->prepend_api_path_and_execute(cmd => $command)){
+            die('Failed to execute gmt command: '. $command);
         }
         unless (-e $file_name) {
             die('The gmt command ran but the file does not exist: '. $file_name);
