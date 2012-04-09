@@ -85,15 +85,6 @@ sub api_version {
     return $self->_api_version;
 }
 
-sub api_path {
-    my $self = shift;
-    my $api_path = '/gsc/scripts/share/ensembl-'.$self->api_version .'/ensembl/modules';
-    unless (-e $api_path) {
-        die('Failed to find API path for version: '. $api_path);
-    }
-    return $api_path;
-}
-
 sub create_dbh {
     my $self = shift;
     my $dbi_string = 'dbi:mysql:database='.$self->database .';host='.$self->hostname;
@@ -151,9 +142,7 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     unless ($self) { return; }
-    my $api_path = $self->api_path;
     my $bioperl_path = '/gsc/lib/perl5/bioperl/1.6.0/lib/perl5/';
-    unshift(@INC, $api_path);
     unshift(@INC, $bioperl_path);
     require Bio::EnsEMBL::DBSQL::DBAdaptor;
 
