@@ -33,6 +33,9 @@ chomp @lines;
 my $list = join(",\n", map { '    ' . $_ } grep { /\S/ } @lines);
 
 # re-construct the debian/control file content
+unless (-e "$dir-control-template") {
+    die "Failed to find $dir-control-template from which to rebuild the control file.  See similar projects for an example."
+}
 my $template = join('',IO::File->new("$dir-control-template")->getlines);
 my $new_content = eval '"' . $template . '"';
 if ($@) {
