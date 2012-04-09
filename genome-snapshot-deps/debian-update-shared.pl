@@ -175,6 +175,7 @@ if (-e $parent_path) {
             }
             else {
                 print "updating from $old_version to $new_version\n";
+                $dep =~ s/$old_version/$new_version/;
             }
         }
         else {
