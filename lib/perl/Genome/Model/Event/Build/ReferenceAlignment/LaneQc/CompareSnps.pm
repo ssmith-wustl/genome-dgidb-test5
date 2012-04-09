@@ -82,7 +82,9 @@ sub resolve_geno_path_for_build {
     if ($build->region_of_interest_set_name) {
         my $output_dir = $build->qc_directory;
 
-        my $roi_bed_path = $build->region_of_interest_set_bed_file;
+        my $feature_list = Genome::FeatureList->get(name => $build->region_of_interest_set_name);
+        # This cleans up the FeatureList, e.g. removes chr prefix.
+        my $roi_bed_path = $feature_list->processed_bed_file(short_name => 0);
 
         # Convert original gold2geno file into a BED for easy intersection with FeatureList
         my $gold2geno_bed_path = UR::Value::FilePath->get("$output_dir/genotype.gold2geno.bed");
