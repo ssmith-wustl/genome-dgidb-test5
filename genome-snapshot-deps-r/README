@@ -1,6 +1,8 @@
-Setting up a working R environment.
+** Setting up a working R environment. **
 
-We want to pull R packages from two main APT repositories, CRAN and Bioconductor.  The following apt list files represent those repositories.  Note that the deb-src lines are only required to apt-get source for development, not for runtime locations.
+We want to pull R packages from two main APT repositories: CRAN and Bioconductor.  In addition, where there are broken packages in those repos, we repair them and put them in the TGI repo.  
+
+The following apt list files represent those repositories.  Note that the deb-src lines are only required to apt-get source for development, not for runtime locations.
 
 - CRAN
 
@@ -28,10 +30,17 @@ gpg --keyserver keyserver.ubuntu.com --recv 545DE9BCD912350D
 gpg --export --armor D912350D > D912350D.asc
 sudo apt-key add D912350D.asc
 
+- TGI
+
+You automatically have these inside the institute, and have them outside if you connect to apt.genome.wustl.edu.
+
+
+
 Now that you have the repositories set up you can:
 
 sudo apt-get update
 sudo apt-get install r-base
+
 
 From time to time we've seen that some packages on CRAN install properly, but fail at runtime because the module was built with an older R interpreter than is available.  For example:
 
@@ -43,6 +52,15 @@ apt-get source r-cran-xtable # Sometimes you have to hunt for the right package 
 cd r-cran-xtable-1.5.5
 dpkg-buildpackage
 cd ..
-cp r-cran-xtable-1.5.5-1_all.deb $USER@$WORKSTATION # transfer the deb to your workstation
+cp r-cran-xtable-1.5.5-1_all.deb $USER@$WORKSTATION # transfer the deb to your workstation if you are not on your workstation
 
 Then publish the deb to TGI apt repository and install in your runtime.  This should make your error go away.
+
+
+If you find that the package you want fails with a namespace error:
+
+1. Do the same thing as above, but add a NAMESPACE file.
+2. Use the one in the r-cran-proto package as an example.
+3. Make a git repository under vendor/ for it.
+4. Commit your changes there so we can track it.
+
