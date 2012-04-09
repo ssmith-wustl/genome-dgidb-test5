@@ -8,7 +8,6 @@ Standards-Version: 3.8.3
 
 Package: genome-snapshot-deps-perl
 Architecture: all
-Provides: genome
 Depends: ${misc:Depends}, ${perl:Depends}, 
     bioperl (>= 1.6.1-1ubuntu1),
     bioperl-run (>= 1.6.1-1),
@@ -232,4 +231,4 @@ Depends: ${misc:Depends}, ${perl:Depends},
     perl-suid (>= 5.10.1-8ubuntu2.1),
     perl-tk (>= 1:804.028-6),
     proj-data (>= 4.7.0-1)
-Description: This meta-package installs all dependencies of the current internal TGI Genome Modeling System software snapshot.
+Description: This meta-package installs all external Perl dependencies of the current internal TGI Genome Modeling System software snapshot.

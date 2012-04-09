@@ -1,3 +1,9 @@
+genome-snapshot-deps (2012.04.09-2) unstable; urgency=low
+
+  * changed: genome-snapshot-deps-perl (>= 2012.04.09-1) to genome-snapshot-deps-perl (>= 2012.04.09-3)
+
+ -- The Genome Institute <gmt@genome.wustl.edu>  Mon, 09 Apr 2012 17:45:57 -0500
+
 genome-snapshot-deps (2012.04.09-1) unstable; urgency=low
 
   * changed: genome-snapshot-deps-perl to genome-snapshot-deps-perl (>= 2012.04.09-1)
