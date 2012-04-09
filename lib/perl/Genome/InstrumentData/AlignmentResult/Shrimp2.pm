@@ -39,7 +39,7 @@ sub _run_aligner {
     $self->static_params('-E');
     if ( @inputs == 2 ) {
         unless ( $aligner_params =~ /-p/ ){
-            my ($lower,$upper) = $self->_derive_insert_size_bounds;
+            my ($lower,$upper) = $self->_derive_insert_size_bounds(600, 50);
             $self->static_params($self->static_params . " -p opp-in -I $lower,$upper");
         }
         $input_path = $self->merge_pairs(@inputs);
@@ -95,26 +95,6 @@ sub fastq_to_fasta {
     $fasta_fh->close();
     $fastq_fh->close();
     return $output;
-}
-
-# note: this may be completely wrong. fix later!
-sub _derive_insert_size_bounds {
-    my $self = shift;
-    my $median = $self->instrument_data->median_insert_size;
-    my $stddev = $self->instrument_data->sd_above_insert_size;
-    #my $readlen = $self->instrument_data->read_length;
-    my $upper = $median + $stddev*5;
-    my $lower = $median - $stddev*5;
-    if ( $upper <= 0 ) {
-        $self->status_message("Calculated upper bound on insert size is invalid ($upper), defaulting to 600");
-        $upper = 600;
-    }
-    if ( not $median || $lower < 0 || $lower > $upper ) {
-        # alternative default = read_length + rev_read_length
-        $self->status_message("Calculated lower bound on insert size is invalid ($lower), defaulting to 50");
-        $lower = 50;
-    }
-    return ($lower,$upper);
 }
 
 sub merge_pairs {

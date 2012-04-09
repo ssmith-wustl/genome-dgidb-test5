@@ -93,9 +93,12 @@ sub results_class {
 }
 
 sub _fallback_lsf_resource {
-    my $tmp_mb = 90000;
-    my $mem_mb = 1024 * 14; # increased b/c we have about 16 GB available when 6 jobs run on a 96 Gb server
-    my $cpus = 4;
+    #my $tmp_mb = 90000;
+    my $tmp_mb = 90;
+    #my $mem_mb = 1024 * 14; # increased b/c we have about 16 GB available when 6 jobs run on a 96 Gb server
+    my $mem_mb = 1024 * 0.25; # increased b/c we have about 16 GB available when 6 jobs run on a 96 Gb server
+    #my $cpus = 4;
+    my $cpus = 1;
 
     my $mem_kb = $mem_mb*1024;
     my $tmp_gb = $tmp_mb/1024;
@@ -105,7 +108,9 @@ sub _fallback_lsf_resource {
     $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
 
     my $host_groups;
-    $host_groups = qx(bqueues -l $queue | grep ^HOSTS:);
+    my $command = qq(bqueues -l $queue | grep ^HOSTS:);
+    warn "command $command";
+    $host_groups = qx($command);
     $host_groups =~ s/\/\s+/\ /;
     $host_groups =~ s/^HOSTS:\s+//;
 
@@ -119,7 +124,10 @@ sub _fallback_lsf_resource {
     #factor of four is based on current six jobs per host policy this should be revisited later
     my $select_check = "select[ncpus >= $cpus && maxmem >= " . ($mem_mb * 4) . " && gtmp >= $tmp_gb] span[hosts=1]";
 
-    my @selected_blades = `bhosts -R '$select_check' $host_groups | grep ^blade`;
+    #$command = qq(bhosts -R '$select_check' $host_groups | grep ^blade);
+    $command = qq(bhosts -R '$select_check' $host_groups );
+    warn "command $command";
+    my @selected_blades = qx($command);
 
     if (@selected_blades) {
         return $required_usage;

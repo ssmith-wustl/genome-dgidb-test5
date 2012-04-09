@@ -1,7 +1,6 @@
 package Genome::InstrumentData::AlignmentResult;
 
 use Genome;
-use Genome::Info::BamFlagstat;
 use Sys::Hostname;
 use IO::File;
 use File::Path;
@@ -572,11 +571,7 @@ sub prepare_scratch_sam_file {
         while (my $line = <$temp_fh>) {
             $self->_sam_output_fh->print($line);
         }
-
-
     }
-
-
     return 1;
 }
 
@@ -595,7 +590,6 @@ sub requires_fastqs_to_align {
 
     # obviously we need fastq if we don't have a bam
     return 1 unless (defined $self->instrument_data->bam_path && -e $self->instrument_data->bam_path);
-
 
     return 0;
 }
@@ -743,7 +737,6 @@ sub collect_inputs_and_run_aligner {
     # STEP 8: RUN THE ALIGNER, APPEND TO all_sequences.sam IN SCRATCH DIRECTORY
     my $fastq_rd_ct = 0;
 
-
     if ($self->requires_fastqs_to_align) {
 
         for my $pass (@passes) {
@@ -768,7 +761,6 @@ sub collect_inputs_and_run_aligner {
         $self->error_message("Failed to get a read count before aligning.");
         return;
     }
-
 
     for my $pass (@passes) {
         $self->status_message("Aligning @$pass...");
@@ -808,7 +800,6 @@ sub collect_inputs_and_run_aligner {
 
 sub determine_input_read_count_from_bam {
     my $self = shift;
-
 
     my $bam_file = $self->_extracted_bam_path || $self->instrument_data->bam_path;
     my $output_file = $self->temp_scratch_directory . "/input_bam.flagstat";
@@ -987,6 +978,13 @@ sub _compute_alignment_metrics {
         $self->warning_message('Given picard version: '.$self->picard_version.' not compatible to CollectMultipleMetrics. Use default: '.$picard_version);
     }
 
+    my $prog_list  = 'CollectAlignmentSummaryMetrics';
+    my $instr_data = $self->instrument_data;
+
+    if ($instr_data->is_paired_end) { #No way to collect insert_size info from single-ended instrument data using picard
+        $prog_list .= ',CollectInsertSizeMetrics';
+    }
+
     my $cmd = Genome::Model::Tools::Picard::CollectMultipleMetrics->create(
         input_file         => $bam,
         output_basename    => $out_base,
@@ -1002,45 +1000,63 @@ sub _compute_alignment_metrics {
     my $align_metrics_file = $out_base.'.alignment_summary_metrics';
     my $align_data = Genome::Model::Tools::Picard::CollectAlignmentSummaryMetrics->parse_file_into_metrics_hashref($align_metrics_file);
 
-    my ($r1_pct_aligned, $r2_pct_aligned, $r1_mismatch, $r2_mismatch);
+    if ($instr_data->is_paired_end) {
+        my ($r1_pct_aligned, $r2_pct_aligned, $r1_mismatch, $r2_mismatch);
 
-    if ($align_data->{FIRST_OF_PAIR}) {
-        $r1_pct_aligned = sprintf("%.2f", $align_data->{FIRST_OF_PAIR}->{PCT_PF_READS_ALIGNED} * 100);
-        $r1_mismatch    = sprintf("%.2f", $align_data->{FIRST_OF_PAIR}->{PF_MISMATCH_RATE} * 100);
-    }
-    else {
-        $self->warning_message("Failed to parse read_1_pct_aligned and read_1_pct_mismatch from $align_metrics_file");
-        ($r1_pct_aligned, $r1_mismatch) = (0, 0);
-    }
-
-    if ($align_data->{SECOND_OF_PAIR}) {
-        $r2_pct_aligned = sprintf("%.2f", $align_data->{SECOND_OF_PAIR}->{PCT_PF_READS_ALIGNED} * 100);
-        $r2_mismatch    = sprintf("%.2f", $align_data->{SECOND_OF_PAIR}->{PF_MISMATCH_RATE} * 100);
-    }
-    else {
-        $self->warning_message("Failed to parse read_2_pct_aligned and read_2_pct_mismatch from $align_metrics_file");
-        ($r2_pct_aligned, $r2_mismatch) = (0, 0);
-    }
-    $self->read_1_pct_aligned($r1_pct_aligned);
-    $self->read_2_pct_aligned($r2_pct_aligned);
-    $self->read_1_pct_mismatch($r1_mismatch);
-    $self->read_2_pct_mismatch($r2_mismatch);
-
-    my $is_metrics_file = $out_base.'.insert_size_metrics';
-
-    if (-s $is_metrics_file) { #sometimes (like unit tests) the insert_size_metrics will not be generated because < 0.01 of the total aligned paired data
-        my $is_data = Genome::Model::Tools::Picard::CollectInsertSizeMetrics->parse_file_into_metrics_hashref($is_metrics_file);
-
-        if ($is_data->{FR}) {
-            $self->median_insert_size($is_data->{FR}->{MEDIAN_INSERT_SIZE});
-            $self->sd_insert_size($is_data->{FR}->{STANDARD_DEVIATION});
-            return 1;
+        if ($align_data->{FIRST_OF_PAIR}) {
+            $r1_pct_aligned = sprintf("%.2f", $align_data->{FIRST_OF_PAIR}->{PCT_PF_READS_ALIGNED} * 100);
+            $r1_mismatch    = sprintf("%.2f", $align_data->{FIRST_OF_PAIR}->{PF_MISMATCH_RATE} * 100);
         }
+        else {
+            $self->warning_message("Failed to parse read_1_pct_aligned and read_1_pct_mismatch from $align_metrics_file");
+            ($r1_pct_aligned, $r1_mismatch) = (0, 0);
+        }
+
+        if ($align_data->{SECOND_OF_PAIR}) {
+            $r2_pct_aligned = sprintf("%.2f", $align_data->{SECOND_OF_PAIR}->{PCT_PF_READS_ALIGNED} * 100);
+            $r2_mismatch    = sprintf("%.2f", $align_data->{SECOND_OF_PAIR}->{PF_MISMATCH_RATE} * 100);
+        }
+        else {
+            $self->warning_message("Failed to parse read_2_pct_aligned and read_2_pct_mismatch from $align_metrics_file");
+            ($r2_pct_aligned, $r2_mismatch) = (0, 0);
+        }
+        $self->read_1_pct_aligned($r1_pct_aligned);
+        $self->read_2_pct_aligned($r2_pct_aligned);
+        $self->read_1_pct_mismatch($r1_mismatch);
+        $self->read_2_pct_mismatch($r2_mismatch);
     }
-    
-    $self->warning_message("Failed to parse median_insert_size and sd_insert_size from $is_metrics_file");
-    $self->median_insert_size(0);
-    $self->sd_insert_size(0);
+    else { #Only one set of alignment metrics for single_end instrument data
+        my ($r1_pct_aligned, $r1_mismatch);
+
+        if ($align_data->{UNPAIRED}) {
+            $r1_pct_aligned = sprintf("%.2f", $align_data->{UNPAIRED}->{PCT_PF_READS_ALIGNED} * 100);
+            $r1_mismatch    = sprintf("%.2f", $align_data->{UNPAIRED}->{PF_MISMATCH_RATE} * 100);
+        }
+        else {
+            $self->warning_message("Failed to parse single_end pct_pf_reads_aligned and pf_mismatch_rate from $align_metrics_file");
+            ($r1_pct_aligned, $r1_mismatch) = (0, 0);
+        }
+        $self->read_1_pct_aligned($r1_pct_aligned);
+        $self->read_1_pct_mismatch($r1_mismatch);
+    }
+
+    if ($instr_data->is_paired_end) {
+        my $is_metrics_file = $out_base.'.insert_size_metrics';
+
+        if (-s $is_metrics_file) { #sometimes (like unit tests) the insert_size_metrics will not be generated because < 0.01 of the total aligned paired data
+            my $is_data = Genome::Model::Tools::Picard::CollectInsertSizeMetrics->parse_file_into_metrics_hashref($is_metrics_file);
+
+            if ($is_data->{FR}) {
+                $self->median_insert_size($is_data->{FR}->{MEDIAN_INSERT_SIZE});
+                $self->sd_insert_size($is_data->{FR}->{STANDARD_DEVIATION});
+                return 1;
+            }
+        }
+
+        $self->warning_message("Failed to parse median_insert_size and sd_insert_size from $is_metrics_file");
+        $self->median_insert_size(0);
+        $self->sd_insert_size(0);
+    }
 
     return 1;
 }
@@ -1215,7 +1231,6 @@ sub _promote_validated_data {
 
 sub _process_sam_files {
     my $self = shift;
-
     my $groups_input_file;
 
     # if a bam file is already staged at the end of _run_aligner, trust it to be correct.
@@ -1324,9 +1339,7 @@ sub _process_sam_files {
     }
 
     $self->status_message("Conversion successful.  File is: $per_lane_bam_file");
-
     return 1;
-
 }
 
 
@@ -1423,7 +1436,6 @@ sub resolve_allocation_disk_group_name {
 
 sub _extract_input_fastq_filenames {
     my $self = shift;
-
     my $instrument_data = $self->instrument_data;
 
     my %segment_params;
@@ -1501,8 +1513,6 @@ sub _extract_input_fastq_filenames {
             Genome::Sys->copy_file($report_file, $staged_path);
             unlink($report_file);
         }
-
-
         $self->_input_fastq_pathnames(\@input_fastq_pathnames);
     }
     return @input_fastq_pathnames;
@@ -1558,13 +1568,6 @@ sub _prepare_reference_sequences {
         die $self->error_message;
     }
 
-    #my $reference_fasta_index_path = $reference_fasta_path . ".fai";
-
-    #unless(-e $reference_fasta_index_path) {
-    #    $self->error_message("Alignment reference index path $reference_fasta_index_path does not exist. Use 'samtools faidx' to create this");
-    #    die $self->error_message;
-    #}
-
     return 1;
 }
 
@@ -1589,23 +1592,22 @@ sub get_or_create_sequence_dictionary {
 }
 
 sub construct_groups_file {
-
     my $self = shift;
     my $output_file = shift || $self->temp_scratch_directory . "/groups.sam";
 
-
     my $aligner_command_line = $self->aligner_params_for_sam_header;
+    my $instr_data = $self->instrument_data;
 
     my $insert_size_for_header;
-    if ($self->instrument_data->can('median_insert_size') && $self->instrument_data->median_insert_size) {
-        $insert_size_for_header= $self->instrument_data->median_insert_size;
+    if ($instr_data->can('resolve_median_insert_size') && $instr_data->resolve_median_insert_size) {
+        $insert_size_for_header= $instr_data->resolve_median_insert_size;
     }
     else {
         $insert_size_for_header = 0;
     }
 
     my $description_for_header;
-    if ($self->instrument_data->is_paired_end) {
+    if ($instr_data->is_paired_end) {
         $description_for_header = 'paired end';
     }
     else {
@@ -1614,15 +1616,15 @@ sub construct_groups_file {
 
 
     # build the header
-    my $id_tag = $self->read_and_platform_group_tag_id;
-    my $pu_tag = sprintf("%s.%s",$self->instrument_data->run_identifier,$self->instrument_data->subset_name);
-    my $lib_tag = $self->instrument_data->library_name;
-    my $date_run_tag = $self->instrument_data->run_start_date_formatted;
-    my $sample_tag = $self->instrument_data->sample_name;
+    my $id_tag       = $self->read_and_platform_group_tag_id;
+    my $pu_tag       = sprintf("%s.%s", $instr_data->run_identifier, $instr_data->subset_name);
+    my $lib_tag      = $instr_data->library_name;
+    my $date_run_tag = $instr_data->run_start_date_formatted;
+    my $sample_tag   = $instr_data->sample_name;
     my $aligner_version_tag = $self->aligner_version;
-    my $aligner_cmd =  $aligner_command_line;
+    my $aligner_cmd  =  $aligner_command_line;
 
-    my $platform = $self->instrument_data->sequencing_platform;
+    my $platform = $instr_data->sequencing_platform;
     $platform = ($platform eq 'solexa' ? 'illumina' : $platform);
 
     #@RG     ID:2723755796   PL:illumina     PU:30945.1      LB:H_GP-0124n-lib1      PI:0    DS:paired end   DT:2008-10-03   SM:H_GP-0124n   CN:WUGSC
@@ -1707,6 +1709,32 @@ sub get_reference_sequence_index {
 # this behavior was in the alignment class earlier and was set as changeable in SoftwareResult::Stageable.
 sub _needs_symlinks_followed_when_syncing {
     1;
+}
+
+
+# note: this may be completely wrong. fix later!
+sub _derive_insert_size_bounds {
+    my ($self, $up_default, $low_default) = @_;
+
+    my $median = $self->instrument_data->resolve_median_insert_size;
+    my $stddev = $self->instrument_data->resolve_sd_insert_size;
+
+    my ($upper, $lower);
+    
+    if (defined $median && defined $stddev) {
+        $upper = $median + $stddev*5;
+        $lower = $median - $stddev*5;
+    }
+    
+    if (!defined $upper || $upper <= 0) {
+        $self->status_message("Calculated upper bound on insert size is undef or less than 0, defaulting to $up_default");
+        $upper = $up_default;
+    }
+    if (!defined $lower || not $median || $lower < 0 || $lower > $upper) {
+        $self->status_message("Calculated lower bound on insert size is undef or invalid, defaulting to $low_default");
+        $lower = $low_default;
+    }
+    return ($lower, $upper);
 }
 
 1;

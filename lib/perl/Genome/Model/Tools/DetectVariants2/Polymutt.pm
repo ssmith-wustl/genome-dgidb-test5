@@ -12,8 +12,8 @@ use File::Basename;
 class Genome::Model::Tools::DetectVariants2::Polymutt {
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
     has_param => [
-        lsf_resource => {
-            default => "-q workflow ", #hope that works
+        lsf_queue=> {
+            default => "workflow",
         }
     ],
 };
@@ -90,8 +90,8 @@ sub run_polymutt {
     #i.e. if 10 families reside in one pedfile, and we supply a glfindex for just one of those families, this code is bad
     chomp(my $family_id = `head -n 1 $ped_file | cut -f 1`); 
     #FIXME:
-    $inputs{output_denovo} = $self->output_directory . "/$family_id.denovo.vcf";
-    $inputs{output_standard} = $self->output_directory . "/$family_id.standard.vcf";
+    $inputs{output_denovo} = $self->output_directory . "/snvs.denovo.vcf";
+    $inputs{output_standard} = $self->output_directory . "/snvs.standard.vcf";
     my $workflow = Workflow::Model->create(
         name=> "Run polymutt standard and denov",
         input_properties => [
@@ -294,6 +294,7 @@ sub generate_glfs {
         $self->error_message( join("\n", map($_->name . ': ' . $_->error, @Workflow::Simple::ERROR)) );
         die $self->error_message("parallel glf generation workflow did not return correctly.");
     }
+
     return @outputs;
 }
 

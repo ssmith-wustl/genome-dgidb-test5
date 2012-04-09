@@ -182,8 +182,37 @@ sub prepend_api_path_and_execute {
 
 sub get_or_create_roi_bed {
     my $self = shift;
+    my %params = @_;
+
+    my $name = $self->name.'_roi';
+
+    my $exclude_patterns;
+    my $include_patterns;
+
+    if (%params) {
+        if ($params{excluded_reference_sequence_patterns}) {
+            $exclude_patterns = join("|", @{$params{excluded_reference_sequence_patterns}});
+                $name = join("_", $name, $exclude_patterns);
+                $self->status_message('Excluding features that match the pattern: '.$exclude_patterns);
+            }
+
+            if ($params{included_feature_type_patterns}) {
+                $include_patterns = join("|", @{$params{included_feature_type_patterns}});
+                $name = join("_", $name, $include_patterns);
+                $self->status_message('Including only features that match the pattern: '.$include_patterns);
+            }
+
+            if ($params{condense_feature_name}) {
+                $name = $name."_gene-name-only";
+            }
+
+            if ($params{flank_size} and $params{flank_size} > 0 ) {
+                $name = $name."_".$params{flank_size}."bp-flank";
+            }
+    }
+
     my $roi = Genome::FeatureList->get(subject => $self,
-                                       name => $self->name.'_roi');
+        name => $name);
     if ($roi) {
         return $roi;
     }
@@ -210,10 +239,44 @@ sub get_or_create_roi_bed {
             else {
                 $strand = 'fwd';
             }
-            my $string = join("\t",$chrom, $start, $stop, 
-                            join(":", $gene_id,
-                            $transcript_id, $structure_type, $ordinal,
-                            $strand));
+            my $description = join(":", $gene_id, $transcript_id,
+                $structure_type, $ordinal,
+                $strand);
+
+            my $reference_index = $self->reference_sequence->full_consensus_sam_index_path;
+print "Getting reference index from $reference_index\n";
+`cp $reference_index /gscuser/aregier/reference_index`;
+            my %chrom_stop = map {chomp; split(/\t/)} `cut -f 1,2 $reference_index`;
+
+            if (%params) {
+                if ($params{one_based}) {
+                    $start++;
+                }
+                if ($exclude_patterns) {
+                    if ($chrom =~ /$exclude_patterns/) {
+                        next;
+                    }
+                }
+                if ($include_patterns) {
+                    if (!($structure_type =~ /$include_patterns/)) {
+                        next;
+                    }
+                }
+                if ($params{condense_feature_name}) {
+                    $description = $gene_id;
+                }
+                if ($params{flank_size} and $params{flank_size} > 0) {
+                    if ($start > $chrom_stop{$chrom}) {
+                        next;
+                    }
+                    $start -= $params{flank_size};
+                    $stop += $params{flank_size};
+                    $start = 1 if ($start < 1);
+                    $stop = $chrom_stop{$chrom} if ($stop > $chrom_stop{$chrom});
+                }
+            }
+
+            my $string = join("\t",$chrom, $start, $stop, $description);
             if ($structure_type ne 'flank') {
                 print $out_file "$string\n";
             }
@@ -221,15 +284,29 @@ sub get_or_create_roi_bed {
     }
     close $out_file;
 
-    my $file_content_hash = Genome::Sys->md5sum($out);
+    my $sorted_out = Genome::Sys->create_temp_file_path;
+
+    my $rv = Genome::Model::Tools::Joinx::Sort->execute(input_files => [$out],
+        unique => 1,
+        output_file => $sorted_out );
+
+    my $file_content_hash = Genome::Sys->md5sum($sorted_out);
+
+    my $format;
+    if (%params and $params{one_based}) {
+        $format = '1-based';
+    }
+    else {
+        $format = 'true-BED';
+    }
 
     $roi = Genome::FeatureList->create(
-        name => $self->name.'_roi',
-        format => 'true-BED',
+        name => $name,
+        format => $format,
         file_content_hash => $file_content_hash,
         subject => $self,
         reference => $self->reference_sequence,
-        file_path => $out,
+        file_path => $sorted_out,
         content_type => 'roi',
         description => 'Created by ImportedAnnotation->get_or_create_roi_bed',
         source => 'WUTGI',

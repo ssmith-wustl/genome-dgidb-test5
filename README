@@ -40,8 +40,8 @@ C/C++/Java:
 
 Test Data:
 
-  If it's very small, put it next-to the test case, and use __FILE__ to
-  find the path when running.
+  If it's very small, put it next-to the test case, and use __FILE__ (in the
+  Perl test script) to find the path when running.
 
   If it's big, make a separate project/submodule like above, so it won't 
   bog down the source repo.  We'll package it separately as a dependency.

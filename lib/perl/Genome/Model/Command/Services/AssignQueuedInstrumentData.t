@@ -60,7 +60,6 @@ isa_ok($sample, 'Genome::Sample');
 
 my $ii = Test::MockObject->new();
 
-$ii->set_always('copy_sequence_files_confirmed_successfully', 1);
 $ii->set_always('get_work_orders', ($gsc_workorder));
 no warnings;
 *Genome::InstrumentData::Solexa::index_illumina = sub{ return $ii };
@@ -153,11 +152,6 @@ my $command_1 = Genome::Model::Command::Services::AssignQueuedInstrumentData->cr
 
 isa_ok($command_1, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
 $command_1->dump_status_messages(1);
-
-# Mock copy sequence files pse and its status
-my $copy_sequence_pse = Test::MockObject->new;
-$copy_sequence_pse->mock('pse_status', sub { 'inprogress' });
-$ii->mock('get_copy_sequence_files_pse', sub { $copy_sequence_pse });
 
 ok($command_1->execute(), 'assign-queued-instrument-data executed successfully.');
 

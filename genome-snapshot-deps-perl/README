@@ -1,13 +1,29 @@
-This meta-package represents all externally developed Perl modules required for the snapshot to run.
+This meta-package represents all externally developed Perl modules required for the GMS snapshot to run.
 
-Because UR and Workflow are part of the snapshot, they are not in the dependency list.
+To add or remove *external* Perl modules from the TGI cluster, edit the "ubuntu-lucid-list". 
+It contains the names of all required Perl Debian packages in alphabetical order.
 
-To begin depending on a new Perl module:
-- determine the name of the Debian package (Foo::Bar::Baz is libfoo-bar-baz-perl)
-- install it locally to make sure it works
-- put the name(s) in the "debian-list" file in alphabetical positions
-- commit and push the change
+NOTE: These are the packages which work with /usr/bin/perl.  
+Until the final changes are made to transition to /usr/bin/perl, any modules changed here also require a hardware ticket to install the module for the /gsc/bin/perl 5.8 interpreter.
 
-The apipe-ci server will run debian-update.pl to update the package for the changes, 
-and will push out a new package, along with a new genome-snapshot-deps master package.
+ALSO NOTE: Because UR and Workflow are part of the snapshot, they are not in the dependency list.
+
+Finding the Debian package for a Perl module is pretty easy.  By convention Foo::Bar::Baz will have the Debian package name:
+ libfoo-bar-baz-perl
+
+If you are adding a dependency should make sure that the Debian package for the Perl module in question exists:
+ apt-cache search libfoo-bar-baz-perl
+
+Then attempt to install it on your local machine to try it out:
+ sudo apt-get install libfoo-bar-baz-perl
+
+Then add it to this file, in alphabetical position:
+ ubuntu-lucid-list
+
+This is what the apipe-ci server will do:
+* run ubuntu-lucid-update.pl to update the ubuntu-lucid/ directory
+* rebuild the genome-snapshot-deps-perl package
+* put it into the internal repository
+
+Systems will ensure that, when there is a new deps package available, blades and workstations update themselves.
 

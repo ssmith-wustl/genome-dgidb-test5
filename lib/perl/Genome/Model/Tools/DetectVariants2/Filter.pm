@@ -156,7 +156,7 @@ EOS
 }
 
 sub help_detail {
-    return <<EOS 
+    return <<EOS
 Tools to run variant detector filters with a common API
 EOS
 }
@@ -165,7 +165,7 @@ sub _variant_type { die 'override _variant_type' };
 
 # Take all parameters from the "params" property and store them in individual properties for the class.
 # resolve_class_and_params_for_argv will check for us to make sure all the property names are valid
-sub _process_params { 
+sub _process_params {
     my $self = shift;
 
     if ($self->params) {
@@ -213,7 +213,7 @@ sub shortcut_filter {
     my $self = shift;
     my ($params) = $self->params_for_filter_result;
     my $result = Genome::Model::Tools::DetectVariants2::Result::Filter->get_with_lock(%$params);
-    
+
     #TODO -- remove this monstrosity once this is pushed and filter_results are backfilled with filter_version=>v1
     unless($result) {
         $self->status_message("Could not find filter_result, removing filter_version param and checking again");
@@ -443,7 +443,13 @@ sub _validate_output {
     my ($hq,$lq);
     ($hq) = grep /[svs|snvs|indels]\.hq\.bed/, @files;
     ($lq) = grep /[svs|snvs|indels]\.lq\.bed/, @files;
+
     unless($hq && $lq){
+        # If we have a vcf file, and no hq or lq beds... just return. #TODO this should be cleaned up since more filters will be running on just vcf
+        my $vcf_file = $self->output_directory."/".$self->_variant_type.".vcf.gz";
+        if (-e $vcf_file) {
+            return 1;
+        }
         die $self->error_message("Could not locate either or both hq and lq files");
     }
     unless($self->_check_file_counts) {
@@ -517,7 +523,7 @@ sub _check_file_counts {
 }
 
 sub has_version {
-   
+
     ## No Filter version checking is currently done.
     ## Overloading this in an individual filter module
     ## will enable version checking for that module.
@@ -543,17 +549,21 @@ sub _generate_standard_output {
         unless($lq_detector_file){
             $self->_convert_bed_to_detector($original_detector_file,$lq_bed_output,$lq_detector_output);
         }
-    } 
+    }
     # If there is an hq_detector_file and not an hq_bed_file, generate an hq_bed_file
     elsif ($hq_detector_file && not $hq_bed_file) {
         $self->_create_bed_file($hq_detector_output,$hq_bed_output);
         unless($lq_bed_file){
             $self->_create_bed_file($lq_detector_output,$lq_bed_output);
         }
-    } 
+    }
     # If there is neither an hq_detector_file nor an hq_bed_file, explode
     elsif ((not $hq_detector_file) &&( not $hq_bed_file)) {
-        die $self->error_message("Could not locate output file of any type for this filter.");
+        # ... unless this is a vcf-only situation.
+        my $vcf_file = $self->output_directory."/".$self->_variant_type.".vcf.gz";
+        unless (-e $vcf_file) {
+            die $self->error_message("Could not locate output file of any type for this filter.");
+        }
     }
 
     return 1;
@@ -575,7 +585,7 @@ sub _convert_bed_to_detector {
     my $detector_fh = Genome::Sys->open_file_for_reading($detector_file);
     my $bed_fh = Genome::Sys->open_file_for_reading($bed_file);
 
-    #This cycles through the bed and original detector file, looking for intersecting lines 
+    #This cycles through the bed and original detector file, looking for intersecting lines
     # to dump into the detector style output
 
     my $detector_class = $self->detector_name;
@@ -589,7 +599,7 @@ sub _convert_bed_to_detector {
         my ($chr,$start,$stop,$refvar,@data) = split "\t", $line;
         my ($ref,$var) = split "/", $refvar;
 
-        INNER: while(my $dline = $detector_fh->getline){ 
+        INNER: while(my $dline = $detector_fh->getline){
             chomp $dline;
 
             # some detectors (samtools, sniper) can have more than one indel call per line
@@ -601,7 +611,7 @@ sub _convert_bed_to_detector {
             while (my $parsed_variant = shift @parsed_variants ) {
                 my ($dchr,$dpos,$dref,$dvar) = @{$parsed_variant};
                 if(($chr eq $dchr)&&($stop == $dpos)&&($ref eq $dref)&&($var eq $dvar)){
-                    print $ofh $dline."\n"; 
+                    print $ofh $dline."\n";
 
                     # If we got more than one bed line back for one raw detector line, we only want to print the detector line once. So skip the next bed line and account for this line count difference when we verify output.
                     if (@parsed_variants) {
@@ -609,7 +619,7 @@ sub _convert_bed_to_detector {
                         # There are 2 cases here:
                         # 1) Both bed lines representing the raw detector output passed the filter. But we don't want to count them twice so we skip the next bed line.
                         # 2) One bed line passed and one failed the filter. Therefore we cannot throw away the next bed line because it represents a new variant
-                        $line = $bed_fh->getline; 
+                        $line = $bed_fh->getline;
                         chomp $line;
                         ($chr,$start,$stop,$refvar,@data) = split "\t", $line;
                         ($ref,$var) = split "/", $refvar;
@@ -713,7 +723,7 @@ sub params_for_vcf_result {
         filter_description => $self->filter_description,
         vcf_version => $vcf_version,
         previous_filter_strategy => $self->_previous_filter_strategy,
-        
+
     );
     $params{control_aligned_reads_sample} = $self->control_aligned_reads_sample if defined $self->control_aligned_reads_sample;
 

@@ -45,7 +45,7 @@ sub _run_aligner {
     $self->static_params('-best 1 -udiff 1 -align 0 -output sam_soft');
     $aligner_params = $aligner_params || '';
     if ( @_ > 1 && not $aligner_params =~ /-pair/ ){
-        my ($lower,$upper) = $self->_derive_insert_size_bounds;
+        my ($lower,$upper) = $self->_derive_insert_size_bounds(600, 100);
         $self->static_params($self->static_params . " -pair $lower,$upper");
     }
     my $static_params = $self->static_params;
@@ -73,32 +73,6 @@ sub _run_aligner {
 sub aligner_params_for_sam_header {
     my $self = shift;
     return 'ssaha2 ' . $self->aligner_params . ' ' . $self->static_params;
-}
-
-# note: this may be completely wrong. fix later!
-sub _derive_insert_size_bounds {
-    my $self = shift;
-
-    my $median = $self->instrument_data->median_insert_size;
-    my $stddev = $self->instrument_data->sd_above_insert_size;
-    #my $readlen = $self->instrument_data->read_length;
-    my ( $upper, $lower );
-    
-    if ( defined $median && defined $stddev ) {
-        $upper = $median + $stddev*5;
-        $lower = $median - $stddev*5;
-    }
-    
-    if ( !defined $upper || $upper <= 0 ) {
-        $self->status_message("Calculated upper bound on insert size is undef or less than 0, defaulting to 600");
-        $upper = 600;
-    }
-    if ( !defined $lower || not $median || $lower < 0 || $lower > $upper ) {
-        # alternative default = read_length + rev_read_length
-        $self->status_message("Calculated lower bound on insert size is undef or invalid, defaulting to 100");
-        $lower = 100;
-    }
-    return ($lower,$upper);
 }
 
 sub fillmd_for_sam { return 1; } 
