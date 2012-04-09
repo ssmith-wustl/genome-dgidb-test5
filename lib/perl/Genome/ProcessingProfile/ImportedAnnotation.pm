@@ -71,12 +71,12 @@ sub _execute_build{
         imported_annotation_build => $build,
     );
 
-    my $interpro_cmd = Genome::Model::Tools::Annotate::ImportInterpro::Run->execute(
-        reference_transcripts => join('/', $model->name, $version),
-        interpro_version => $self->interpro_version, #TODO: update processing profiles
-        log_file => join('/', $data_directory, 'interpro_log'),
-    );
-    $interpro_cmd->execute;
+    # my $interpro_cmd = Genome::Model::Tools::Annotate::ImportInterpro::Run->execute(
+        # reference_transcripts => join('/', $model->name, $version),
+        # interpro_version => $self->interpro_version, #TODO: update processing profiles
+        # log_file => join('/', $data_directory, 'interpro_log'),
+    # );
+    # $interpro_cmd->execute;
 
     my $tiering_cmd;
     my $annotation_directory = $build->_annotation_data_directory;
@@ -101,7 +101,7 @@ sub _execute_build{
             output_directory => $annotation_directory."/tiering_bitmasks",
             reference_sequence => $build->reference_sequence->fasta_file,
             transcript_version => $build->version,
-            annotation_model => $build->model,
+            annotation_model => $build->model->id,
             ucsc_directory => $build->reference_sequence->get_or_create_ucsc_tiering_directory,
         );
     }
@@ -122,6 +122,7 @@ sub _execute_build{
                 output_file => $bed_name,
                 bitmask => $file,
             );
+            $convert_cmd->execute;
         }
     }
 
@@ -153,7 +154,8 @@ sub generate_rna_seq_files {
     my $self = shift;
     my $build = shift;
 
-    unless(Genome::Model::ImportedAnnotation::Command::CopyRibosomalGeneNames->execute(output_file => $build->_annotation_data_directory .'/RibosomalGeneNames.txt', species_name => $build->species_name)){
+    my $cmd = Genome::Model::ImportedAnnotation::Command::CopyRibosomalGeneNames->create(output_file => join('/', $build->_annotation_data_directory, 'RibosomalGeneNames.txt'), species_name => $build->species_name);
+    unless($cmd->execute){
         $self->error_message("Failed to generate the ribosomal gene name file!");
         return;
     }
