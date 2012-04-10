@@ -720,13 +720,10 @@ sub _unarchive {
             }
         }
 
-        # Update allocation and commit
+        # Make updates to the allocation
         $self->mount_path($self->volume->active_mount_path);
         $self->_update_owner_for_move;
         $self->_create_observer($self->_unlock_closure($allocation_lock));
-        unless (UR::Context->commit) {
-            confess "Could not commit!";
-        }
 
         # Untar tarball into allocation directory, and remove the tarball afterward
         my $untar_rv = Genome::Sys->untar(
@@ -737,9 +734,14 @@ sub _unarchive {
         unless ($untar_rv) {
             confess "Could not untar tarball " . $self->tar_path . " at " . $self->absolute_path;
         }
+
+        # Commit changes, which will release locks
+        unless (UR::Context->commit) {
+            confess "Could not commit!";
+        }
     };
     if (my $error = $@) {
-        Genome::Sys->unlock_resource($allocation_lock) if $allocation_lock;
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock) if $allocation_lock;
         confess "Could not unarchive, received error:\n$error";
     }
 
