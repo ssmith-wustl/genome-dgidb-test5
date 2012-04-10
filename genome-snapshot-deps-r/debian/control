@@ -24,5 +24,7 @@ Depends: ${misc:Depends},
     r-cran-rcolorbrewer (>= 1.0-2-2),
     r-cran-scatterplot3d (>= 0.3-31-1cran1),
     r-base-core (>= 2.15.0-1lucid0),
-    r-cran-proto (>= 0.3-9.2)
+    r-cran-proto (>= 0.3-9.2),
+    r-cran-boot	(>= 1.2.43-1lucid0),
+    r-cran-xtable (>= 1.5.5-1)
 Description: This meta-package installs all external R dependencies of the current internal TGI Genome Modeling System software snapshot.

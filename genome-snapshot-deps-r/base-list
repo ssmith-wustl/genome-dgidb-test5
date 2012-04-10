@@ -12,3 +12,6 @@ multicore
 plotrix
 preprocessCore
 scatterplot3d
+proto
+boot
+xtable

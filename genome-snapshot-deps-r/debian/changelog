@@ -1,3 +1,10 @@
+genome-snapshot-deps-r (2012.04.09-5) unstable; urgency=low
+
+  * added: r-cran-boot	(>= 1.2.43-1lucid0)
+  * added: r-cran-xtable (>= 1.5.5-1)
+
+ -- The Genome Institute <gmt@genome.wustl.edu>  Mon, 09 Apr 2012 19:09:46 -0500
+
 genome-snapshot-deps-r (2012.04.09-4) unstable; urgency=low
 
   * changed: r-bioc-dnacopy to r-bioc-dnacopy (>= 1.24.0-1cran1)
