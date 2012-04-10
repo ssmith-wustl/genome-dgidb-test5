@@ -109,7 +109,6 @@ sub _fallback_lsf_resource {
 
     my $host_groups;
     my $command = qq(bqueues -l $queue | grep ^HOSTS:);
-    warn "command $command";
     $host_groups = qx($command);
     $host_groups =~ s/\/\s+/\ /;
     $host_groups =~ s/^HOSTS:\s+//;
@@ -126,7 +125,6 @@ sub _fallback_lsf_resource {
 
     #$command = qq(bhosts -R '$select_check' $host_groups | grep ^blade);
     $command = qq(bhosts -R '$select_check' $host_groups );
-    warn "command $command";
     my @selected_blades = qx($command);
 
     if (@selected_blades) {
