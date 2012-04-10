@@ -95,7 +95,7 @@ sub wait_for_lsf_job {
     my $status;
     while (1) {
         $status = Genome::Sys->get_lsf_job_status($job_id);
-        last unless $status eq 'RUN' or $status eq 'PEND';
+        last unless $status eq 'RUN' or $status eq 'PEND' or $status eq 'PSUSP';
         sleep 10;
     }
     return $status;
