@@ -639,6 +639,7 @@ sub _archive {
         confess "Could not commit!" unless $rv;
     };
     if (my $error = $@) {
+        unlink $tar_path if -e $tar_path;
         $self->_cleanup_archive_directory($archive_allocation_path);
         Genome::Sys->unlock_resource($allocation_lock);
         confess "Could not archive allocation " . $self->id, "error:\n$error";
@@ -670,6 +671,7 @@ sub _archive {
         }
     };
     if (my $error = $@) {
+        unlink $tar_path if -e $tar_path;
         $self->_cleanup_archive_directory($archive_allocation_path);
         Genome::Sys->unlock_resource($volume_lock) if $volume_lock;
         confess "Could not update active volume after copying data to archive volume, received error\n$error";
@@ -1041,7 +1043,7 @@ sub _cleanup_archive_directory {
     my ($class, $directory) = @_;
     my $cmd = "rm -rf $directory";
     unless ($ENV{UR_DBI_NO_COMMIT}) {
-        my ($job_id, $status) = Genome::Sys->bsub(
+        my ($job_id, $status) = Genome::Sys->bsub_and_wait(
             queue => $ENV{GENOME_ARCHIVE_LSF_QUEUE},
             cmd => $cmd,
         );
