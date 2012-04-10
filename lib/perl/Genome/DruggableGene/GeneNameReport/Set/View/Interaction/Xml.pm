@@ -116,12 +116,9 @@ sub get_interactions {
 
         for my $interaction (map{$_->interactions}$group->genes){
             $interactions_node->addChild($self->build_interaction_node(
-                    $interaction->drug_name,
-                    $interaction->drug->human_readable_name,
-                    $interaction->gene_name,
+                    $interaction,
                     $group_name,
                     $group_data->{search_terms},
-                    [$interaction->interaction_types],
                 ));
         }
     }
@@ -140,12 +137,9 @@ sub get_ambiguous_interactions {
 
             for my $interaction (map{$_->interactions}$group->genes){
                 my $interaction_node = ($self->build_interaction_node(
-                        $interaction->drug_name,
-                        $interaction->drug->human_readable_name,
-                        $interaction->gene_name,
+                        $interaction,
                         $gene_group_name,
                         [$ambiguous_term],
-                        [$interaction->interaction_types],
                     ));
 
                 my $matches_node = $doc->createElement('number_of_matches');
@@ -160,13 +154,14 @@ sub get_ambiguous_interactions {
 
 sub build_interaction_node {
     my $self = shift;
-    my $drug_name = shift;
-    my $human_readable_drug_name = shift;
-    my $gene_name = shift;
+    my $interaction = shift;
     my $gene_group_name = shift;
     my $search_terms = shift;
-    my $interaction_types = shift;
     my $doc = $self->_xml_doc;
+    my $drug_name = $interaction->drug_name,
+    my $human_readable_drug_name = $interaction->drug->human_readable_name,
+    my $gene_name = $interaction->gene_name,
+    my $interaction_types = [$interaction->interaction_types],
 
     my $item = $doc->createElement('item');
     my $drug_node = $doc->createElement('drug');
@@ -189,6 +184,9 @@ sub build_interaction_node {
     my $search_terms_node = $doc->createElement('search_terms');
     $search_terms_node->addChild($doc->createTextNode(join(', ', @{$search_terms})));
     $item->addChild($search_terms_node);
+    my $source_node = $doc->createElement('source');
+    $source_node->addChild($doc->createTextNode($interaction->source_db_name));
+    $item->addChild($source_node);
 
     return $item;
 }

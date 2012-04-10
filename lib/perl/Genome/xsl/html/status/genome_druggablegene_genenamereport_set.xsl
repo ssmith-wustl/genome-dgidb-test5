@@ -14,6 +14,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <table class='dataTable' id='interactions'>
       <thead>
         <tr>
+          <th>Source</th>
           <th>Drug</th>
           <th>Interaction Type</th>
           <th>Gene</th>
@@ -26,12 +27,18 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       <tbody>
         <xsl:for-each select="$interactions/item">
           <tr>
+            <th><xsl:value-of select='source' /></th>
             <th>
               <xsl:call-template name='object_link_button'>
                 <xsl:with-param name='type' select="'Genome::DruggableGene::DrugNameReport::Set'"/>
                 <xsl:with-param name="key" select="'name'"/>
                 <xsl:with-param name="id" select="drug"/>
-                <xsl:with-param name="linktext" select="human_readable_drug_name"/>
+                <xsl:with-param name="linktext">
+                  <xsl:value-of select="substring(human_readable_drug_name, 1, 40)"/>
+                  <xsl:if test="string-length(human_readable_drug_name) &gt; 40">
+                    <xsl:text>...</xsl:text>
+                  </xsl:if>
+                </xsl:with-param>
               </xsl:call-template>
             </th>
             <th>
@@ -127,6 +134,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           </div>
 
           <div class="box_content rounded-bottom span-12 last">
+            <br />
             <ul>
               <xsl:for-each select="missing_interactions/item">
                 <li>
@@ -136,7 +144,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                     <xsl:with-param name="id" select="group"/>
                     <xsl:with-param name="linktext" select="group"/>
                   </xsl:call-template>
-                  <xsl:text> for search term: </xsl:text>
+                  <xsl:text> for search term </xsl:text>
                   <xsl:value-of select='search_terms' />
                 </li>
               </xsl:for-each>
@@ -150,6 +158,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           </div>
 
           <div class="box_content rounded-bottom span-12 last">
+            <br />
             <ul>
               <xsl:for-each select="missing_ambiguous_interactions/item">
                 <li>
@@ -159,7 +168,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                     <xsl:with-param name="id" select="group"/>
                     <xsl:with-param name="linktext" select="group"/>
                   </xsl:call-template>
-                  <xsl:text> for search term: </xsl:text>
+                  <xsl:text> for search term </xsl:text>
                   <xsl:value-of select='search_terms' />
                   <xsl:text> with quantity of matches </xsl:text>
                   <xsl:value-of select='number_of_matches' />
