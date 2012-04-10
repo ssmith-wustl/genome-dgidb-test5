@@ -1,3 +1,5 @@
+For a description of the directory structure here, see the README for the top-level genome-snapshot-deps package.
+
 ** Setting up a working R environment. **
 
 We want to pull R packages from two main APT repositories: CRAN and Bioconductor.  In addition, where there are broken packages in those repos, we repair them and put them in the TGI repo.  
