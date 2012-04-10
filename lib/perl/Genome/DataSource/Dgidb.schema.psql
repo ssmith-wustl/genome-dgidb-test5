@@ -72,7 +72,7 @@ create table drug_gene_interaction_report (
         id varchar NOT NULL,
         drug_name_report_id varchar NOT NULL,
         gene_name_report_id varchar NOT NULL,
-        interaction_type varchar NOT NULL,
+        interaction_type varchar,
         source_db_name varchar NOT NULL,
         source_db_version varchar NOT NULL,
         description text,
