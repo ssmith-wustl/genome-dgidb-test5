@@ -193,16 +193,22 @@ sub execute {
     $self->status_message("Preparing to execute repeat masker.");
 
     $self->_check_input_fasta;
-    $self->_validate_species_and_library;
-    $self->_set_temp_working_directory unless defined $self->temp_working_directory;
+    $self->_set_masked_fasta unless defined $self->masked_fasta;
     $self->_set_ace_file_location if $self->make_ace and not defined $self->ace_file_location;
     $self->_set_gff_file_location if $self->make_gff and not defined $self->gff_file_location;
-    $self->_set_masked_fasta unless defined $self->masked_fasta;
 
+    # Prepare for skip copies the input fasta to the output location, which is why the input fasta
+    # needs to be checked first and the masked fasta location needs to be figured out. Also, the
+    # ace file and gff file locations need to be set so they can be passed on to later steps. Workflow 
+    # doesn't allow links to not have values, so even though the files don't exist in the case that
+    # execution is skipped, they still gotta be defined.
     if ($self->skip_masking) {
         $self->_prepare_for_skip;
         return 1;
     }
+
+    $self->_validate_species_and_library;
+    $self->_set_temp_working_directory unless defined $self->temp_working_directory;
 
     my $executable = $self->path_for_version($self->version);
     $self->_validate_executable($executable);
