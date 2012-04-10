@@ -160,7 +160,7 @@ sub _map_workflow_inputs {
         rfamscan_version => $self->rfamscan_version,
         snap_version =>  $self->snap_version,
         skip_masking_if_no_rna => $self->skip_masking_if_no_rna,
-        repeat_library => $model->repeat_library,
+        repeat_library => (defined $model->repeat_library ? $model->repeat_library : '' ),
         snap_models => $model->snap_models,
         fgenesh_model => $model->fgenesh_model,
         contig_fasta => $model->assembly_contigs_file,
