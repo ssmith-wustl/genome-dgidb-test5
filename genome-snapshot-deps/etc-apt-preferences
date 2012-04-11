@@ -1,0 +1,20 @@
+Package: *
+Pin: origin repo.gsc.wustl.edu
+Pin-Priority: 1001
+
+Package: *
+Pin: origin bioinformatics.rri.sari.ac.uk
+Pin-Priority: 500
+
+Package: *
+Pin: release o=CRAN
+Pin-Priority: 500
+
+Package: *
+Pin: release o=LP-PPA-crcarlin
+Pin-Priority: 300
+
+Package: *
+Pin: release n=natty
+Pin-Priority: -10
+
