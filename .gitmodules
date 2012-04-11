@@ -154,3 +154,6 @@
 [submodule "vendor/r-cran-bitops"]
 	path = vendor/r-cran-bitops
 	url = git@github.com:genome-vendor/r-cran-bitops.git
+[submodule "vendor/r-cran-catools"]
+	path = vendor/r-cran-catools
+	url = git@github.com:sakoht/r-cran-catools.git
