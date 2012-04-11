@@ -8,6 +8,16 @@ use File::Path 'rmtree';
 
 class Genome::Model::Build::RnaSeq {
     is => 'Genome::Model::Build',
+    has => [
+        annotation_build => {
+            is => "Genome::Model::Build::ImportedAnnotation",
+            is_input => 1
+        },
+        reference_sequence_build => {
+            is => "Genome::Model::Build::ReferenceSequence",
+            is_input => 1
+        },
+    ]
 };
 
 sub accumulated_alignments_directory {

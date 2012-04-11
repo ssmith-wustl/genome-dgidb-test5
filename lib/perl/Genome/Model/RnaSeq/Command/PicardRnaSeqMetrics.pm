@@ -39,11 +39,11 @@ sub execute {
     my $alignment_result = $self->build->alignment_result;
     my $bam_file = $alignment_result->bam_file;
 
-    my $reference_build = $self->build->model->reference_sequence_build;
+    my $reference_build = $self->build->reference_sequence_build;
     my $reference_path = $reference_build->full_consensus_path('fa');
     my $seqdict_file = $reference_build->get_sequence_dictionary('sam',$reference_build->species_name,$self->picard_version);
 
-    my $annotation_build = $self->model->annotation_build;
+    my $annotation_build = $self->build->annotation_build;
     unless ($annotation_build) {
         $self->status_message('Skipping PicardRnaSeqMetrics since annotation_build is not defined');
         return 1;
