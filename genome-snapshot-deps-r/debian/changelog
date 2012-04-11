@@ -1,6 +1,27 @@
+genome-snapshot-deps-r (2012.04.11-3) unstable; urgency=low
+
+  * added: r-cran-matrix (>= 1.0-6-1lucid0)
+  * added: r-cran-mgcv (>= 1.7-13-1lucid0)
+
+ -- The Genome Institute <gmt@genome.wustl.edu>  Wed, 11 Apr 2012 10:45:03 -0500
+
+genome-snapshot-deps-r (2012.04.11-2) unstable; urgency=low
+
+  * added: r-cran-cairo (>= 1.4-8-1cran1)
+  * added: r-bioc-genomgraphs (>= 1.10.0-1cran1)
+
+ -- The Genome Institute <gmt@genome.wustl.edu>  Wed, 11 Apr 2012 10:32:11 -0500
+
+genome-snapshot-deps-r (2012.04.11-1) unstable; urgency=low
+
+  * added: r-cran-gplots (>=2.8.0-1cran1 )
+  * added: r-cran-bitops (>=1.0-4.1-1cran1)
+  * added: r-cran-catools (>=1.11-1cran1)
+
+ -- The Genome Institute <gmt@genome.wustl.edu>  Wed, 11 Apr 2012 10:24:04 -0500
+
 genome-snapshot-deps-r (2012.04.10-1) unstable; urgency=low
 
-  * changed: r-cran-xtable (>= 1.5.5-1) to r-cran-xtable (>= 1.5.5-1)
   * added: r-cran-colorspace (>= 1.0.1-1build1)
 
  -- The Genome Institute <gmt@genome.wustl.edu>  Tue, 10 Apr 2012 09:41:28 -0500
