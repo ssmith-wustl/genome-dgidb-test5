@@ -157,3 +157,6 @@
 [submodule "vendor/r-cran-catools"]
 	path = vendor/r-cran-catools
 	url = git@github.com:genome-vendor/r-cran-catools.git
+[submodule "vendor/r-cran-h5r"]
+	path = vendor/r-cran-h5r
+	url = git@github.com:genome-vendor/r-cran-h5r.git
