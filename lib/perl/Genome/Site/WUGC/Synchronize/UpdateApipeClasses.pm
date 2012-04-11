@@ -92,11 +92,27 @@ sub _suppress_status_messages {
 sub execute {
     my $self = shift;
 
+    my $lock = Genome::Sys->lock_resource(
+        resource_lock => '/gsc/var/lock/sychronize-update-apipe-classes',
+        max_try => 1,
+    );
+    if ( not $lock ) {
+        $self->error_message("Could not lock sync cron!");
+        return;
+    }
+
+    UR::Context->current->add_observer(
+        aspect => 'commit',
+        callback => sub{
+            Genome::Sys->unlock_resource(resource_lock => $lock);
+        }
+    );
+
     $self->_suppress_status_messages;
 
     # Stores copied and missing IDs for each type
     my %report;
-    
+
     # Maps new classes with old classes
     my %types = $self->objects_to_sync;
 

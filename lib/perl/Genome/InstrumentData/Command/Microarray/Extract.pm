@@ -240,28 +240,15 @@ sub _load_genotyopes {
     $self->status_message('Open Genotype file...');
 
     my $instrument_data = $self->instrument_data;
-    my $data_directory = $instrument_data->data_directory;
-    if ( not $data_directory or not -d $data_directory ) {
-        $self->error_message('No data directory for instrument data');
+    my $genotype_file_attr = $instrument_data->attributes(attribute_label => 'genotype_file');
+    if ( not $genotype_file_attr ) {
+        $self->error_message('No genotype file attribute for instrument data: '.$instrument_data->id);
         return;
     }
 
-    my $genotype_file;
-    my @possible_file_names = (
-        'snpreport/'.$instrument_data->id,
-        'snpreport/'.$instrument_data->sample->id,
-        $instrument_data->id.'.genotype',
-        $instrument_data->sample->id.'.genotype',
-    );
-
-    for my $possible_file_name ( @possible_file_names ) {
-        my $possible_file = $data_directory.'/'.$possible_file_name;
-        next if not -e $possible_file;
-        $genotype_file = $possible_file;
-    }
-
-    if ( not $genotype_file ) {
-        $self->error_message('Failed to find genotype file in directory: '.$data_directory);
+    my $genotype_file = $genotype_file_attr->attribute_value;
+    if ( not -s $genotype_file ) {
+        $self->error_message('Genotype file file does not exist! '.$genotype_file);
         return;
     }
     $self->status_message('Genotype file: '.$genotype_file);

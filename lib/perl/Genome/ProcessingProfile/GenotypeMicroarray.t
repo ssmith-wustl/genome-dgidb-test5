@@ -53,10 +53,13 @@ my $instrument_data = Genome::InstrumentData::Imported->__define__(
     sequencing_platform => 'infinium',
 );
 ok($instrument_data, 'create instrument data');
+ok(
+    $instrument_data->add_attribute(attribute_label => 'genotype_file', attribute_value => $testdir.'/instdata/snpreport/-7777'),
+    'add attr to inst data for genotype file',
+);
 $sample->default_genotype_data_id($instrument_data->id);
 
 no warnings;
-*Genome::InstrumentData::Imported::data_directory = sub{ return $testdir.'/instdata'; };
 *Genome::FeatureList::file_path = sub{ return $dbsnp_file };
 use warnings;
 

@@ -57,12 +57,12 @@ sub create_groups {
             for my $gene (@genes){#make sure each gene is already in this group
                 Genome::DruggableGene::GeneNameGroupBridge->create(
                     gene_id => $gene->id,
-                    gene_id => $group->id
+                    group_id => $group->id
                 ) if not Genome::DruggableGene::GeneNameGroupBridge->get(gene_id => $gene->id);
             }
         }else{
             $group = Genome::DruggableGene::GeneNameGroup->create(name => $alt);
-            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $_->id, gene_id => $group->id) for @genes;
+            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $_->id, group_id => $group->id) for @genes;
         }
         print "$progress_counter : created new group for $alt\n" if rand() < .001;
     }
