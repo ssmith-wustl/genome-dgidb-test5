@@ -93,12 +93,9 @@ sub results_class {
 }
 
 sub _fallback_lsf_resource {
-    #my $tmp_mb = 90000;
-    my $tmp_mb = 90;
-    #my $mem_mb = 1024 * 14; # increased b/c we have about 16 GB available when 6 jobs run on a 96 Gb server
-    my $mem_mb = 1024 * 0.25; # increased b/c we have about 16 GB available when 6 jobs run on a 96 Gb server
-    #my $cpus = 4;
-    my $cpus = 1;
+    my $tmp_mb = 90000;
+    my $mem_mb = 1024 * 14; # increased b/c we have about 16 GB available when 6 jobs run on a 96 Gb server
+    my $cpus = 4;
 
     my $mem_kb = $mem_mb*1024;
     my $tmp_gb = $tmp_mb/1024;

@@ -639,6 +639,7 @@ sub _archive {
         confess "Could not commit!" unless $rv;
     };
     if (my $error = $@) {
+        unlink $tar_path if -e $tar_path;
         $self->_cleanup_archive_directory($archive_allocation_path);
         Genome::Sys->unlock_resource($allocation_lock);
         confess "Could not archive allocation " . $self->id, "error:\n$error";
@@ -670,6 +671,7 @@ sub _archive {
         }
     };
     if (my $error = $@) {
+        unlink $tar_path if -e $tar_path;
         $self->_cleanup_archive_directory($archive_allocation_path);
         Genome::Sys->unlock_resource($volume_lock) if $volume_lock;
         confess "Could not update active volume after copying data to archive volume, received error\n$error";
@@ -718,13 +720,10 @@ sub _unarchive {
             }
         }
 
-        # Update allocation and commit
+        # Make updates to the allocation
         $self->mount_path($self->volume->active_mount_path);
         $self->_update_owner_for_move;
         $self->_create_observer($self->_unlock_closure($allocation_lock));
-        unless (UR::Context->commit) {
-            confess "Could not commit!";
-        }
 
         # Untar tarball into allocation directory, and remove the tarball afterward
         my $untar_rv = Genome::Sys->untar(
@@ -735,9 +734,14 @@ sub _unarchive {
         unless ($untar_rv) {
             confess "Could not untar tarball " . $self->tar_path . " at " . $self->absolute_path;
         }
+
+        # Commit changes, which will release locks
+        unless (UR::Context->commit) {
+            confess "Could not commit!";
+        }
     };
     if (my $error = $@) {
-        Genome::Sys->unlock_resource($allocation_lock) if $allocation_lock;
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock) if $allocation_lock;
         confess "Could not unarchive, received error:\n$error";
     }
 
@@ -1041,7 +1045,7 @@ sub _cleanup_archive_directory {
     my ($class, $directory) = @_;
     my $cmd = "rm -rf $directory";
     unless ($ENV{UR_DBI_NO_COMMIT}) {
-        my ($job_id, $status) = Genome::Sys->bsub(
+        my ($job_id, $status) = Genome::Sys->bsub_and_wait(
             queue => $ENV{GENOME_ARCHIVE_LSF_QUEUE},
             cmd => $cmd,
         );

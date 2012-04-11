@@ -909,6 +909,19 @@
               <tr>
                 <td colspan="2" style="border-bottom: 1px solid #acaca3; padding-top: -1px;">
                   <span style="font-weight: bold;">
+                    processing profile:
+                  </span>
+                  <xsl:call-template name="object_link_button">
+                    <xsl:with-param name="linktext" select="aspect[@name='processing_profile']/object/@id" />
+                    <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+                  </xsl:call-template>
+                  <xsl:text> </xsl:text>
+                  <xsl:value-of select="aspect[@name='processing_profile']/object/aspect[@name='name']/value"/>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2" style="border-bottom: 1px solid #acaca3; padding-top: -1px;">
+                  <span style="font-weight: bold;">
                     inputs
                     <xsl:if test="normalize-space(aspect[@name='build_needed']/value) != ''">
                       <span style="color: #a40014;">(build needed)</span>

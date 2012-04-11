@@ -15,3 +15,17 @@ That should in turn result in this package being rebuilt automatically with a ne
 TGI Sytems will ensure that updates to this package are propagated to the internal computer cluster.
 Currently, this process is manual, so put in a ticket as this needs to occur.
 
+Each of the four subordinate meta-packages have the same structure as this package.
+
+Features:
+* One or more "debian" directories will exist, either called "debian" or named for a specific distribution, like "ubuntu-lucid" or "ubuntu-precise".
+* Where we have directories which are not "debian", there is a "debian" symlink which points to our current default distro.
+* Several files will exist for each $dist:
+    * $dist-control-template    The content of the debian/control file, with a placeholder for the actual dependencies.
+    * $dist-list                The list of packages to be mixed into the $dist-control-template.
+    * $dist-parent              If this is a subordinate meta-package, the name of the parent meta-package.
+    * $dist-update.pl           A script to merge the above, and rebulid the $dist directory.  Usually a symlink to a common debian-update-shared.pl. 
+* There is often also a "base-list", which has the names of the softare units in their native form. 
+* A README explaining how to approach packaging.
+
+
