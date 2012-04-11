@@ -39,6 +39,7 @@ for my $changes_file (@pkgs) {
         "chmod 664 $prefix*" => "** setting permissions...",
         "chgrp info $prefix*" => "** setting the group to info...",
         "mv $prefix* ~codesigner/incoming/lucid-genome-development/" => "** moving files to codesigner queue",
+        "ls -lt ~codesigner/incoming/lucid-genome-development/" => "** current codesigner queue is:",
     );
 
     while (@cmds) {
