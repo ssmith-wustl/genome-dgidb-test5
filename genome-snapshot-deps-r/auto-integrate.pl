@@ -1,9 +1,14 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
+use File::Basename;
+
+my $path = __FILE__;
+my $dir = File::Basename::dirname($path);
+chdir "$dir/..";
 
 unless (@ARGV) {
-    die "Usage: mk-r-pkg SOMPKG\n";
+    die "Usage: auto-integrate.pl SOMPKG\n";
 }
 
 unless (-e "$ENV{HOME}/.github-username") {
@@ -11,6 +16,7 @@ unless (-e "$ENV{HOME}/.github-username") {
 }
 
 my $user_github = `cat ~/.github-username`;
+chomp $user_github;
 if ($user_github) {
     print "got github username $user_github\n";
 }
@@ -18,7 +24,7 @@ else {
     die "no github username at ~/.github-username";
 }
 
-warn "*** this is a very experimental attempt to automate R repackaging for TGI ...it will interact with github and git on your behalf, perhaps poorly (ctrl-c now) ***";
+warn "*** this is a very experimental attempt to automate R repackaging for TGI ...it will interact with github and git on your behalf, perhaps poorly (ctrl-c now) ***\n";
 sleep 5;
 
 for my $r_pkg (@ARGV) {
@@ -40,14 +46,41 @@ for my $r_pkg (@ARGV) {
             last;
         }
     }
+
+    my $src_path = '';
     if (not $deb_pkg_name) {
-        die "failed to find package for $r_pkg\n";
+        print "failed to find package for $r_pkg\n";
+        my $tgz = `wget -q -O - http://cran.r-project.org/web/packages/$r_pkg/index.html | grep "Package source"`;
+        unless ($tgz) {
+            die "failed to find $r_pkg at cran.r-project.org/web/packages/$r_pkg/index.html";
+        }
+        chomp $tgz;
+        print "tgz $tgz\n";
+        $tgz =~ s/^.*\/([^\/]+?.tar.gz).*$/$1/;
+        print "tgz $tgz\n";
+        my $url = "http://cran.r-project.org/src/contrib/$tgz";
+        print "URL is $url\n";
+        system "cd /tmp; wget $url";
+        $src_path = "/tmp/$tgz";
+        if (-e $src_path) {
+            print "got file $src_path\n";
+        }
+        else {
+            print "no file at $src_path!\n";
+        }
+        $deb_pkg_name = 'r-cran-' . lc($r_pkg);
+        $deb_version = lc($tgz);
+        $deb_version =~ s/$r_pkg//;
+        $deb_version =~ s/^_//;
+        $deb_version =~ s/.tar.gz$//;
     }
-    print "got $deb_pkg_name\n";
-    
+    else {
+        print "got $deb_pkg_name\n";
+    }
+
     my $tmp = "tmp-mkdir";
     my @cmds = (
-        "mkdir $tmp",
+        #"mkdir $tmp",
         "chmod +rwx $tmp",
     );
 
@@ -59,14 +92,14 @@ for my $r_pkg (@ARGV) {
     }
     else {
         print "no submoudle found at vendor/$deb_pkg_name ...creating...\n";
-        print <<EOS
+        print <<EOS;
 ****** open this URL: https://github.com/repositories/new
 ****** make a repo called $deb_pkg_name in your own namespace $user_github
 EOS
-
-        if (`wget -S https://github.com/genome-vendor/deb_package_name 2>&1 | grep 'HTTP.* 404 Not Found'`) {
+        $DB::single = 1;
+        if (`wget -O -q - https://github.com/genome-vendor/$deb_pkg_name 2>&1 | grep 'HTTP.* 404 Not Found'`) {
             print "not on github under genome-vendor yet\n";
-            if (`wget -S https://github.com/$user_github/$deb_package_name 2>&1 | grep 'HTTP.* 404 Not Found'`) {
+            if (not `wget -O - -q https://github.com/$user_github/$deb_pkg_name 2>&1 | grep 'clone_url'`) {
                 print "also no personal github repo for $user_github.  creating one...\n";
                 push @cmds, (
                     "mkdir $tmp/$deb_pkg_name",
@@ -82,9 +115,8 @@ EOS
                     "rm -rf $tmp/$deb_pkg_name",
                 );
             }
-            push @cmds (
-                "echo ****** go http://github.com/$user_github/$deb_pkg_name, click 'Admin', and transfer the repo to 'genome-vendor'; sleep 30",
-                "wget -S https://github.com/genome-vendor/$deb_package_name 2>&1 | grep 'HTTP.* 404 Not Found' # checking for the project on github in genome-vendor...",
+            push @cmds, (
+                \"\$nn=0; while (`wget -O -q - https://github.com/genome-vendor/$deb_pkg_name 2>&1 | grep 'HTTP.* 404 Not Found'`) { warn q|waiting for https://github.com/genome-vendor/$deb_pkg_name|; sleep 5 }",
             );
         }
 
@@ -99,11 +131,33 @@ EOS
     push @cmds, (
         \"chdir 'vendor/$deb_pkg_name'",
         "mkdir $tmp2", # this is another one _inside_the repo
-        "cd $tmp2; apt-get source $deb_pkg_name",
-        "rm $tmp2/*.gz $tmp/*.dsc",
-        "mv $tmp2/*/* .",
-        "rmdir $tmp2/*/",
-        "rmdir $tmp2",
+    );
+
+    if ($src_path) {
+        # make new deb source
+        push @cmds, (
+            "cd $tmp2; mv $src_path .; tar -zxvf *.gz",
+            "rm $tmp2/*.gz",
+            "mv $tmp2/*/* .",
+            "rmdir $tmp2/*/",
+            "rmdir $tmp2",
+            "cp -r ../../genome-snapshot-deps-r/example-debian-dir debian",
+            "~ssmith/bin/findreplace PACKAGE_NAME $deb_pkg_name debian/*",
+            "~ssmith/bin/findreplace VERSION '$deb_version'",
+        );
+    }
+    else {
+        # unpack exising deb source
+        push @cmds, (
+            "cd $tmp2; apt-get source $deb_pkg_name",
+            "rm $tmp2/*.gz $tmp/*.dsc",
+            "mv $tmp2/*/* .",
+            "rmdir $tmp2/*/",
+            "rmdir $tmp2",
+        );
+    }
+
+    push @cmds, (
         "git checkout -b b$deb_version",
         "git add *",
         "git status",

@@ -1,3 +1,9 @@
+genome-snapshot-deps-r (2012.04.11-4) unstable; urgency=low
+
+  * changed: r-bioc-genomgraphs (>= 1.10.0-1cran1) to r-bioc-genomegraphs (>= 1.10.0-1cran1)
+
+ -- The Genome Institute <gmt@genome.wustl.edu>  Wed, 11 Apr 2012 10:57:02 -0500
+
 genome-snapshot-deps-r (2012.04.11-3) unstable; urgency=low
 
   * added: r-cran-matrix (>= 1.0-6-1lucid0)
