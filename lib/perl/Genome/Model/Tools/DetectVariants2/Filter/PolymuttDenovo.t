@@ -77,6 +77,7 @@ my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::PolymuttDeno
     previous_result_id => $detector_result->id,
     alignment_results => \@test_alignment_results,
     output_directory => $output_dir,
+    pedigree_file_path => "$detector_directory/DS10239.ped",
 );
 $filter_command->dump_status_messages(1);
 isa_ok($filter_command, 'Genome::Model::Tools::DetectVariants2::Filter::PolymuttDenovo', 'created filter command');
