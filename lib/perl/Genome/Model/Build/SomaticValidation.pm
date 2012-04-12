@@ -193,16 +193,53 @@ sub calculate_estimated_kb_usage {
     return 15_728_640;
 }
 
-sub files_ignored_by_diff {
+sub regex_files_for_diff {
     return qw(
-        build.xml
+        alignments/normal/\d+\.(bam.*)$
+        alignments/tumor/\d+\.(bam.*)$
+        coverage/(tumor|normal)/wingspan_(\d+)/\d+_(\w+)_STATS.t(sv|xt)
+        coverage/(tumor|normal)/\d+-(\w+)-wingspan_(\d+)-alignment_summary.tsv
     );
 }
 
+sub files_ignored_by_diff {
+    return qw(
+        reports/Build_Initialized/report.xml
+        reports/Build_Succeeded/report.xml
+        variants/dispatcher.cmd
+        \.vcf$
+        \.vcf.idx$
+        workflow\.xml$
+        build\.xml$
+        \d+\.out$
+        \d+\.err$
+        \.png$
+        readcounts$
+        variants/sv/breakdancer
+        variants/sv/squaredancer
+        variants/sv/union
+        variants/svs.hq
+        svs\.merge\.index$
+        cnv_graph\.pdf$
+        pindel\.config$
+        variants/cnv/plot-cnv-[^/]+/\d+\.bam\.cnvseg$
+        variants/cnv/plot-cnv-[^/]+/\d+.bam.bamtocn$
+        variants/indel/pindel-[^/]+/pindel-somatic-calls-[^/]+/pindel-read-support-[^/]+/indels.hq.read_support.bed$
+        alignments/.*\.log$
+        alignments/.*\.metrics$
+        alignments/.*\.bam\.md5$
+        alignments/.*\.bam$
+        alignments/.*\.bam\.bai$
+    );
+}
 sub dirs_ignored_by_diff {
     return qw(
         logs/
         reports/
+        variants/\d+/
+        variants/sv/breakdancer
+        variants/sv/squaredancer
+        variants/sv/union
     );
 }
 

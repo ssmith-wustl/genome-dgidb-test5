@@ -1862,6 +1862,17 @@ sub compare_output {
         REGEX: for my $regex ($self->regex_files_for_diff) {
             next REGEX unless $rel_path =~ /$regex/;
 
+            #check for captures to narrow the search for the matching file
+            if($regex =~ /\([^?].*?\)/) {
+                my $modified_regex = $regex;
+                for($rel_path =~ /$regex/) {
+                    #replace captures with their found values from the original file
+                    $modified_regex =~ s/\([^?].*?\)/$_/;
+                }
+
+                $regex = $modified_regex;
+            }
+
             my @other_keys = grep { $_ =~ /$regex/ } sort keys %other_file_paths;
             if (@other_keys > 1) {
                 $diffs{$rel_path} = "multiple files from $other_build_id matched file name pattern $regex\n" . join("\n", @other_keys);
