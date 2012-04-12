@@ -44,18 +44,18 @@ for (phenotype in phenos)
     base.class = as.vector(sort(unique(x1)))[1];
 
     coxph(Surv(time, status) ~ x1, loopdata) -> co;
-    summary(co)->co; co$conf->cox; p=co$logtest[3];
+    summary(co)->co; co$conf->cox; co$logtest[3]->p; co$coef[5]->indv.p;
     rownames(cox) = sub("x1","",rownames(cox));
-    if (rownames(cox)==c("")) { rownames(cox) = c("1"); }
-    logr=rbind(logr,cbind(base.class,rownames(cox),phenotype,cox,p))
+    if (length(rownames(cox))==1 && rownames(cox)[1]=="") { rownames(cox)[1] = "1"; }
+    logr=rbind(logr,cbind(base.class,rownames(cox),phenotype,cox,indv.p,p))
 
     mfit.by <- survfit(Surv(time, status == 1) ~ x1, data = loopdata)
     ## file name for plot
     bitmap(file=paste(out.dir,"/",phenotype,"_survival_plot.png",sep=""))
     ## create survival plot
     plot(mfit.by,lty=1:10,ylab="Survival Probability",xlab="Time",col=c(1:10))
-    if (dim(table(x1))==2) {
-        title(paste(phenotype," P=",signif(p,3),sep=""));
+    if (dim(table(x1))>1) {
+        title(paste(phenotype,", P=",signif(p,3),sep=""));
     } else {
         title(paste(phenotype));
     }
@@ -73,6 +73,6 @@ logr=cbind(logr,fdr)
 
 ######################### print output
 
-colnames(logr)[1:8]=c("base.class","comparison.class","phenotype","hazard.ratio","lower.95","upper.95","p-value","fdr")
+colnames(logr)[1:9]=c("base.class","comparison.class","phenotype","hazard.ratio","lower.95","upper.95","2-class-p-value","p-value","fdr")
 logr=logr[order(logr[,"p-value"]),]
 write.table(logr,file=paste(out.dir,"survival_analysis_test_results.csv",sep="/"),quote=F,append=F,row.names=F,sep="\t")
