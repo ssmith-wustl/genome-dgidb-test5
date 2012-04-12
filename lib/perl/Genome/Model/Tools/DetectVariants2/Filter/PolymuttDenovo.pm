@@ -13,17 +13,17 @@ use File::Path;
 class Genome::Model::Tools::DetectVariants2::Filter::PolymuttDenovo {
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
     has_optional_input => [
-        min_read_qual=> {
-            doc=>'the lowest quality reads to use in the calculation. default q20',
-            default=>"20",
-        },
-        min_unaffected_pvalue=> {
-            doc=>"the minimum binomial test result from unaffected members to pass through the filter",
-            default=>"1.0e-4",
-        },
+    min_read_qual=> {
+        doc=>'the lowest quality reads to use in the calculation. default q20',
+        default=>"20",
+    },
+    min_unaffected_pvalue=> {
+        doc=>"the minimum binomial test result from unaffected members to pass through the filter",
+        default=>"1.0e-4",
+    },
     ],
     doc => "A binomial filter for polymutt denovo output",
-    };
+};
 
 sub help_detail {
     "A binomial filter for polymutt denovo output"
@@ -76,12 +76,42 @@ sub _filter_variants {
     $r_fh->print($self->r_code($r_input_path, $r_output));
     $r_fh->close;
     `R --vanilla < $r_script_path`;
-    $self->output_passing_vcf($vcf, $r_output, $self->min_unaffected_pvalue, $output_file);
+    my $unaffecteds = $self->find_indexes_of_unaffecteds($header_line, $self->pedigree_file_path);
+    $self->output_passing_vcf($vcf, $r_output, $self->min_unaffected_pvalue, $output_file, $unaffecteds);
     return 1;
 }
 
+sub find_indexes_of_unaffecteds {
+    my ($self, $header_line, $ped_file) = @_;
+    my $ped_fh = IO::File->new($ped_file);
+    my @unaffected_indices;
+    my %status;
+    while(my $line = $ped_fh->getline) {
+        chomp($line);
+        my @fields = split "\t", $line;
+        my $sample_name = $fields[1];
+        my $affectation_status = $fields[-1];
+        if(($affectation_status ne 'U') && ($affectation_status ne 'A')) {
+            $self->error_message("Ped line: $line does not end in U or A. Unable to parse ped to figure out who is unaffected.");
+            die;
+        }
+        $status{$sample_name}=$affectation_status;
+    }
+    $ped_fh->close();
+    my @header = split"\t", $header_line;
+    splice(@header, 0, 9);
+    for(my $i = 0; $i < scalar(@header); $i++) {
+        if(exists($status{$header[$i]})) {
+            if($status{$header[$i]} eq 'U') {
+                push @unaffected_indices, $i;
+            }
+        }
+    }
+    return \@unaffected_indices;
+}
+
 sub output_passing_vcf {
-    my($self, $input_filename, $r_output, $pvalue_cutoff, $output_filename) = @_;
+    my($self, $input_filename, $r_output, $pvalue_cutoff, $output_filename, $unaffecteds) = @_;
     my $pvalues = Genome::Sys->open_file_for_reading($r_output);
     my $input_file = Genome::Sys->open_gzip_file_for_reading($input_filename);
     my $output_file = Genome::Sys->open_gzip_file_for_writing($output_filename);
@@ -96,10 +126,16 @@ sub output_passing_vcf {
 
     my (@unaffected, $pvalues_chr, $pvalues_pos, $affected);
     while(my $pvalues_line = $pvalues->getline) {
-        ($pvalues_chr,$pvalues_pos, $unaffected[0], $unaffected[1], $affected) = split "\t", $pvalues_line; ###generic method for any kind of family later
+        #($pvalues_chr,$pvalues_pos, $unaffected[0], $unaffected[1], $affected) = split "\t", $pvalues_line; ###generic method for any kind of family later
+        my @fields = split"\t", $pvalues_line;
+        my $pvalues_chr = $fields[0];
+        my $pvalues_pos = $fields[1];
+        splice(@fields,0,2);
         my $pass = 1;
-        for my $unaff_pvalue (@unaffected) {
-            if($unaff_pvalue < $pvalue_cutoff) {
+        for my $idx (@{$unaffecteds}) {
+            my $unaff_pval = $fields[$idx];
+# debug            $self->status_message("Examining individual at index $idx, p-value $unaff_pval, line was $pvalues_line");
+            if($unaff_pval < $pvalue_cutoff) {
                 $pass=0;
             }
         }
