@@ -165,7 +165,7 @@
 	url = git@github.com:genome-vendor/r-cran-pbh5
 [submodule "vendor/r-bioc-lumi"]
 	path = vendor/r-bioc-lumi
-	url = git@github.com:sakoht/r-bioc-lumi.git
+	url = git@github.com:genome-vendor/r-bioc-lumi.git
 [submodule "vendor/r-bioc-biobase"]
 	path = vendor/r-bioc-biobase
 	url = git@github.com:genome-vendor/r-bioc-biobase.git
