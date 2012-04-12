@@ -160,11 +160,16 @@ for my $i (1...8) {
         );
 }
 
+my $fake_library = Genome::Library->create(
+    sample_id => $fake_samples[7]->id,
+    name => $fake_samples[7]->name . '-lib4',
+);
+
 my $sample_list_file = Genome::Sys->create_temp_file_path;
 Genome::Sys->write_file($sample_list_file, join("\n",
     join("\t", $fake_samples[0]->name, $fake_samples[1]->name),
-    join("\t", $fake_samples[2]->name, $fake_samples[3]->name, $fake_samples[4]->name, $fake_samples[5]->name, $fake_samples[6]->name),
-    $fake_samples[7]->name
+    join("\t", $fake_samples[2]->name, $fake_samples[3]->name, $fake_samples[4]->name, $fake_samples[5]->id, $fake_samples[6]->name),
+    $fake_library->name
 ));
 
 my $define_6 = Genome::Model::Command::Define::SomaticValidation->create(

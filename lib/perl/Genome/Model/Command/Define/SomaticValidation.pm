@@ -80,6 +80,7 @@ class Genome::Model::Command::Define::SomaticValidation {
     doc => 'define a new somatic validation model',
 };
 
+
 sub help_detail {
     return <<'EOHELP'
 To set up the model to run the validation process, three pieces of information are needed: the design (as sent to the vendor), the target set (as received from the vendor), and the variants to be validated. Each of these constituent parts are tracked individually by the analysis system, and this model takes the individual pieces and links them together.
@@ -148,14 +149,29 @@ sub execute {
                 $all_names{$name} = undef;
             }
         }
+
         my @samples = Genome::Sample->get(name => [keys %all_names]);
         for my $s (@samples) {
             $all_names{$s->name} = $s;
         }
 
+        local %Command::V2::ALTERNATE_FROM_CLASS = (
+            'Genome::Sample' => {
+                'Genome::Library' => ['sample'],
+                'Genome::InstrumentData' => ['sample'],
+            },
+        );
+
         my @bad_names;
         for my $name (keys %all_names) {
-            push @bad_names, $name unless defined $all_names{$name};
+            unless(defined $all_names{$name}) {
+                my $sample = eval { return $self->resolve_param_value_from_cmdline_text({name => 'sample', class => 'Genome::Sample', value => [$name]}); };
+                if($sample) {
+                    $all_names{$name} = $sample;
+                } else {
+                    push @bad_names, $name;
+                }
+            }
         }
 
         if(@bad_names) {
