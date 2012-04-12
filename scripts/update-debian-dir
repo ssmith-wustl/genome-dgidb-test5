@@ -18,7 +18,7 @@ $name =~ s|^.*/||;
 # find the packaging directory from the script name
 my $script = File::Basename::basename($FindBin::Script);
 my $dir = $script;
-$dir =~ s/-update.pl//;
+$dir =~ s/-update(.pl|)//;
 unless (-d $dir) {
     die "no $dir found under $pkgdir!";
 }
@@ -67,13 +67,17 @@ my @diff = `sdiff -s $old_control_path $new_control_path`;
 my @msg;
 for my $change (@diff) {
     my ($old,$type,$new) = ($change =~ /^\s*(.*?)\s+([\<\|\>])\s+(.*)/);
-    $old =~ s/,\s*$//;
-    $new =~ s/,\s*$//;
+    $old =~ s/(,|)\s*$//;
+    $new =~ s/(,|)\s*$//;
     if ($type eq '<') {
         push @msg, "  * removed: $old";
     }
     elsif ($type eq '>') {
         push @msg, "  * added: $new";
+    }
+    elsif ($old eq $new) {
+        warn "same $old & $new?";
+        next;
     }
     else {
         push @msg, "  * changed: $old to $new"

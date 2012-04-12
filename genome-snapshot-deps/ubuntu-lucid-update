@@ -171,7 +171,6 @@ if (-e $parent_path) {
     my @base_list = join('',IO::File->new($base_list)->getlines());
     my $found = 0;
     for my $dep (@base_list) {
-        print "DEP: $dep****\n";
         if ($dep =~ /^$name\s+\((\>\=|)\s*(.*)\)/) {
             $found++;
             my $old_version = $2;
