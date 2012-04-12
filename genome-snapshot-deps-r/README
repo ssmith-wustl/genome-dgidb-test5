@@ -1,3 +1,86 @@
+When asked to make an R "package" (aka "library") work, follow the following procedure.
+
+There is a tool in the top-level scripts/ directory of genome.git called r-slurp.
+It attempts to do all of this from the name of the package/library.  It is very experimental.
+
+These are the instructions for the manual version of what that script attempts to do.
+
+1. Ensure your R_LIBS environment variable is NOT set.  It will hit old /gsc/ things we are getting rid of.
+    echo $R_LIBS
+    unset R_LIBS # put this in your .bashrc
+
+2. See if the package exists and works:
+    R -e 'library(fooBaR)'
+
+3. If it does not, attempt to install it:
+    sudo apt-get update
+    sudo apt-get install r-cran-foobar
+    # if that fails, try
+    sudo apt-get install r-bioc-foobar
+
+4. If neither of those work, we'll need to build a package, which is fairly easy.  We'll cover that later.
+
+5. What is more common than a missing package, is one which doesn't work.  To rebuild a package:
+    apt-get source r-cran-foobar
+    # unzip the source
+    # cd into the directory
+    # update LD_LIBRARY_PATH to not include /gsc libs unless you are on a VM.
+    dpkg-buildpackage
+    cd .. # the package is in the directory above
+    sudo dpkg -i *.deb
+    R -e 'library(fooBaR) # test it
+
+6. It may still fail to test because of a "missing namespace".  
+    # go through the normal cirucus of making a vendor/r-cran-foobar sub-repo
+    # put the code there and do an initial commit
+    # copy the namespace file from the ubuntu-lucid-package-skel directory into it
+    # try the build a again
+    # if it works, be sure to commit and push, then commit and push in the base genome.git repo
+    # if it fails due to deps, be sure to install all deps from the debian/control file and try again
+
+7. If you have to package it completely:
+    # as above, make the vendor/r-cran-foobar sub-repo
+    # go here for the source tarball: http://cran.r-project.org/web/packages/available_packages_by_name.html
+    # on occassion we've found the source on github, so try google if the above fails
+    # use the ubuntu-lucid-package-skel/NAMESPACE file if there is no namespace file
+    # use the ubuntu-lucid-package-skel/debian for the debian directory
+    # findreplace PACKAGE r-cran-foobar debian/*
+    # findreplace VERSION 1.2-1 debian/*
+    # findreplace DATE with the standard tedious debian date format
+
+WHEN DONE ALWAYS UPDATE THE R META-PACKAGE:
+    cd $MY_GIT_REPO
+    cd genome-snapshot-deps-r
+    echo fooBaR >> base-list
+    echo 'library(fooBaR)' >> test.R
+    echo 'r-cran-foobar (>= 1.2-1)' >> ubuntu-lucid-list
+    ./ubuntu-lucid-update
+    ln -s ubuntu-lucid debian
+    dpkg-buildpackage
+    rm debian
+    cd ..
+    sudo dpkg -i genome-snapshot-deps-r*.deb
+
+THEN THE MASTER DEPS PACKAGE
+    cd $MY_GIT_REPO
+    cd genome-snapshot-deps
+    # the ubuntu-lucid-list should already have changes made by the above script
+    # if not ensure it shows the version number of your new R deps package above
+    ./ubuntu-lucid-update
+    ln -s ubuntu-lucid debian
+    dpkg-buildpackage
+    rm debian
+    cd ..
+    sudo dpkg -i genome-snapshot-deps*.deb
+
+THEN PUSH YOUR PACKAGES
+    cd $MY_GIT_REPO
+    scripts/sign-and-queue-packages *.changes vendor/*.changes
+
+
+
+Notes from Matt on how other things are set up...
+
 For a description of the directory structure here, see the README for the top-level genome-snapshot-deps package.
 
 ** Setting up a working R environment. **
