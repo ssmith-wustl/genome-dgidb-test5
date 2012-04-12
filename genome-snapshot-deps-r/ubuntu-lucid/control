@@ -34,5 +34,7 @@ Depends: ${misc:Depends},
     r-cran-cairo (>= 1.4-8-1cran1),
     r-bioc-genomegraphs (>= 1.10.0-1cran1),
     r-cran-matrix (>= 1.0-6-1lucid0),
-    r-cran-mgcv (>= 1.7-13-1lucid0)
+    r-cran-mgcv (>= 1.7-13-1lucid0),
+    r-cran-h5r (>= 1.2-1),
+    r-cran-pbh5 (>= 2012.04.12-1)
 Description: This meta-package installs all external R dependencies of the current internal TGI Genome Modeling System software snapshot.
