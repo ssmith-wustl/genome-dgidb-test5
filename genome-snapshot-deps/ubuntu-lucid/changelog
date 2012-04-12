@@ -1,3 +1,9 @@
+genome-snapshot-deps (2012.04.12-2) unstable; urgency=low
+
+  * changed: genome-snapshot-deps-r (>= 2012.04.12-1) to genome-snapshot-deps-r (>= 2012.04.12-3)
+
+ -- The Genome Institute <gmt@genome.wustl.edu>  Thu, 12 Apr 2012 15:18:01 -0500
+
 genome-snapshot-deps (2012.04.12-1) unstable; urgency=low
 
   * changed: genome-snapshot-deps-r (>= 2012.04.11-3) to genome-snapshot-deps-r (>= 2012.04.12-1)
