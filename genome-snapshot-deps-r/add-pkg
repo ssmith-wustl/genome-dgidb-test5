@@ -2,20 +2,26 @@
 use strict;
 use warnings;
 unless (@ARGV) {
-    die "Usage: add-pkg DEBNAME ...\n";
+    die "Usage: add-pkg DEBNAME DEBNAME...\n";
 }
 
 for my $deb (@ARGV) {
-    my $version = `dpkg -l $deb | tail -n 1 | awk '{ print $3 }'`;
+    my $version = `dpkg -l $deb | tail -n 1 | awk '{ print \$3 }'`;
     unless ($version) {
         die "failed to find debian package $deb\n";
     }
+    chomp $version;
+    print "version $version\n";
 
-    my $rname = `dpkg -L r-cran-pbh5 | grep NAMESPACE | sed s/.NAMESPACE// | sed s/^.*\\///`;
+    my $rname = `dpkg -L r-cran-pbh5 | grep NAMESPACE`;
     unless ($rname) {
-        die "failed to find an R package name in the dpkg -L output\n";
+        die "failed to find an R package name in the dpkg -L output for $deb\n";
     }
-    
+    chomp $rname;
+    $rname =~ s/.NAMESPACE//;
+    $rname =~ s/^.*\///;
+    print "rname: $rname\n";
+
     sub run {
         my $cmd = shift;
         print "RUN: $cmd\n";
