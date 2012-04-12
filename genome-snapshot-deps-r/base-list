@@ -16,3 +16,12 @@ proto
 boot
 xtable
 colorspace
+gplots
+caTools
+bitops
+Cairo
+GenomeGraphs
+Matrix
+mgcv
+h5r
+pbh5

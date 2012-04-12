@@ -11,5 +11,5 @@ Architecture: all
 Provides: genome
 Depends: ${misc:Depends}, ${perl:Depends}, 
     genome-snapshot-deps-perl (>= 2012.04.09-3),
-    genome-snapshot-deps-r (>= 2012.04.10-1)
+    genome-snapshot-deps-r (>= 2012.04.12-1)
 Description: This meta-package installs all dependencies of the current TGI Genome Modeling System software snapshot.

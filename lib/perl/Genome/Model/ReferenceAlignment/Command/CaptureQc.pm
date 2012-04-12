@@ -202,9 +202,9 @@ sub write_full_summary {
             $self->metric_names,
         )) . "\n";
 
-    for my $model ($self->models){
-        next if $model->subject->name =~ /Pooled_Library/;
-        my $build = $model->last_succeeded_build || next;
+    for my $build_id (keys %{$build_to_metrics}){
+        my $build = Genome::Model::Build->get($build_id);
+        my $model = $build->model;
 
         #Take the first instrument_data's index until a decision is made
         #  on how to handle per-sample data, when per-instrument-data data is unavailable
