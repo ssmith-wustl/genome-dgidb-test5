@@ -165,9 +165,9 @@ EOS
         \"chdir 'vendor/$deb_pkg_name/'",
         \"unless (-e 'NAMESPACE') { system q|cp ../../genome-snapshot-deps-r/DEFAULT_NAMESPACE NAMESPACE; git add NAMESPACE; git commit -m add\\ NAMESPACE;| }",
         "git push origin b$deb_version",
-        "dpkg-buildpackage; ls ../$deb_pkg_name*.changes", # ignore bad exit code on build package, just look for the .changes file
+        "dpkg-buildpackage; ls ../*$short_name*.changes", # ignore bad exit code on build package, just look for the .changes file
         \"chdir '..'",
-        "dpkg -i *$short_name*.deb",
+        "sudo dpkg -i *$short_name*.deb",
         "debsign -k$ENV{MYGPGKEY} *$short_name*.changes",
         "chmod 664 ${deb_pkg_name}_* ${short_name}_*",
         "chgrp info ${deb_pkg_name}_* ${short_name}_*",
@@ -175,10 +175,10 @@ EOS
         "ls -lt ~codesigner/incoming/lucid-genome-development/",
         "git add $deb_pkg_name",
         "git commit -m 'built $deb_pkg_name version $deb_version'",
-        "git push origin master",
-        "rm -rf $deb_pkg_name/.* $deb_pkg_name/*",
+        #"git push origin master",
+        "rm -rf $deb_pkg_name; mkdir $deb_pkg_name",
         \"chdir '..'",
-        "echo '$deb_pkg_name (>= $deb_version)' >> genome-snapshot-deps-r/debian-list",
+        "echo '$deb_pkg_name (>= $deb_version)' >> genome-snapshot-deps-r/ubuntu-lucid-list",
         "echo '$r_pkg' >> genome-snapshot-deps-r/base-list",
         "echo 'library($r_pkg)' >> genome-snapshot-deps-r/test.R",
     );
