@@ -199,8 +199,7 @@ sub execute {
         } elsif (!($ref =~/-|0/) && !($var =~ /-|0/)){ #indel
             $sline = $sline . "\tNA\tNA\tNA\n";
         } else {
-            $sline = $sline . "\tNA\tNA\tNA\n";
-            print STDERR "$chr:$st:$ref:$var not found in readcounts\n";
+            $sline = $sline . "\t0\t0\tNA\n";
         }
         print OUTFILE $sline;
         
