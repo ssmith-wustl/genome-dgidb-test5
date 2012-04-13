@@ -149,8 +149,7 @@ sub import_genes {
             next unless $nomenclature;
             my $alternate_name_association = $self->_create_gene_alternate_name_report($gene_name, $identifier, $nomenclature, $evidence_code); #TODO: is pushing evidence_code into description the right thing to do
         }
-        my $go_id_category = $self->_create_gene_category_report($gene_name, 'go_id', $go_input->{'go_id'}, $go_input->{'go_description'});
-        my $go_short_name_category = $self->_create_gene_category_report($gene_name, 'go_short_name', $go_input->{'go_short_name'}, '');
+        my $go_short_name_and_id_category = $self->_create_gene_category_report($gene_name, 'go_short_name_and_id', join('_', $go_input->{'go_short_name'}, $go_input->{'go_id'}), $go_input->{'go_description'});
         my $secondary_go_term = $go_input->{'secondary_go_term'};
         if($go_input->{'go_id'} !~ /$secondary_go_term/ ){
             my $secondary_go_id_category = $self->_create_gene_category_report($gene_name, 'secondary_go_id', $secondary_go_term, '');

@@ -118,17 +118,17 @@ sub _fallback_lsf_resource {
 
     #check to see if our resource requests are feasible (This uses "maxmem" to check theoretical availability)
     #factor of four is based on current six jobs per host policy this should be revisited later
-    my $select_check = "select[ncpus >= $cpus && maxmem >= " . ($mem_mb * 4) . " && gtmp >= $tmp_gb] span[hosts=1]";
+    #my $select_check = "select[ncpus >= $cpus && maxmem >= " . ($mem_mb * 4) . " && gtmp >= $tmp_gb] span[hosts=1]";
 
     #$command = qq(bhosts -R '$select_check' $host_groups | grep ^blade);
-    $command = qq(bhosts -R '$select_check' $host_groups );
-    my @selected_blades = qx($command);
+    #$command = qq(bhosts -R '$select_check' $host_groups );
+    #my @selected_blades = qx($command);
 
-    if (@selected_blades) {
+    #if (@selected_blades) {
         return $required_usage;
-    } else {
-        die __PACKAGE__->error_message("Failed to find hosts that meet resource requirements ($required_usage). [Looked with $select_check]");
-    }
+    #} else {
+    #    die __PACKAGE__->error_message("Failed to find hosts that meet resource requirements ($required_usage). [Looked with $select_check]");
+    #}
 }
 
 sub bsub_rusage {

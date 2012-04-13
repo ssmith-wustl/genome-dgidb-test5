@@ -1,3 +1,16 @@
+genome-snapshot-deps-r (2012.04.12-3) unstable; urgency=low
+
+  * added: r-bioc-biobase (>= 2.10.0-1cran1)
+  * added: r-bioc-lumi (>= 1.6.3-1)
+
+ -- The Genome Institute <gmt@genome.wustl.edu>  Thu, 12 Apr 2012 14:56:42 -0500
+
+genome-snapshot-deps-r (2012.04.12-2) unstable; urgency=low
+
+  * added: r-bioc-affy (>= 1.28.0-1cran1)
+
+ -- The Genome Institute <gmt@genome.wustl.edu>  Thu, 12 Apr 2012 13:55:44 -0500
+
 genome-snapshot-deps-r (2012.04.12-1) unstable; urgency=low
 
   * added: r-cran-h5r (>= 1.2-1)

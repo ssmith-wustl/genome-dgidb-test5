@@ -92,6 +92,8 @@ sub _suppress_status_messages {
 sub execute {
     my $self = shift;
 
+    # An unlock observer is added at end of execute (not here) because
+    # this command periodically commits (which triggers the observer).
     my $lock = Genome::Sys->lock_resource(
         resource_lock => '/gsc/var/lock/sychronize-update-apipe-classes',
         max_try => 1,
@@ -101,18 +103,11 @@ sub execute {
         return;
     }
 
-    UR::Context->current->add_observer(
-        aspect => 'commit',
-        callback => sub{
-            Genome::Sys->unlock_resource(resource_lock => $lock);
-        }
-    );
-
     $self->_suppress_status_messages;
 
     # Stores copied and missing IDs for each type
     my %report;
-
+    
     # Maps new classes with old classes
     my %types = $self->objects_to_sync;
 
@@ -206,6 +201,13 @@ sub execute {
         $self->print_object_cache_summary if $self->show_object_cache_summary;
         $self->status_message("Done syncning $new_type and $old_type");
     }
+
+    UR::Context->current->add_observer(
+        aspect => 'commit',
+        callback => sub{
+            Genome::Sys->unlock_resource(resource_lock => $lock);
+        }
+    );
 
     $self->_report(\%report);
     return 1;

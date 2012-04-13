@@ -13,7 +13,7 @@ for my $deb (@ARGV) {
     chomp $version;
     print "version $version\n";
 
-    my $rname = `dpkg -L r-cran-pbh5 | grep NAMESPACE`;
+    my $rname = `dpkg -L $deb | grep NAMESPACE`;
     unless ($rname) {
         die "failed to find an R package name in the dpkg -L output for $deb\n";
     }
@@ -35,5 +35,6 @@ for my $deb (@ARGV) {
     run "echo '$rname' >> base-list";
     run "echo 'library($rname)' >> test.R";
     run "echo '$deb (>= $version)' >> ubuntu-lucid-list";
+    run "tail base-list test.R ubuntu-lucid-list";
 }
 
