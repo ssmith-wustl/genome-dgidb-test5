@@ -30,10 +30,8 @@ class Genome::Model::Tools::Annotate::ImportInterpro::GenerateInterproResults{
         },
         tmp_dir => { 
             is => 'Path',
-            is_optional => 1,
-            default => '/tmp',
             is_input => 1,
-            doc => 'if set, temporary files for fasta generation, iprscan output, etc. are written to this directory.  Defaults to /tmp'
+            doc => 'files for fasta generation, iprscan output, etc. are written to this directory'
         },
         commit_size => {
             is => 'Number',

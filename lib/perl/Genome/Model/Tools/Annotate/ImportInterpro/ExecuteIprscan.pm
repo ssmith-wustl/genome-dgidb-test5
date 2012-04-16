@@ -19,10 +19,8 @@ class Genome::Model::Tools::Annotate::ImportInterpro::ExecuteIprscan{
         },
         tmp_dir => { 
             is => 'Path',
-            is_optional => 1,
-            default => '/tmp',
             is_input => 1,
-            doc => 'if set, temporary files for fasta generation, iprscan output, etc. are written to this directory.  Defaults to /tmp'
+            doc => 'files for fasta generation, iprscan output, etc. are written to this directory'
         },
         benchmark => {
             is => 'Boolean',
