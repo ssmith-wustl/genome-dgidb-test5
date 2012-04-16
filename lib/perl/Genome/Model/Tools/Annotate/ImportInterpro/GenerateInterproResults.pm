@@ -28,7 +28,7 @@ class Genome::Model::Tools::Annotate::ImportInterpro::GenerateInterproResults{
             is_input => 1,
             doc => 'if set, run times are displayed as status messages after certain steps are completed (x, y, z, etc)',
         },
-        tmp_dir => { 
+        scratch_dir => { 
             is => 'Path',
             is_input => 1,
             doc => 'files for fasta generation, iprscan output, etc. are written to this directory'
@@ -75,8 +75,8 @@ sub execute{
     my $self = shift;
 
     my $build = $self->build;
-    my $tmp_dir = $self->tmp_dir;
-    die "Could not get tmp directory $tmp_dir" unless $tmp_dir; 
+    my $scratch_dir = $self->scratch_dir;
+    die "Could not get tmp directory $scratch_dir" unless $scratch_dir; 
     my $commit_size = $self->commit_size;
     die "Could not get commit-size $commit_size" unless $commit_size; 
     die "commit-size of $commit_size is invalid.  Must be greater than 1" if($commit_size < 1);
@@ -101,7 +101,7 @@ sub execute{
     my $pre_iprscan_merger = Benchmark->new; 
     my %iprscan = $self->get_iprscan_results();
     my $iprscan_merged = File::Temp->new(UNLINK => 0,
-                                         DIR => $tmp_dir,
+                                         DIR => $scratch_dir,
                                          TEMPLATE => 'import-interpro_iprscan-merged-results_XXXXXX');
     my $iprscan_merged_path = $iprscan_merged->filename;
     for my $iprscan_path (keys %iprscan){
@@ -121,7 +121,7 @@ sub execute{
     my $converter_lib = '/lib';
     my $converter_cmd = '/bin/converter.pl';
     my $converter_temp = File::Temp->new(UNLINK => 0,
-                                         DIR => $tmp_dir,
+                                         DIR => $scratch_dir,
                                          TEMPLATE => 'import-interpro_iprscan-results-converted_XXXXXX');
     my $converter_output = $converter_temp->filename;
     #the perl -I is used to ensure that the iprscan lib is included in the path.  This may no longer be necessary, as we are using the version on /gsc/scripts
@@ -147,7 +147,7 @@ sub execute{
     #attempting the mv
     UR::Context->commit;
 
-    unless($genbank_base_dir eq $self->tmp_dir){
+    unless($genbank_base_dir eq $self->scratch_dir){
         #copy genbank dir over genbank's interpro results folder
         if (-d $genbank_results_data_dir->dirname . "/interpro_results"){
             Genome::Sys->shellcmd(cmd => "mv -f " . $genbank_results_data_dir->dirname . "/interpro_results " . $genbank_base_dir) or die "Failed to mv Genbank results: $!";
@@ -156,7 +156,7 @@ sub execute{
             print "No results for Genbank, skipping...";
         }
     }
-    unless($ensembl_base_dir eq $self->tmp_dir){
+    unless($ensembl_base_dir eq $self->scratch_dir){
         #copy ensembl dir over ensembl's interpro results folder
         if (-d $ensembl_results_data_dir->dirname . "/interpro_results"){
             Genome::Sys->shellcmd(cmd => "mv -f " . $ensembl_results_data_dir->dirname . "/interpro_results " . $ensembl_base_dir) or die "Failed to mv Ensembl results: $!";
@@ -172,9 +172,9 @@ sub execute{
 
 sub get_iprscan_results{
     my $self = shift;
-    my $tmp_dir = $self->tmp_dir;
+    my $scratch_dir = $self->scratch_dir;
     my %results;
-    while (my $file = glob("$tmp_dir/import-interpro_iprscan-result_*")) {
+    while (my $file = glob("$scratch_dir/import-interpro_iprscan-result_*")) {
         $results{$file}++;
     }
     return %results;
@@ -198,7 +198,7 @@ sub _get_results_target_dir{
     }elsif ($model_name =~ $source){
         $dir = join("/", $self->build->data_directory, "annotation_data");
     }else{
-        $dir = $self->tmp_dir;
+        $dir = $self->scratch_dir;
     }
     return $dir;
 }

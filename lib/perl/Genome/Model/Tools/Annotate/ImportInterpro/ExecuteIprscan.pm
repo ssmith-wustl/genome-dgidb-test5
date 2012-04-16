@@ -17,7 +17,7 @@ class Genome::Model::Tools::Annotate::ImportInterpro::ExecuteIprscan{
             default => 4.5,
             doc => 'Version of Interpro used.  This option is currently nonfunctional  The default is 4.5',
         },
-        tmp_dir => { 
+        scratch_dir => { 
             is => 'Path',
             is_input => 1,
             doc => 'files for fasta generation, iprscan output, etc. are written to this directory'
@@ -49,8 +49,8 @@ EOS
 sub execute{
     my $self = shift;
 
-    my $tmp_dir = $self->tmp_dir;
-    die "Could not get tmp directory $tmp_dir" unless $tmp_dir; #TODO: Sanity check this
+    my $scratch_dir = $self->scratch_dir;
+    die "Could not get tmp directory $scratch_dir" unless $scratch_dir; #TODO: Sanity check this
     my $iprscan_dir = '/gsc/scripts/pkg/bio/iprscan/iprscan-'.$self->interpro_version; #defaults to 4.5; 
     die "Could not find interpro version ".$self->interpro_version unless -d $iprscan_dir; 
 
@@ -68,12 +68,12 @@ sub execute{
     my %iprscan;
     my %fastas = $self->get_fastas();
     my $output_text = File::Temp->new(UNLINK => 0,
-                                      DIR => $tmp_dir,
+                                      DIR => $scratch_dir,
                                       TEMPLATE => 'import-interpro_iprscan-output-text_XXXXX');
     for my $fasta_file (keys %fastas){
         $self->status_message("Dealing with fasta $fasta_file");
         my $iprscan_temp = File::Temp->new(UNLINK => 0,
-                                           DIR => $tmp_dir,
+                                           DIR => $scratch_dir,
                                            TEMPLATE => 'import-interpro_iprscan-result_XXXXXX');
         my $iprscan_output = $iprscan_temp->filename;
         #This will run the iprscan, appending STDOUT and STDERR to the $ouput_file
@@ -99,10 +99,10 @@ sub execute{
 
 sub get_fastas{
     my $self = shift;
-    my $tmp_dir = $self->tmp_dir;
+    my $scratch_dir = $self->scratch_dir;
     my %fastas;
 
-    while (my $file = glob ("$tmp_dir/import-interpro_fasta_*")) {
+    while (my $file = glob ("$scratch_dir/import-interpro_fasta_*")) {
         $fastas{$file}++;
     }
     return %fastas;

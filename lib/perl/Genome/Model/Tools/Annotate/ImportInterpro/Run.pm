@@ -56,7 +56,7 @@ class Genome::Model::Tools::Annotate::ImportInterpro::Run{
             is_input => 1,
             doc => 'if set, STDOUT and STDERR are directed to this file path for logging purposes.  Defaults to /dev/null'
         },
-        tmp_dir => { 
+        scratch_dir => { 
             is => 'Path',
             is_input => 1,
             doc => 'files for fasta generation, iprscan output, etc. are written to this directory'
@@ -111,20 +111,20 @@ sub execute {
     my $iprscan_dir = '/gsc/scripts/pkg/bio/iprscan/iprscan-'.$self->interpro_version; #defaults to 4.5; 
     die "Could not find interpro version ".$self->interpro_version unless -d $iprscan_dir; 
 
-    my $tmp_dir = $self->tmp_dir;
-    die "Could not get tmp directory $tmp_dir" unless $tmp_dir; #TODO: Sanity check this
+    my $scratch_dir = $self->scratch_dir;
+    die "Could not get tmp directory $scratch_dir" unless $scratch_dir; #TODO: Sanity check this
     print "Starting GenerateTranscript Fastas" . "\n";
     my $fasta_success = Genome::Model::Tools::Annotate::ImportInterpro::GenerateTranscriptFastas->execute(
         build => $build,
         chunk_size => $chunk_size,
         benchmark => $self->benchmark,
-        tmp_dir => $tmp_dir,
+        scratch_dir => $scratch_dir,
     );
     die "Could not generate .fasta files: $!" unless $fasta_success;
     print "Finished GenerateTranscriptFastas" . "\n";
     my $interpro_success = Genome::Model::Tools::Annotate::ImportInterpro::ExecuteIprscan->execute(
         benchmark => $self->benchmark,
-        tmp_dir => $tmp_dir,
+        scratch_dir => $scratch_dir,
     );
     die "Could not complete Interpro scan: $!" unless $interpro_success;
     print "Finished Iprscan" . "\n";
@@ -143,7 +143,7 @@ sub execute {
     my $results_success = Genome::Model::Tools::Annotate::ImportInterpro::GenerateInterproResults->execute(
         build => $build,
         benchmark => $self->benchmark,
-        tmp_dir => $tmp_dir,
+        scratch_dir => $scratch_dir,
         commit_size => $commit_size,
         reference_transcripts => $self->reference_transcripts,
     );
@@ -181,7 +181,7 @@ Gets every transcript for a given build, runs them through Interpro, and creates
 
  in the shell:
 
-     gmt annotate import-interpro run --reference-transcripts NCBI-human.combined-annotation/54_36p
+     gmt annotate import-interpro run --reference-transcripts NCBI-human.combined-annotation/54_36p --scratch-dir my_dir
 
  in Perl:
 
@@ -190,7 +190,7 @@ Gets every transcript for a given build, runs them through Interpro, and creates
          interpro_version => '4.1', #default 4.5
          chunk_size => 40000, #default 25000
          log_file => mylog.txt, #default /dev/null
-         tmp_dir =>  'myDir', #defualt /tmp
+         scratch_dir =>  'myDir',
      );
 
 =head1 Methods

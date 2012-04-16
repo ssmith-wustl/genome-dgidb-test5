@@ -30,7 +30,7 @@ class Genome::Model::Tools::Annotate::ImportInterpro::GenerateTranscriptFastas{
             is_input => 1,
             doc => 'if set, run times are displayed as status messages after certain steps are completed (x, y, z, etc)',
         },
-        tmp_dir => { 
+        scratch_dir => { 
             is => 'Path',
             is_input => 1,
             doc => 'files for fasta generation, iprscan output, etc. are written to this directory'
@@ -64,8 +64,8 @@ sub execute{
     my $chunk_size = $self->chunk_size;
     die "Could not get chunk-size $chunk_size" unless $chunk_size; 
     die "chunk-size of $chunk_size is invalid.  Must be between 1 and 50000" if($chunk_size > 50000 or $chunk_size < 1);
-    my $tmp_dir = $self->tmp_dir;
-    die "Could not get tmp directory $tmp_dir" unless $tmp_dir; #TODO: Sanity check this
+    my $scratch_dir = $self->scratch_dir;
+    die "Could not get tmp directory $scratch_dir" unless $scratch_dir; #TODO: Sanity check this
 
     # db disconnect to avoid Oracle failures killing our long running stuff
     if (Genome::DataSource::GMSchema->has_default_handle) {
@@ -82,7 +82,7 @@ sub execute{
                 $fastas{$fasta} = $fasta_temp;
             }
             $fasta_temp = File::Temp->new(UNLINK => 0, 
-                                          DIR => $tmp_dir,
+                                          DIR => $scratch_dir,
                                           TEMPLATE => 'import-interpro_fasta_XXXXXX');
             $fasta = $fasta_temp->filename; 
             $fasta_writer = Bio::SeqIO->new(-file => ">$fasta", -format => 'fasta');
