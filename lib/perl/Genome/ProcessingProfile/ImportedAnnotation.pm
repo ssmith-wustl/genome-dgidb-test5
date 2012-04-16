@@ -71,12 +71,13 @@ sub _execute_build{
         imported_annotation_build => $build,
     );
 
-    # my $interpro_cmd = Genome::Model::Tools::Annotate::ImportInterpro::Run->execute(
-        # reference_transcripts => join('/', $model->name, $version),
-        # interpro_version => $self->interpro_version, #TODO: update processing profiles
-        # log_file => join('/', $data_directory, 'interpro_log'),
-    # );
-    # $interpro_cmd->execute;
+    my $interpro_cmd = Genome::Model::Tools::Annotate::ImportInterpro::Run->create(
+        reference_transcripts => join('/', $model->name, $version),
+        interpro_version => $self->interpro_version, #TODO: update processing profiles
+        log_file => join('/', $data_directory, 'interpro_log'),
+        scratch_dir => $data_directory,
+    );
+    $interpro_cmd->execute;
 
     my $tiering_cmd;
     my $annotation_directory = $build->_annotation_data_directory;
