@@ -177,6 +177,7 @@ sub params_for_result {
         minimum_mapping_quality => ($pp->refcov_minimum_mapping_quality || 0),
         use_short_roi_names => $pp->refcov_use_short_names,
         merge_contiguous_regions => $pp->refcov_merge_roi_regions,
+        roi_track_name => ($pp->refcov_roi_track_name || undef),
         test_name => ($ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef),
     );
 }

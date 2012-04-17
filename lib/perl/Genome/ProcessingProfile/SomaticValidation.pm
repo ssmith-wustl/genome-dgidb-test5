@@ -82,6 +82,11 @@ class Genome::ProcessingProfile::SomaticValidation {
             is => 'Boolean',
             doc => 'Replace names in the BED file with short pre-generated names',
         },
+        refcov_roi_track_name => {
+            is => 'Text',
+            valid_values => ['target_region','tiled_region'],
+            doc => 'For multi-tracked BED files we define which track to use.',
+        },
     ],
 };
 

@@ -129,6 +129,12 @@ class Genome::ModelDeprecated {
             to => 'value_id',
             where => [ name => 'short_roi_names', value_class_name => 'UR::Value' ], 
         },
+        roi_track_name => {
+            is_mutable => 1,
+            via => 'inputs', 
+            to => 'value_id',
+            where => [ name => 'roi_track_name', value_class_name => 'UR::Value' ], 
+        },
     ],
     has_optional_calculated => [
         individual_common_name => {

@@ -1423,13 +1423,17 @@ sub region_of_interest_set_bed_file {
     }
     my $bed_file_path = $self->reference_coverage_directory .'/'. $roi_set->id .'.bed';
     unless (-e $bed_file_path) {
-        my $dump_command = Genome::FeatureList::Command::DumpMergedList->create(
+        my %dump_params = (
             feature_list => $roi_set,
             output_path => $bed_file_path,
             alternate_reference => $alt_reference,
             merge => $merge_status,
             short_name => $use_short_names,
         );
+        if ($self->model->roi_track_name) {
+            $dump_params{'track_name'} = $self->model->roi_track_name;
+        }
+        my $dump_command = Genome::FeatureList::Command::DumpMergedList->create(%dump_params);
         unless ($dump_command->execute) {
             die('Failed to print bed file to path '. $bed_file_path);
         }

@@ -40,6 +40,10 @@ class Genome::InstrumentData::AlignmentResult::Merged::CoverageStats {
             is => 'Boolean',
             doc => 'Whether or not to shorten the names in the BED file for processing',
         },
+        roi_track_name => {
+            is => 'Text',
+            doc => 'For multi-tracked ROI use this named track',
+        },
         merge_contiguous_regions => {
             is => 'Boolean',
             doc => 'Whether or not to merge overlapping/adjoining regions before analysis',
@@ -224,13 +228,17 @@ sub _dump_bed_file {
 
     my $bed_file_path = $self->temp_staging_directory .'/'. $roi_set->id .'.bed';
     unless (-e $bed_file_path) {
-        my $dump_command = Genome::FeatureList::Command::DumpMergedList->create(
+        my %dump_params = (
             feature_list => $roi_set,
             output_path => $bed_file_path,
             alternate_reference => $alt_reference,
             merge => $merge_status,
             short_name => $use_short_names,
         );
+        if ($self->roi_track_name) {
+            $dump_params{track_name} = $self->roi_track_name;
+        }
+        my $dump_command = Genome::FeatureList::Command::DumpMergedList->create(%dump_params);
         unless ($dump_command->execute) {
             die('Failed to print bed file to path '. $bed_file_path);
         }

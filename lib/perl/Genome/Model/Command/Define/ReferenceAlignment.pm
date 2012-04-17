@@ -58,6 +58,11 @@ class Genome::Model::Command::Define::ReferenceAlignment {
             default_value => 1,
             doc => 'A flag to use short ROI names in the BED file used to evaluate coverage.',
         },
+        roi_track_name => {
+            is => 'Text',
+            valid_values => ['target_region','tiled_region'],
+            doc => 'If the ROI used is multi-tracked, select one of the tracks for use as the ROI.',
+        },
     ],
 };
 
@@ -146,6 +151,12 @@ sub execute {
     }
     if ($self->region_of_interest_set_name) {
         my $name = $self->region_of_interest_set_name;
+        my $feature_list = Genome::FeatureList->get(name => $name);
+        unless ($feature_list) {
+            $self->error_message('Failed to find region_of_interest_set_name : '. $name);
+            $model->delete;
+            return;
+        }
         my $i = $model->add_input(value_class_name => 'UR::Value', value_id => $name, name => 'region_of_interest_set_name');
         if ($i) {
             $self->status_message("Analysis limited to region of interest set '$name'");
@@ -179,6 +190,23 @@ sub execute {
                 }
             } else {
                 $self->error_message('Failed to set model input short_roi_names to '. $self->short_roi_names .'!');
+                $model->delete;
+                return;
+            }
+        }
+        if (defined($self->roi_track_name)) {
+            unless ($feature_list->is_multitracked) {
+                $self->error_message('No need to set roi_track_name since region_of_interest_set_name '. $name .' is not multi-tracked!');
+                $model->delete;
+                return;
+            }
+            my $roi_track_name_input = $model->add_input(value_class_name => 'UR::Value', value_id => $self->roi_track_name, name => 'roi_track_name');
+            if ($roi_track_name_input) {
+                if ($roi_track_name_input->value_id) {
+                    $self->status_message('Track name '. $roi_track_name_input->value_id .' will be used for region of interest set '. $name .'.');
+                }
+            } else {
+                $self->error_message('Failed to set model input roi_track_name to '. $self->roi_track_name .'!');
                 $model->delete;
                 return;
             }
