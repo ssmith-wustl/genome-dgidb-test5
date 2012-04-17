@@ -86,7 +86,7 @@ sub execute{
     my $iprscan_time = timediff($post_iprscan, $pre_iprscan);
     $self->status_message('iprscan: ' . timestr($iprscan_time, 'noc')) if $self->benchmark;
 
-    #Restart failed jobs
+    #TODO: Restart failed jobs correctly
     my @restart_commands = $self->_find_restart_commands($output_text->filename, $iprscan_dir); 
     for my $cmd (@restart_commands){
         $self->status_message("Restarting job with command: $cmd");
@@ -111,6 +111,9 @@ sub get_fastas{
 #This parses the output for notifications of failed jobs and 
 #collects the commands into a list.
 sub _find_restart_commands{
+#TODO: this clearly doesn't work.  The report file in question required for
+#the restart lives someplace in $iprscan_dir/tmp/.  This also generally 
+#requires some sort of manual intervention to fix the error before the restart will work...
     my ($self, $output_file, $iprscan_dir) = @_;
 
     my $iprscan_bin = $iprscan_dir . '/bin/';
