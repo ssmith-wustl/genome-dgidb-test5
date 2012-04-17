@@ -123,7 +123,7 @@ sub params_for_result {
         minimum_mapping_quality => ($build->minimum_mapping_quality || 0),
         use_short_roi_names => $use_short_roi,
         merge_contiguous_regions => $merge_regions,
-        roi_track_name => ($roi_track_name || undef);
+        roi_track_name => ($roi_track_name || undef),
         test_name => ($ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef),
     );
 }
