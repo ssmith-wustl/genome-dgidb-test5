@@ -31,6 +31,12 @@ class Genome::Taxon {
         },
     ],
     has_optional => [
+#       This was once on the Subject base class but this caused UR to not know how to join over to
+#       SubjectAttributes.
+        common_name => {
+            calculate_from => 'name',
+            calculate => q{ return $name },
+        },
         strain_name=> {
             is => 'Text',
             via => 'attributes',

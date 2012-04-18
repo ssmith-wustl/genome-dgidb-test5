@@ -37,9 +37,12 @@ class Genome::Subject {
             is => 'Text',
             doc => 'Official name of the subject',
         },
-        common_name => {
-            calculate_from => 'name',
-            calculate => q{ return $name },
+        common_name => { 
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'common_name' ],
+            is_mutable => 1,
         },
         description => { 
             is => 'Text',

@@ -36,6 +36,11 @@ class Genome::Model {
                 return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($pp->type_name);
             },
         },
+        _last_complete_build_id => {
+            is => 'Number',
+            column_name => 'last_complete_build_id',
+            doc => 'The last complete build id',
+        },
         subject => {
             is => 'Genome::Subject',
             id_by => 'subject_id',
@@ -62,6 +67,21 @@ class Genome::Model {
         user_name => { is => 'Text' },
         creation_date  => { is => 'Timestamp' },
         build_requested => { is => 'Boolean'},
+        keep_n_most_recent_builds => { 
+            via => 'attributes', to => 'value', is_mutable => 1, 
+            where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] 
+        },
+        _last_complete_build_id => { 
+            is => 'Number', 
+            column_name => 'LAST_COMPLETE_BUILD_ID', 
+            doc => 'The last complete build id' ,
+        },
+        apipe_cron_status => {
+            via => 'notes',
+            to => 'body_text',
+            where => [ header_text => 'apipe_cron_status' ],
+            is_mutable => 0,
+        },
     ],
     has_optional_many => [
         builds  => {

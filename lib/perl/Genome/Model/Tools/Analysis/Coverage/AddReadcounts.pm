@@ -196,7 +196,7 @@ sub execute {
         if(exists($readcounts{$key})){
             my ($rcnt,$vcnt,$vaf) = split(/:/,$readcounts{$key});
             $sline = $sline . "\t$rcnt\t$vcnt\t$vaf\n";
-        } elsif (!($ref =~/-|0/) && !($var =~ /-|0/)){ #indel
+        } elsif (($ref =~/-|0/) || ($var =~ /-|0/)){ #indel
             $sline = $sline . "\tNA\tNA\tNA\n";
         } else {
             $sline = $sline . "\t0\t0\tNA\n";
