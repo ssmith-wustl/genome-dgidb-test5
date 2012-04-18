@@ -333,7 +333,7 @@ sub default_genotype_models {
         name => 'instrument_data',
     );
     my @models = map { $_->model } @inputs;
-    @models = grep { $_->subclass_name eq 'Genome::Model::GenotypeMicroarray' and $_->subject_id eq $self->id } @models;
+    @models = grep { $_->subclass_name eq 'Genome::Model::GenotypeMicroarray' } @models;
 
     return @models;
 }
