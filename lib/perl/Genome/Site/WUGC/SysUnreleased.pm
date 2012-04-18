@@ -437,25 +437,6 @@ sub open_file_for_overwriting {
     Carp::croak("Failed to open file ($file) for over write: $!");
 }
 
-sub copy_file {
-    my ($self, $file, $dest) = @_;
-
-    $self->validate_file_for_reading($file)
-        or Carp::croak("Cannot open input file ($file) for reading!");
-
-    $self->validate_file_for_writing($dest)
-        or Carp::croak("Cannot open output file ($dest) for writing!");
-
-    # Note: since the file is validate_file_for_reading, and the dest is validate_file_for_writing,
-    #  the files can never be exactly the same.
-
-    unless ( File::Copy::copy($file, $dest) ) {
-        Carp::croak("Can't copy $file to $dest: $!");
-    }
-
-    return 1;
-}
-
 sub copy_directory {
     my ($self, $source, $dest) = @_;
 

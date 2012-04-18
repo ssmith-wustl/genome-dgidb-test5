@@ -182,6 +182,25 @@ sub create_temp_directory {
 # Basic filesystem operations
 #####
 
+sub copy_file {
+    my ($self, $file, $dest) = @_;
+
+    $self->validate_file_for_reading($file)
+        or Carp::croak("Cannot open input file ($file) for reading!");
+
+    $self->validate_file_for_writing($dest)
+        or Carp::croak("Cannot open output file ($dest) for writing!");
+
+    # Note: since the file is validate_file_for_reading, and the dest is validate_file_for_writing,
+    #  the files can never be exactly the same.
+
+    unless ( File::Copy::copy($file, $dest) ) {
+        Carp::croak("Can't copy $file to $dest: $!");
+    }
+
+    return 1;
+}
+
 sub tar {
     my ($class, %params) = @_;
     my $tar_path = delete $params{tar_path};
