@@ -15,13 +15,6 @@ package Genome::Model::Tools::Vcf::VcfFilter;
 use strict;
 use warnings;
 use Genome;
-use File::stat;
-use IO::File;
-use File::Basename;
-use Getopt::Long;
-use FileHandle;
-use List::MoreUtils qw(firstidx);
-use List::MoreUtils qw(uniq);
 
 class Genome::Model::Tools::Vcf::VcfFilter {
     is => 'Command',
@@ -129,7 +122,7 @@ sub execute {
 
     # first, read the filter file and store the locations
     my %filter;
-    my $filter_fh = Genome::Sys->open_file_for_reading($filter_file); #IO::File->new( $filter_file ) || die "can't open vcf file\n";
+    my $filter_fh = Genome::Sys->open_file_for_reading($filter_file);
     while( my $line = $filter_fh->getline ) {
         chomp($line);
 
