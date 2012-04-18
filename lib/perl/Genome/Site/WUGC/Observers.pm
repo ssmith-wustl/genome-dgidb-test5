@@ -14,6 +14,8 @@ UR::Object::Type->add_observer(
             require Genome::Site::WUGC::Observers::Project;
         } elsif ($class_name eq 'Command::V1') {
             require Genome::Site::WUGC::Observers::Command;
+        } elsif ($class_name eq 'Genome::DataSource::GMSchema') {
+            require Genome::Site::WUGC::Observers::GMSchema;
         }
         die $@ if $@;
     },
