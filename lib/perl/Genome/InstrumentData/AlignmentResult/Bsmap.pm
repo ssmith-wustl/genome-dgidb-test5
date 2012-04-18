@@ -320,7 +320,7 @@ sub prepare_reference_sequence_index {
 
 # TODO assume yes?
 sub fillmd_for_sam {
-    return 0;
+    return 1;
 }
 
 # TODO assume yes?
