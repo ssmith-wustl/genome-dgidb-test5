@@ -244,8 +244,6 @@ sub get_or_create_roi_bed {
                 $strand);
 
             my $reference_index = $self->reference_sequence->full_consensus_sam_index_path;
-print "Getting reference index from $reference_index\n";
-`cp $reference_index /gscuser/aregier/reference_index`;
             my %chrom_stop = map {chomp; split(/\t/)} `cut -f 1,2 $reference_index`;
 
             if (%params) {
