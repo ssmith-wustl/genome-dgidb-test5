@@ -62,12 +62,12 @@ if ($0 =~ /(?:gmt|genome)(?:5\.12\.1)?$/ and not `grep log_command $0`) {
 use UR::ObjectV001removed;
 
 # we removed UR::Time, but lots of things still depend on it
-# this brings back UR::Time as a namespace, but only or legacy things
+# this brings back UR::Time as a namespace, but only for legacy things
 use Genome::Site::WUGC::LegacyTime;
 
 # bring in the regular Genome::Sys, then extend
 use Genome::Sys;
-use Genome::Site::WUGC::SysUnreleased;      # extensions to Genome::Sys
+use Genome::Site::TGI::Extension::Sys;      # extensions to Genome::Sys
 
 # the old Genome::Config is all deprecated
 # the core stuff about looking up your host config is now in Genome::Site
