@@ -249,8 +249,8 @@ class Genome::InstrumentData::Solexa {
         },
         # TODO Replace with new Genome::Project
         project => {
-            is => "Genome::Site::WUGC::Project",
-            calculate => q|Genome::Site::WUGC::Project->get(name => $self->project_name)|
+            is => "Genome::Site::TGI::Project",
+            calculate => q|Genome::Site::TGI::Project->get(name => $self->project_name)|
         },
     ],
 };

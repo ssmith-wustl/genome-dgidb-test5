@@ -19,7 +19,7 @@ use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData') or die;
 
 my $gsc_project = Test::MockObject->new();
 ok($gsc_project, 'create mock gsc project');
-$gsc_project->set_isa('Genome::Site::WUGC::SetupProjectResearch');
+$gsc_project->set_isa('Genome::Site::TGI::SetupProjectResearch');
 $gsc_project->set_always(id => -4444);
 $gsc_project->set_always(name => 'AQID-test-project');
 $gsc_project->set_always(setup_name => 'AQID-test-project');
@@ -27,7 +27,7 @@ $gsc_project->set_always( pse_id => '-10000001');
 
 my $gsc_workorder = Test::MockObject->new();
 ok($gsc_workorder, 'create mock work order');
-$gsc_workorder->set_isa('Genome::Site::WUGC::SetupWorkOrder');
+$gsc_workorder->set_isa('Genome::Site::TGI::SetupWorkOrder');
 $gsc_workorder->set_always(id => -1111);
 $gsc_workorder->set_always(name => 'AQID-Test-Workorder');
 $gsc_workorder->set_always(setup_name => 'AQID-Test-Workorder');

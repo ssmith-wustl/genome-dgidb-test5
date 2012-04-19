@@ -33,12 +33,12 @@ is(@instrument_data, $qidfgm_cnt, "create $qidfgm_cnt inst data");
 is(@pses, $qidfgm_cnt, "create $qidfgm_cnt pses");
 
 my $gsc_project = Test::MockObject->new();
-$gsc_project->set_isa('Genome::Site::WUGC::SetupProjectResearch');
+$gsc_project->set_isa('Genome::Site::TGI::SetupProjectResearch');
 $gsc_project->set_always(id => -111);
 $gsc_project->set_always(name => 'AQID-TEST-PROJECT');
 $gsc_project->set_always(setup_name => 'AQID-TEST-PROJECT');
 my $gsc_workorder = Test::MockObject->new();
-$gsc_workorder->set_isa('Genome::Site::WUGC::SetupWorkOrder');
+$gsc_workorder->set_isa('Genome::Site::TGI::SetupWorkOrder');
 $gsc_workorder->set_always(id => -222);
 $gsc_workorder->set_always(name => 'AQID-TEST-WORKORDER');
 $gsc_workorder->set_always(setup_name => 'AQID-TEST-WORKORDER');

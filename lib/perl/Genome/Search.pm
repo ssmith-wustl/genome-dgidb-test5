@@ -76,7 +76,7 @@ sub searchable_classes {
         Genome::ProcessingProfile
         Genome::InstrumentData::FlowCell
         Genome::WorkOrder
-        Genome::Site::WUGC::Project
+        Genome::Site::TGI::Project
         Genome::Sys::Email
         Genome::DruggableGene::DrugGeneInteractionReport
         Genome::DruggableGene::DrugNameReport

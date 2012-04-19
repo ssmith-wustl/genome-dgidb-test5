@@ -1,5 +1,5 @@
 package Genome::Config::vm54;
-use Genome::Site::WUGC;
+use Genome::Site::TGI;
 1;
 
 =pod

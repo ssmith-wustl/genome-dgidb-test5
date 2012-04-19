@@ -135,7 +135,7 @@ class Genome::Model::Build {
                               doc => 'variants linked to this build... currently only for Somatic builds but need this accessor for get_all_objects' },
         model_groups     => { via => 'model', is_many => 1, },
 
-        projects         => { is => 'Genome::Site::WUGC::Project', via => 'model' },
+        projects         => { is => 'Genome::Site::TGI::Project', via => 'model' },
         work_orders      => { is => 'Genome::WorkOrder', via => 'projects' },
         work_order_names => { via => 'work_orders', to => 'name' },
         work_order_numbers => { via => 'work_orders', to => 'id' },

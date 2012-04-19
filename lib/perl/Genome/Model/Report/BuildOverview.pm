@@ -102,7 +102,7 @@ sub generate_report_detail {
 #   REALLY oughta get this to work correctly... not all subjects are samples.
     if ($model->subject_type eq 'sample_name') {
         $sample = Genome::Sample->get(name=>$subject_name);
-        @project_list = Genome::Site::WUGC::Project->get(sample_names=>$sample->name);
+        @project_list = Genome::Site::TGI::Project->get(sample_names=>$sample->name);
     }
 
     @build_reports_list = $build->available_reports;

@@ -26,13 +26,13 @@ sub GSC::IndexIllumina::get { my ($class, $id) = @_; for my $index_illumina ( @i
 use warnings;
 
 my $gsc_project = Test::MockObject->new();
-$gsc_project->set_isa('Genome::Site::WUGC::SetupProjectResearch');
+$gsc_project->set_isa('Genome::Site::TGI::SetupProjectResearch');
 $gsc_project->set_always(id => -444);
 $gsc_project->set_always(setup_id => -444);
 $gsc_project->set_always(name => '__TEST_PROJECT__');
 $gsc_project->set_always(setup_name => '__TEST_PROJECT__');
 my $gsc_workorder = Test::MockObject->new();
-$gsc_workorder->set_isa('Genome::Site::WUGC::SetupWorkOrder');
+$gsc_workorder->set_isa('Genome::Site::TGI::SetupWorkOrder');
 $gsc_workorder->set_always(id => -222);
 $gsc_workorder->set_always(name => '__TEST_WORKORDER__');
 $gsc_workorder->set_always(setup_name => '__TEST_WORKORDER__');

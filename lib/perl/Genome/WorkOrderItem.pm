@@ -56,11 +56,11 @@ class Genome::WorkOrderItem {
     ],
     has_many_optional => [
         sequence_products => {
-            is => 'Genome::Site::WUGC::WorkOrderItemSequenceProduct',
+            is => 'Genome::Site::TGI::WorkOrderItemSequenceProduct',
             reverse_as => 'work_order_item',
         },
         sequence_items => {
-            is => 'Genome::Site::WUGC::SequenceItem',
+            is => 'Genome::Site::TGI::SequenceItem',
             via => 'sequence_products',
             to => 'sequence_item',
         },
@@ -154,8 +154,8 @@ sub event_statuses {
         my $status = {};
 
         # get event statuses from LIMS
-        # FIXME this will not work b/c the seq items (Genome::Site::WUGC::SequenceItem) here do not have the code to get the creation pse
-        #  if adding this functionality, DO NOT add GSC classes, use a view in Genome::Site::WUGC.
+        # FIXME this will not work b/c the seq items (Genome::Site::TGI::SequenceItem) here do not have the code to get the creation pse
+        #  if adding this functionality, DO NOT add GSC classes, use a view in Genome::Site::TGI.
         if ($sp->sequence_item_type eq 'index illumina') {
 
             my $creation_pse = $sp->get_creation_event();

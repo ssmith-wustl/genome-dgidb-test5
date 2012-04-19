@@ -60,7 +60,7 @@ class Genome::Sample::View::Status::Xml {
                 },
                 {
                     name => 'projects',
-                    subject_class_name => 'Genome::Site::WUGC::Project',
+                    subject_class_name => 'Genome::Site::TGI::Project',
                     perspective => 'default',
                     toolkit => 'xml',
                     aspects => [

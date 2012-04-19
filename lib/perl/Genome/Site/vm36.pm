@@ -1,5 +1,5 @@
 package Genome::Config::vm36;
-use Genome::Site::WUGC;
+use Genome::Site::TGI;
 1;
 
 =pod
@@ -12,7 +12,7 @@ Genome::Config::vm36 - WUGC host configuration for the wugsc ssh server
 
 Its a hack! Because our vm's are not named as expected
 
-Ensures that Genome::Site::WUGC is used by all *.gsc.wustl.edu hosts
+Ensures that Genome::Site::TGI is used by all *.gsc.wustl.edu hosts
 
 =cut
 

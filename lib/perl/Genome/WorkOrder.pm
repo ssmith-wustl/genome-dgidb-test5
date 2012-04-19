@@ -53,7 +53,7 @@ class Genome::WorkOrder {
             len => 10,
         },
         project => { 
-            is => 'Genome::Site::WUGC::Project', 
+            is => 'Genome::Site::TGI::Project', 
             id_by => 'project_id' 
         },
         project_name => {

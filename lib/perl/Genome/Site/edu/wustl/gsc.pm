@@ -1,5 +1,5 @@
 package Genome::Site::edu::wustl::gsc;
-use Genome::Site::WUGC;
+use Genome::Site::TGI;
 1;
 
 =pod
