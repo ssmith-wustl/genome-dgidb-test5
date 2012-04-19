@@ -190,7 +190,7 @@ sub execute {
   my $tumor_min_depth = $self->tumor_min_depth;
   my $min_mapq = $self->min_mapq;
 
-  my $optional_params;
+  my $optional_params = "";
 
   if ($normal_min_depth) {
     $optional_params .= ", normal_min_depth => \"$normal_min_depth\"";
