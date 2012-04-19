@@ -177,7 +177,7 @@ sub execute {
         next unless( -e $wig_file );
 
         # Use joinx to parse the WIG file and return per-ROI coverages of AT, CG (non-CpG), and CpG
-        system( "joinx wig2bed -Zc $wig_file | joinx intersect -F \"I A3\" $roi_bed - | joinx ref-stats - $ref_seq | cut -f 1-7 > $roi_covg_dir/$sample.covg" );# or die "Failed to run joinx to calculate per-gene coverages in $sample! $!\n";
+        system( "joinx wig2bed -Zc $wig_file | joinx sort -s | joinx intersect -F \"I A3\" $roi_bed - | joinx ref-stats - $ref_seq | cut -f 1-7 > $roi_covg_dir/$sample.covg" );# or die "Failed to run joinx to calculate per-gene coverages in $sample! $!\n";
 
         # Read the joinx formatted coverage file and count covered bases per gene
         my %geneCovg = ();
@@ -203,14 +203,14 @@ sub execute {
                                     $geneCovg{$gene}{at}, $geneCovg{$gene}{cg}, $geneCovg{$gene}{cpg} ), "\n" );
             }
             else {
-                $geneCovgFh->print( "$gene\t" . $geneLen{$gene} . "0\t0\t0\t0\n" );
+                $geneCovgFh->print( "$gene\t" . $geneLen{$gene} . "\t0\t0\t0\t0\n" );
             }
         }
         $geneCovgFh->close;
 
         # Measure coverage stats on the merged ROI file, so that bps across the genome are not counted twice
         my $merged_roi_bed_covg = Genome::Sys->create_temp_file_path();
-        system( "joinx wig2bed -Zc $wig_file | joinx intersect $merged_roi_bed - | joinx ref-stats - $ref_seq | cut -f 1-6 > $merged_roi_bed_covg" );# or die "Failed to run joinx to calculate overall coverages in $sample! $!\n";
+        system( "joinx wig2bed -Zc $wig_file | joinx sort -s | joinx intersect $merged_roi_bed - | joinx ref-stats - $ref_seq | cut -f 1-6 > $merged_roi_bed_covg" );# or die "Failed to run joinx to calculate overall coverages in $sample! $!\n";
 
         # Read the joinx formatted coverage file and sum up the coverage stats per region
         my ( $tot_covd, $tot_at_covd, $tot_cg_covg, $tot_cpg_covd );
