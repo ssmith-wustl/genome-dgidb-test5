@@ -1058,13 +1058,7 @@ sub resolve_sd_insert_size {
 
 sub get_default_alignment_metrics { #means BWA
     my ($self, $metric_name) = @_;
-    my $pp = Genome::ProcessingProfile::ReferenceAlignment->default_profile;
-
-    my @sr = Genome::InstrumentData::AlignmentResult->get(
-        instrument_data_id => $self->id,
-        aligner_name       => $pp->read_aligner_name,
-        aligner_version    => $pp->read_aligner_version,  
-    );
+    my @sr = $self->get_default_alignment_results;
 
     for my $sr (@sr) {
         my ($metric) = grep{$_->metric_name eq $metric_name}$sr->metrics;
@@ -1073,6 +1067,19 @@ sub get_default_alignment_metrics { #means BWA
         }
     }
     return;
+}
+
+sub get_default_alignment_results {  #means BWA and created in auto-cron by apipe-builder
+    my $self = shift;
+    my $pp   = Genome::ProcessingProfile::ReferenceAlignment->default_profile;
+
+    my @sr = Genome::InstrumentData::AlignmentResult->get(
+        instrument_data_id => $self->id,
+        aligner_name       => $pp->read_aligner_name,
+    );
+
+    #grep alignment results only created by apipe-builder and latest result list first
+    return grep{$_->output_dir =~ /\-apipe\-builder\-/}sort{$b->id <=> $a->id}@sr;
 }
 
 
