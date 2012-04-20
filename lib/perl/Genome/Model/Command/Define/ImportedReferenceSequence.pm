@@ -62,7 +62,7 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
             is_optional => 1,            
             doc => 'Copied from species_name.'
         },
-        skip_bases_file => {
+        skip_bases_files => {
             is => 'Boolean',
             is_optional => 1,
             doc => 'If set, bases files for quick sequence/position look up will not be created.  Useful for importing files with a large number of sequences',
