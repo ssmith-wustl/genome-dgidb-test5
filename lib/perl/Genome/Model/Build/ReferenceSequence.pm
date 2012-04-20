@@ -172,6 +172,11 @@ class Genome::Model::Build::ReferenceSequence {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'append_to_id',
         },
+        skip_bases_files => {
+            is => 'Boolean',
+            is_optional => 1, 
+            doc => 'If specified, individual bases files are not created for each sequence in the fasta',
+        },
         _sequence_filehandles => {
             is => 'Hash',
             is_optional => 1,
