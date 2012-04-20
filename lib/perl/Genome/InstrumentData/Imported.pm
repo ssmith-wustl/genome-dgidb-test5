@@ -278,6 +278,7 @@ no warnings 'once';
 *resolve_median_insert_size = \&Genome::InstrumentData::Solexa::resolve_median_insert_size;
 *resolve_sd_insert_size = \&Genome::InstrumentData::Solexa::resolve_sd_insert_size;
 *get_default_alignment_metrics = \&Genome::InstrumentData::Solexa::get_default_alignment_metrics;
+*get_default_alignment_results = \&Genome::InstrumentData::Solexa::get_default_alignment_results;
 }
 
 sub dump_sanger_fastq_files {
