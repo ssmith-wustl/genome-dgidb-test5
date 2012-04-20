@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+use List::MoreUtils;
 my @pkgs;
 if (@ARGV) {
     @pkgs = @ARGV;
@@ -23,22 +24,24 @@ for my $changes_file (@pkgs) {
 
     my $prefix = $changes_file;
     $prefix =~ s/_[^_]+.changes//;
-    print "c: $changes_file\n";
-    print "p: $prefix\n";
-
-    my @all_files = glob("$prefix*");
+    
+    my @all_files = (glob("$prefix*"),glob("*.deb"));
     my $cnt = scalar(@all_files);
-    print "cnt: $cnt\n";
-    unless ($cnt == 4) {
+    unless ($cnt == 6) {
         warn "did not find exactly 4 files in the directory with prefix $prefix!  skipping...\n";
         next;
     }
 
+    my @debs = `awk '{ print $3 }' < $changes_file | sort -u`; # get multi-package source
+    if (@debs) {
+        @all_files = List::MoreUtils::uniq(@all_files, @debs);
+    }
+
     my @cmds = (
         "debsign -k$ENV{MYGPGKEY} $changes_file" => '** signing files...',
-        "chmod 664 $prefix*" => "** setting permissions...",
-        "chgrp info $prefix*" => "** setting the group to info...",
-        "mv $prefix* ~codesigner/incoming/lucid-genome-development/" => "** moving files to codesigner queue",
+        "chmod 664 @all_files" => "** setting permissions...",
+        "chgrp info @all_files" => "** setting the group to info...",
+        "mv @all_files ~codesigner/incoming/lucid-genome-development/" => "** moving files to codesigner queue",
         "ls -lt ~codesigner/incoming/lucid-genome-development/" => "** current codesigner queue is:",
     );
 
