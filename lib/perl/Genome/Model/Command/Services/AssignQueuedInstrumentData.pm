@@ -726,7 +726,7 @@ sub assign_instrument_data_to_models {
 
         if ($id_capture_target) {
             # keep only models with the specified capture target
-            @models = grep($_->can('target_region_set_name') && $_->target_region_set_name eq $id_capture_target, @models);
+            @models = grep($_->can('target_region_set_name') && $_->target_region_set_name && $_->target_region_set_name eq $id_capture_target, @models);
         } else {
             # keep only models with NO capture target
             my %capture_model_ids = map { $_->model_id => 1 } Genome::Model::Input->get(
