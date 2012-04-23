@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 27;
+use Test::More tests => 26;
 
 use_ok('Genome::Model::Tools::Vcf::VcfFilter');
 
