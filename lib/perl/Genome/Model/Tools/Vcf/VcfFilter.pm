@@ -295,7 +295,7 @@ sub execute {
 
                 $fields[6] = $final_filter_value;
             } else {
-                $filter_value = $fields[6];
+                $final_filter_value = $fields[6];
             }
 
             # Add a FT field with the same information as the filter field

@@ -51,11 +51,9 @@ sub _generate_content {
         ];
     }
     $hash->{'aaData'} = \@attributes;
-    $hash->{'aoColumns'} => ['foo','bar'];
+    $hash->{'aoColumns'} = ['foo','bar'];
 
     return $self->_json->encode($hash);
 }
-
-
 
 1;

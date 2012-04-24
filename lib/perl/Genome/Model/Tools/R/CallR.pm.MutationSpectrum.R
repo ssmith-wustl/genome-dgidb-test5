@@ -95,8 +95,8 @@ make_stack_barplot <- function(data.in,plot_title="Mutation Spectrum",plot_order
   p <- p + scale_y_continuous(name='% Total Mutations',limits=c(0,1),formatter="percent");
   p <- p + opts(legend.position = 'right',legend.title=theme_blank());
   p <- p + opts(title=plot_title);
-  plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=90,hjust=1),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
-  p <- p + plot_theme;
+  plot_theme <- opts(axis.text.x=theme_text(colour='black',angle=90,hjust=1),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
+  p <- p + theme_bw() + plot_theme;
 
   return(p);
 
@@ -128,8 +128,8 @@ make_dodge_barplot <- function(data.in,plot_title="Mutation Spectrum",plot_order
   p <- p + scale_x_discrete(name="");
   p <- p + opts(legend.position = 'right',legend.title=theme_blank());
   p <- p + opts(title=plot_title);
-  plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=0,hjust=0.5),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
-  p <- p + plot_theme;
+  plot_theme <- opts(axis.text.x=theme_text(colour='black',angle=0,hjust=0.5),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
+  p <- p + theme_bw()+plot_theme;
 
   return(p);
   
@@ -167,8 +167,8 @@ barplot_facet_mutation_type <- function(data.in,plot_title="Mutation Spectrum",p
   p <- p + opts(title=plot_title);
   p <- p + facet_grid( . ~ Category,scales='free_x');
 
-  plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black'),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
-  p <- p + plot_theme;
+  plot_theme <- opts(axis.text.x=theme_text(colour='black'),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
+  p <- p + theme_bw()+ plot_theme;
   return(p);
 }
 
@@ -190,8 +190,8 @@ barplot_facet_sample <- function(data,plot_title="Mutation Spectrum") {
   p <- p + opts(title=plot_title);
   p <- p + facet_wrap( ~ Sample,scales='free_x',nrow=1);
 
-  plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=90),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
-  p <- p + plot_theme;
+  plot_theme <- opts(axis.text.x=theme_text(colour='black',angle=90),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
+  p <- p + theme_bw()+plot_theme;
   
   return(p);
 }
