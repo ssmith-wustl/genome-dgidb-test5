@@ -172,9 +172,6 @@
 [submodule "genome-snapshot-testdata"]
 	path = genome-snapshot-testdata
 	url = ssh://git//srv/git/genome-snapshot-testdata.git
-[submodule "libstatistics-robust-scale-perl"]
-	path = libstatistics-robust-scale-perl
-	url = git@github.com:genome-vendor/libstatistics-robust-scale-perl.git
 [submodule "vendor/libstatistics-robust-scale-perl"]
 	path = vendor/libstatistics-robust-scale-perl
 	url = git@github.com:genome-vendor/libstatistics-robust-scale-perl.git
