@@ -15,7 +15,7 @@ BEGIN {
 
 BEGIN {
     if (!defined $ENV{GENOME_DB_SKIP_POSTGRES}) {
-        $ENV{GENOME_DB_SKIP_POSTGRES} = '/gsc/scripts/opt/genome/run/skip_postgres_sync';
+        $ENV{GENOME_DB_SKIP_POSTGRES} ||= '/gsc/scripts/opt/genome/run/skip_postgres_sync';
     }
 }
 
@@ -37,7 +37,7 @@ $ENV{GENOME_SW} ||= '/gsc/pkg/bio';
 $ENV{GENOME_TESTSUITE_INPUTS_PATH} = '/gsc/var/cache/testsuite/data';
 
 # configure file that signals that database updates should be paused
-$ENV{GENOME_DB_PAUSE} = '/gsc/var/lock/database/pause_updates';
+$ENV{GENOME_DB_PAUSE} ||= '/gsc/var/lock/database/pause_updates';
 
 # configure our local ensembl db
 $ENV{GENOME_DB_ENSEMBL_API_PATH} ||= '/gsc/scripts/share/ensembl-64';
