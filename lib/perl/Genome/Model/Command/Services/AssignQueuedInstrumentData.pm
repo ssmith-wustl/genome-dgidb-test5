@@ -302,7 +302,14 @@ sub execute {
 
             @validation = grep((($_->tumor_sample and $_->tumor_sample eq $instrument_data->sample) or ($_->normal_sample and $_->normal_sample eq $instrument_data->sample)), @validation);
             if(@validation) {
-                my $ok = $self->assign_instrument_data_to_models($instrument_data, Genome::FeatureList->get(name => $instrument_data->target_region_set_name)->reference, @validation);
+                my $fl = Genome::FeatureList->get(name => $instrument_data->target_region_set_name);
+                my $ok = 0;
+
+                #try all possible matching references
+                for($fl->reference, map($_->destination_reference_build, Genome::Model::Build::ReferenceSequence::Converter->get(source_reference_build_id => $fl->reference->id)) ) {
+                    $ok = $self->assign_instrument_data_to_models($instrument_data, $_, @validation) || $ok;
+                }
+
                 unless($ok) {
                     push @process_errors,
                         $self->error_message('Did not assign validation instrument data to any models.');
