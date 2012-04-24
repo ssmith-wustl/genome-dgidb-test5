@@ -37,6 +37,11 @@ class Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions {
             doc => 'Array of gene identifiers',
         },
     ],
+    has_transient_optional => [
+        result => {
+            is => 'HASH',
+        },
+    ],
 };
 
 sub help_brief { 'Lookup drug-gene interactions through groups using gene identifiers' }
@@ -72,7 +77,9 @@ sub execute {
     push @gene_identifiers, $_ for $self->gene_identifiers;
     $self->status_message('No genes found') unless @gene_identifiers;
 
-    return $self->find_groups_and_interactions(@gene_identifiers);
+    my $result = $self->find_groups_and_interactions(@gene_identifiers);
+    $self->result($result);
+    return $result;
 }
 
 #######   find_groups_and_interactions    #######

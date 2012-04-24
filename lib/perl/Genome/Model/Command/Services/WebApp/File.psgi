@@ -28,6 +28,44 @@ sub load_modules {
 }
 
 sub dispatch_request {
+    sub ( POST + /view/x/druggable-gene-go + %* + *file~ ) {
+        load_modules();
+        my ($self, $params, $file, $env) = @_;
+        my @gene_names;
+        @gene_names = Genome::Sys->read_file($file->path) if $file;
+        push @gene_names, split(/[\r\n]/,$params->{'genes'});
+        chomp @gene_names;
+        @gene_names = grep{/[\w\d]/}@gene_names;
+        @gene_names = map{uc $_}@gene_names;
+
+        my $command = Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions->execute(
+                gene_identifiers => \@gene_names,
+                );
+        my %params = (
+                data => $command->result,
+                subject => Genome::DruggableGene::GeneNameReport->define_set,
+                );
+        for($params->{'return'}){
+            if(/html/){
+                my $html = Genome::DruggableGene::GeneNameReport::Set::View::Go::Html->create(
+                        %params,
+                        desired_perspective => 'status',
+                        xsl_root => Genome->base_dir . '/xsl',
+                        xsl_path => '/static/xsl',
+                        xsl_variables => {
+                            rest      => '/view',
+                            resources => '/view/genome/resource.html',
+                        },
+                        );
+                return [200, ['Content-type' => "text/html"], [$html->content]];
+            } elsif(/tsv/) {
+                return [200, ['Content-type' => "text/tsv"], [join("\n", $command->output)]];
+            } elsif(/xml/) {
+                my $xml = Genome::DruggableGene::GeneNameReport::Set::View::Go::Xml->create(%params);
+                return [200, ['Content-type' => "text/xml"], [$xml->content]];
+            }
+        }
+    },
     sub ( POST + /view/x/druggable-gene + %* + *file~ ) {
         load_modules();
         my ($self, $params, $file, $env) = @_;

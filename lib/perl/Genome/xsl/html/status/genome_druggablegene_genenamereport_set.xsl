@@ -2,6 +2,37 @@
 <xsl:stylesheet version="1.0"
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
+<xsl:template name="gene_go_results_table">
+  <xsl:param name="name"/>
+  <xsl:param name="definite_go_results"/>
+
+  <div class="box_header span-24 last rounded-top">
+    <div class="box_title"><h3 class="genome_genenamereport_16 span-7 last"><xsl:value-of select="$name"/></h3></div>
+  </div>
+
+  <div class="box_content rounded-bottom span-24 last">
+    <table class='dataTable' id='interactions'>
+        <thead>
+          <tr>
+            <th>Gene</th>
+            <th>GO Category</th>
+            <th>Search Term</th>
+          </tr>
+        </thead>
+        <tbody>
+          <xsl:for-each select="$definite_go_results/item">
+            <tr>
+              <th><xsl:value-of select="gene_group_name"/></th>
+              <th><xsl:value-of select="category_name"/></th>
+              <th><xsl:value-of select="search_terms"/></th>
+            </tr>
+          </xsl:for-each>
+        </tbody>
+    </table>
+  </div>
+
+</xsl:template>
+
 <xsl:template name="drug_gene_interactions_table">
   <xsl:param name="name"/>
   <xsl:param name="interactions"/>
@@ -79,6 +110,38 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   </div>
 </xsl:template>
 
+<xsl:template name="go_results" match="go_results">
+  <script type='text/javascript' src='/res/js/pkg/boxy/javascripts/jquery.boxy.js'></script>
+  <link rel="stylesheet" href="/res/js/pkg/boxy/stylesheets/boxy.css" type="text/css" />
+  <link rel="stylesheet" href="/res/css/genome_druggablegene_genenamereport_set.css" type="text/css" />
+  <script type='text/javascript' src='/res/js/app/genome_model_build_list.js'></script>
+  <script class="jsbin" src="http://datatables.net/download/build/jquery.dataTables.nightly.js"></script>
+
+  <xsl:call-template name="control_bar_view"/>
+
+  <xsl:call-template name="view_header">
+    <xsl:with-param name="label_name" select="'The Drug-Gene Interactions Database'" />
+    <xsl:with-param name="icon" select="'genome_genename_32'" />
+  </xsl:call-template>
+
+  <div class="content rounded shadow">
+    <div class="container">
+      <div class="span_24_box_masonry">
+        <xsl:call-template name="gene_go_results_table">
+          <xsl:with-param name="name" select="'Definite GO Results'" />
+          <xsl:with-param name="definite_go_results" select="definite_go_results" />
+        </xsl:call-template>
+      </div>
+    </div>
+  </div>
+
+  <xsl:call-template name="footer">
+    <xsl:with-param name="footer_text">
+      <FORM><INPUT TYPE="button" VALUE="Back" onClick="history.go(-1);return true;" /></FORM>
+    </xsl:with-param>
+  </xsl:call-template>
+
+</xsl:template>
 
 <xsl:template name="drug_gene_interaction" match="drug_gene_interaction">
   <script type='text/javascript' src='/res/js/pkg/boxy/javascripts/jquery.boxy.js'></script>
