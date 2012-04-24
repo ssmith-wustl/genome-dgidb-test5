@@ -396,6 +396,11 @@ sub execute {
     $self->status_message("Completing PSEs...");
     for my $pse (@completable_pses) {
         $pse->pse_status("completed");
+        $pse->{_instrument_data}->remove_attribute(attribute_label => 'tgi_lims_status');
+        $pse->{_instrument_data}->add_attribute(
+            attribute_label => 'tgi_lims_status',
+            attribute_value => 'processed',
+        );
     }
 
     return 1;
