@@ -4,12 +4,14 @@ use warnings;
 use strict;
 
 use Genome;
+use Workflow;
+use Workflow::Simple;
 use Carp;
 
 class Genome::Model::Tools::DetectVariants2::Filter::FalsePositiveVcf {
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
     doc => "This module uses detailed readcount information from bam-readcounts to filter likely false positives",
-    has => [
+    has_input => [
     ## CAPTURE FILTER OPTIONS ##
         'min_strandedness' => {
             type => 'String',
@@ -154,31 +156,13 @@ sub _filter_variants {
     # FIXME this will work after the polymuttdenovo filter, but not directly after polymutt due to the separate denovo and standard filenames
     my $input_file = $self->input_directory . "/snvs.vcf.gz";
     ## Build temp file for positions where readcounts are needed ##
-    my $region_path = $self->_temp_scratch_directory."/regions";
+    #my $region_path = $self->_temp_scratch_directory."/regions";
+    my $region_path = $self->output_directory."/regions";
 
     $self->print_region_list($input_file, $region_path);
 
     ## Run BAM readcounts in batch mode to get read counts for all positions in file ##
-    my $readcount_searcher_by_sample;
-    for my $alignment_result ($self->alignment_results) {
-        my $sample_name = $self->find_sample_name_for_alignment_result($alignment_result);
-        $self->status_message("Running BAM Readcounts for sample $sample_name...");
-
-        my $readcount_file = $self->_temp_staging_directory . "/$sample_name.readcounts";
-        my $readcount_command = Genome::Model::Tools::Sam::Readcount->create(
-            minimum_base_quality => $self->bam_readcount_min_base_quality,
-            bam_file => $alignment_result->merged_alignment_bam_path,
-            reference_fasta => $self->reference_sequence_input,
-            region_list => $region_path,
-            output_file => $readcount_file,
-            use_version => $self->bam_readcount_version,
-        );
-        unless ($readcount_command->execute) {
-            die $self->error_message("Failed to execute readcount command");
-        }
-
-        $readcount_searcher_by_sample->{$sample_name} = make_buffered_rc_searcher(Genome::Sys->open_file_for_reading($readcount_file));
-    }
+    my $readcount_searcher_by_sample = $self->generate_and_run_readcounts_in_parallel($region_path);
 
     # Advance to the first variant line and print out the header
     my ($input_fh, $header) = $self->parse_vcf_header($input_file);
@@ -344,7 +328,7 @@ sub print_region_list {
     my ($input_fh, $header) = $self->parse_vcf_header($input_file);
 
     ## Print each line to file in order to get readcounts
-    $self->status_message('Printing variants to temporary region_list file...');
+    $self->status_message("Printing variants to temporary region_list file $output_file...");
     while(my $line = $input_fh->getline) {
         my ($chr, $pos) = split /\t/, $line;
         print $output_fh "$chr\t$pos\t$pos\n";
@@ -970,6 +954,122 @@ sub print_stats {
 
     print $stats->{'num_pass_filter'} . " passed the strand filter\n";
 
+    return 1;
+}
+
+sub generate_and_run_readcounts_in_parallel {
+    my $self = shift;
+    my $region_path = shift;
+
+    my %inputs;
+    my (@outputs, @inputs);
+
+    #set up global readcount params
+    $inputs{reference_fasta} = $self->reference_sequence_input;
+    $inputs{region_list} = $region_path;
+    $inputs{minimum_base_quality} = $self->bam_readcount_min_base_quality;
+    $inputs{use_version} = $self->bam_readcount_version;
+
+    my @sample_names;
+    for my $alignment_result ($self->alignment_results) {
+        my $sample_name = $self->find_sample_name_for_alignment_result($alignment_result);
+        push @sample_names, $sample_name;
+        $self->status_message("Running BAM Readcounts for sample $sample_name...");
+
+        my $readcount_file = $self->_temp_staging_directory . "/$sample_name.readcounts";  #this is suboptimal, but I want to wait until someone tells me a better way...multiple options exist
+        push @outputs, $readcount_file;
+        $inputs{"bam_${sample_name}"} = $alignment_result->merged_alignment_bam_path;
+        $inputs{"readcounts_${sample_name}"} = $readcount_file;
+    }
+
+    my $workflow = Workflow::Model->create(
+        name=> "FalsePositiveVcf parallel readcount file creation",
+        input_properties => [
+        keys %inputs
+        ],
+        output_properties => [
+        'output',
+        ],
+    );
+    for my $sample (@sample_names) {
+        my $op = $workflow->add_operation(
+            name=>"readcount creation for $sample",
+            operation_type=>Workflow::OperationType::Command->get("Genome::Model::Tools::Sam::Readcount"),
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"reference_fasta",
+            right_operation=>$op,
+            right_property=>"reference_fasta",
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"region_list",
+            right_operation=>$op,
+            right_property=>"region_list",
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"use_version",
+            right_operation=>$op,
+            right_property=>"use_version",
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"minimum_base_quality",
+            right_operation=>$op,
+            right_property=>"minimum_base_quality",
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"bam_$sample",
+            right_operation=>$op,
+            right_property=>"bam_file",
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"readcounts_$sample",
+            right_operation=>$op,
+            right_property=>"output_file",
+        );
+        $workflow->add_link(
+            left_operation=>$op,
+            left_property=>"output_file",
+            right_operation=>$workflow->get_output_connector,
+            right_property=>"output",
+        );
+    }
+    my @errors = $workflow->validate;
+    $workflow->log_dir($self->output_directory);
+    if (@errors) {
+        $self->error_message(@errors);
+        die "Errors validating workflow\n";
+    }
+    $self->status_message("Now launching readcount generation jobs");
+    my $result = Workflow::Simple::run_workflow_lsf( $workflow, %inputs);
+    unless($result) {
+        $self->error_message( join("\n", map($_->name . ': ' . $_->error, @Workflow::Simple::ERROR)) );
+        die $self->error_message("parallel readcount generation workflow did not return correctly.");
+    }
+    
+    #all succeeded so open files
+    my $readcount_searcher_by_sample;
+    for my $sample (@sample_names) {
+        $readcount_searcher_by_sample->{$sample} = make_buffered_rc_searcher(Genome::Sys->open_file_for_reading($inputs{"readcounts_$sample"}));
+    }
+    return $readcount_searcher_by_sample;
+}
+
+#override the default scratch directories in order to allow for network available temp dirs
+sub _create_temp_directories {
+    my $self = shift;
+    $self->_temp_staging_directory($self->output_directory);
+    $self->_temp_scratch_directory($self->output_directory);
+    return 1;
+}
+
+sub _promote_staged_data {
+    my $self = shift;
     return 1;
 }
 

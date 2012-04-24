@@ -11,7 +11,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 24;
+use Test::More tests => 25;
 use Test::MockObject;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
@@ -208,10 +208,63 @@ my $instrument_data_2 = Genome::InstrumentData::Solexa->create(
     index_sequence => 'GGGGG',
 );
 
+my $ref_seq_build_2a = Genome::Model::Build::ImportedReferenceSequence->__define__(
+    id => '-10000',
+    model_id => $ref_seq_build->model_id,
+    version => '36-alternative_for_validation_test',
+);
+
+my $fl2a = Genome::FeatureList->__define__(
+    id => 'ABCDEFGH_alt',
+    name => 'validation-test-roi-alternate_reference',
+    format => 'true-BED',
+    content_type => 'validation',
+    reference => $ref_seq_build_2a,
+);
+
+my $sv_model_2a = Genome::Model::SomaticValidation->__define__(
+    name => 'test-validation-model',
+    target_region_set => $fl2a,
+    design_set => $fl2a,
+    tumor_sample => $instrument_data_1->sample,
+    subject => $instrument_data_1->sample->source,
+    reference_sequence_build => $ref_seq_build,
+);
+my $ref_converter = Genome::Model::Build::ReferenceSequence::Converter->create(
+    source_reference_build_id => $ref_seq_build_2a->id,
+    destination_reference_build_id => $ref_seq_build->id,
+    algorithm => 'chop_chr',
+);
+
+my $pse_2a = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-123467',
+    ps_id => 3733,
+    ei_id => '464681',
+);
+
+my $instrument_data_2a = Genome::InstrumentData::Solexa->create(
+    id => '-103',
+    library_id => $library->id,
+    flow_cell_id => 'TM-021',
+    lane => '3',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+    target_region_set_name => 'validation-test-roi-alternate_reference',
+    index_sequence => 'GGGGG',
+);
+
 $pse_2->add_param('instrument_data_type', 'solexa');
 $pse_2->add_param('instrument_data_id', $instrument_data_2->id);
 $pse_2->add_param('subject_class_name', 'Genome::Sample');
 $pse_2->add_param('subject_id', $sample->id);
+$pse_2a->add_param('instrument_data_type', 'solexa');
+$pse_2a->add_param('instrument_data_id', $instrument_data_2a->id);
+$pse_2a->add_param('subject_class_name', 'Genome::Sample');
+$pse_2a->add_param('subject_id', $sample->id);
 
 my $command_2 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
@@ -224,7 +277,8 @@ ok($command_2->execute(), 'assign-queued-instrument-data executed successfully.'
 my $err = $command_2->error_message;
 ok($err =~ 'validation-test-roi', 'reported error about feature-list');
 
-is($pse_2->pse_status, 'inprogress', 'PSE still in progress');
+is($pse_2->pse_status, 'inprogress', 'erroneous PSE still in progress');
+is($pse_2a->pse_status, 'completed', 'good PSE completed');
 
 $fl2->content_type(undef);
 my $command_3 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(

@@ -9,7 +9,7 @@ my $DEFAULT_VER = '0.4';
 
 class Genome::Model::Tools::Sam::Readcount{
     is  => 'Command',
-    has_input => [
+    has_optional_input => [
         use_version => {
             is  => 'Version',
             doc => "bam-readcount version to be used.",
@@ -22,6 +22,7 @@ class Genome::Model::Tools::Sam::Readcount{
         output_file => {
             is => 'String',
             doc => "The output file containing readcounts",
+            is_output => 1,
         },
         minimum_mapping_quality => {
             is => 'Integer',
