@@ -489,6 +489,49 @@ sub validate_file_for_reading {
     return 1;
 }
 
+sub validate_file_for_writing {
+    my ($self, $file) = @_;
+
+    unless ( defined $file ) {
+        Carp::croak("Can't validate_file_for_writing: No file given");
+    }
+
+    if ($file eq '-') {
+        return 1;
+    }
+
+    if ( -s $file ) {
+        Carp::croak("Can't validate_file_for_writing: File ($file) has non-zero size, refusing to write to it");
+    }
+
+    # FIXME there is a race condition where the path could go away or become non-writable
+    # between the time this method returns and the time we actually try opening the file
+    # for writing
+
+    # validate_file_for_writing_overwrite throws its own exceptions if there are problems
+    return $self->validate_file_for_writing_overwrite($file);
+}
+
+
+sub validate_file_for_writing_overwrite {
+    my ($self, $file) = @_;
+
+    unless ( defined $file ) {
+        Carp::croak("Can't validate_file_for_writing_overwrite: No file given");
+    }
+
+    my ($name, $dir) = File::Basename::fileparse($file);
+    unless ( $dir ) {
+        Carp::croak("Can't validate_file_for_writing_overwrite: Can't determine directory from pathname ($file)");
+    }
+
+    unless ( -w $dir ) {
+        Carp::croak("Can't validate_file_for_writing_overwrite: Do not have WRITE access to directory ($dir) to create file ($name)");
+    }
+
+    # FIXME same problem with the race condition as noted at the end of validate_file_for_writing()
+    return 1;
+}
 sub open_file_for_reading {
     my ($self, $file) = @_;
 

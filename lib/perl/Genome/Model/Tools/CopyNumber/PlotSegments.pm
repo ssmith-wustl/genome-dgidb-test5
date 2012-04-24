@@ -652,7 +652,8 @@ sub execute {
         
         #sanity check - the infile exists and is not empty
         unless (-s $infile){
-            die("input file contains no segments to plot");
+            $self->warning_message("input file <$infile> contains no segments to plot...skipping.");
+            next;
         }
 
 	print R_COMMANDS "plotSegments(";

@@ -758,5 +758,56 @@ sub detector_directory {
     return $self->_detector_directory;
 }
 
+# FIXME these could be moved up further perhaps
+sub sort_alignment_results_by_header {
+    my ($self, $header_line, @alignment_results)= @_;
+
+    unless (@alignment_results) {
+        die $self->error_message("No alignment results provided to sort_alignment_results_by_header");
+    }
+
+    chomp($header_line);
+    my @fields = split "\t", $header_line;
+    splice(@fields, 0, 9);
+    my @return_alignment_results;
+    my @alignment_result_samples;
+    for my $subject_id (@fields) {
+        for my $alignment_result (@alignment_results) {
+            my $subject_name = $self->find_sample_name_for_alignment_result($alignment_result);
+            push @alignment_result_samples, $subject_name;
+            if ($subject_name eq $subject_id) {
+                push @return_alignment_results, $alignment_result;
+            }
+        }
+    }
+    if(scalar(@return_alignment_results) != scalar(@fields)) {
+        die $self->error_message("Can't match the given alignment_results to the input vcf. " .
+            "The samples from the input vcf header are: " . join(",",@fields) .
+            " The samples found in the given alignment results are: " . join(",", @alignment_result_samples));
+    }
+    return @return_alignment_results;
+}
+
+# Given an alignment result, find the sample name present in the instrument data (making sure it does not differ)
+sub find_sample_name_for_alignment_result {
+    my $self = shift;
+    my $alignment_result = shift;
+
+    my @instrument_data = $alignment_result->instrument_data;
+    unless (@instrument_data) {
+        die $self->error_message("No instrument data found for alignment result id: " . $alignment_result->id);
+    }
+
+    my $sample_name;
+    for my $instrument_data (@instrument_data) {
+        if ($sample_name and $instrument_data->sample_name ne $sample_name) {
+            die $self->error_message("Conflicting sample names found in the instrument data for alignment result: " . $alignment_result->id
+                . " samples: $sample_name and " . $instrument_data->sample_name)
+        }
+        $sample_name = $instrument_data->sample_name;
+    }
+
+    return $sample_name;
+}
 
 1;

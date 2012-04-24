@@ -6,7 +6,8 @@ use warnings;
 use Genome;
 
 #This is the variable to change if you wish to change the version of all vcf files being created
-my $VCF_VERSION = "3";
+# 3 was incremented to 4 because of a bug in VcfFilter.pm. When filtered twice, FT fields were being wiped out rather than propagated from "FILTER".
+my $VCF_VERSION = "4";
 
 class Genome::Model::Tools::Vcf {
     is => ['Command'],

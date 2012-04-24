@@ -15,7 +15,7 @@ UR::Object::Type->add_observer(
         } elsif ($class_name eq 'Command::V1') {
             require Genome::Site::TGI::Observers::Command;
         } elsif ($class_name eq 'Genome::DataSource::GMSchema') {
-            require Genome::Site::TGI::Observers::GMSchema;
+            require Genome::Site::TGI::Observers::Context;
         }
         die $@ if $@;
     },

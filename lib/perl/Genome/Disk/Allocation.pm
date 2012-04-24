@@ -641,7 +641,7 @@ sub _archive {
     if (my $error = $@) {
         unlink $tar_path if -e $tar_path;
         $self->_cleanup_archive_directory($archive_allocation_path);
-        Genome::Sys->unlock_resource($allocation_lock);
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess "Could not archive allocation " . $self->id, "error:\n$error";
     }
 
@@ -673,7 +673,7 @@ sub _archive {
     if (my $error = $@) {
         unlink $tar_path if -e $tar_path;
         $self->_cleanup_archive_directory($archive_allocation_path);
-        Genome::Sys->unlock_resource($volume_lock) if $volume_lock;
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock) if $volume_lock;
         confess "Could not update active volume after copying data to archive volume, received error\n$error";
     }
 

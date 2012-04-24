@@ -193,13 +193,13 @@ sub execute {
   my $optional_params = "";
 
   if ($normal_min_depth) {
-    $optional_params .= ", normal_min_depth => \"$normal_min_depth\"";
+    $optional_params .= " --normal-min-depth $normal_min_depth";
   }
   if ($tumor_min_depth) {
-    $optional_params .= ", tumor_min_depth => \"$tumor_min_depth\"";
+    $optional_params .= " --tumor-min-depth $tumor_min_depth";
   }
   if ($min_mapq) {
-    $optional_params .= ", min_mapq => \"$min_mapq\"";
+    $optional_params .= " --min-mapq $min_mapq";
   }
 
   # Check on all the input data before starting work
@@ -270,7 +270,8 @@ sub execute {
     next unless( -e $normal_bam && -e $tumor_bam );
 
     # Construct the command that calculates coverage per ROI
-    my $calcRoiCovg_cmd = "perl -e \'use above 'Genome'; my \$cmd = Genome::Model::Tools::Music::Bmr::CalcCovgHelper->create( normal_tumor_bam_pair => \"$line\", roi_file =>  \"$roi_file\", reference_sequence =>  \"$ref_seq\", output_dir =>  \"$roi_covg_dir\" $optional_params); \$cmd->execute\'";
+    my $calcRoiCovg_cmd = "gmt music bmr calc-covg-helper --normal-tumor-bam-pair \"$line\" --roi-file \"$roi_file\" ".
+    "--reference-sequence \"$ref_seq\" --output-dir \"$roi_covg_dir\" $optional_params";
 
     # If user only wants the calcRoiCovg commands, write them to file and skip running calcRoiCovg
     if( defined $cmd_list_file )
