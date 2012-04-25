@@ -293,14 +293,8 @@ sub _create_instrumentdata_imported {
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
 
-    # Manually create indirect attributes
-    for my $name (sort keys %{$indirect_properties}) {
-        Genome::InstrumentDataAttribute->create(
-            instrument_data_id => $object->id,
-            attribute_label => $name,
-            attribute_value => $indirect_properties->{$name}, 
-        )
-    }
+    my $add_attrs = $self->_add_attributes_to_instrument_data($object, $indirect_properties);
+    Carp::confess('Failed to add attributes to instrument data: '.$object->__display_name__) if not $add_attrs;
 
     return 1;
 }
@@ -326,13 +320,8 @@ sub _create_instrumentdata_solexa {
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
 
-    for my $name (sort keys %{$indirect_properties}) {
-        Genome::InstrumentDataAttribute->create(
-            instrument_data_id => $object->id,
-            attribute_label => $name,
-            attribute_value => $indirect_properties->{$name}, 
-        )
-    }
+    my $add_attrs = $self->_add_attributes_to_instrument_data($object, $indirect_properties);
+    Carp::confess('Failed to add attributes to instrument data: '.$object->__display_name__) if not $add_attrs;
 
     return 1;
 }
@@ -372,13 +361,8 @@ sub _create_instrumentdata_sanger {
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
 
-    for my $name (sort keys %{$indirect_properties}) {
-        Genome::InstrumentDataAttribute->create(
-            instrument_data_id => $object->id,
-            attribute_label => $name,
-            attribute_value => $indirect_properties->{$name}, 
-        );
-    }
+    my $add_attrs = $self->_add_attributes_to_instrument_data($object, $indirect_properties);
+    Carp::confess('Failed to add attributes to instrument data: '.$object->__display_name__) if not $add_attrs;
 
     return 1;
 }
@@ -408,19 +392,24 @@ sub _create_instrumentdata_454 {
         $indirect_properties->{sff_file} = $sff_file if $sff_file;
     }
 
-    for my $name (sort keys %{$indirect_properties}) {
+    my $add_attrs = $self->_add_attributes_to_instrument_data($object, $indirect_properties);
+    Carp::confess('Failed to add attributes to instrument data: '.$object->__display_name__) if not $add_attrs;
+
+    return 1;
+}
+
+sub _add_attributes_to_instrument_data {
+    my ($self, $instrument_data, $attrs) = @_;
+
+    $attrs->{tgi_lims_status} = 'new';
+
+    for my $name ( keys %{$attrs} ) {
         Genome::InstrumentDataAttribute->create(
-            instrument_data_id => $object->id,
+            instrument_data_id => $instrument_data->id,
             attribute_label => $name,
-            attribute_value => $indirect_properties->{$name}, 
+            attribute_value => $attrs->{$name}, 
         );
     }
-    
-    # TODO Need to talk to Scott about how to go about dumping SFF files. Currently, this info is stored in a
-    # LIMS table and dumped to the filesystem as an SFF file on demand, see Genome::InstrumentData::454->sff_file.
-    # The sff_file method uses GSC::* objects and will need to be moved to Genome/Site/WUGC. To accomplish this, 
-    # we can either dump all SFF files from the db and add the dumping logic here in the sync tool, or we can forego
-    # the mass dumping and do it manually as needed (it would still be done here as the data is synced).
 
     return 1;
 }
