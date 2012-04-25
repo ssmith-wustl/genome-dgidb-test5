@@ -175,6 +175,7 @@ sub _map_workflow_inputs {
         remove_merged_files => 1, # Don't want to keep the small unmerged files, they're 
                                   # unnecessary and clutter the data directory
         predictions_ace_file => $build->predictions_ace_file,
+        overly_masked_sequence_fasta => $build->overly_masked_sequence_fasta_file,
         coding_predictions_only_flag => 1, # Similar to the rna predictions flag below, this just tells
                                            # the prediction ace file generator to only include coding gene
                                            # predictions for one particular point. The same module is used
