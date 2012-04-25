@@ -347,10 +347,6 @@ sub execute {
         }
     }
 
-    #THIS IS A TEST FIXME
-    `cp $survival_data_file /gscuser/ndees/git/genome/lib/perl/Genome/Model/Tools/Music/ov_survival/temp_files/`;
-    `cp $mutation_matrix /gscuser/ndees/git/genome/lib/perl/Genome/Model/Tools/Music/ov_survival/temp_files/`;
-
     # set up R command
     my $R_cmd = "R --slave --args < " . __FILE__ . ".R " . join(" ",$survival_data_file,$mutation_matrix,$legend_placement,$output_dir);
     print "R_cmd:\n$R_cmd\n";
