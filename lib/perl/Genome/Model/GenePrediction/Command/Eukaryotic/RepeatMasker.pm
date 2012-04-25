@@ -339,7 +339,7 @@ sub _filter_masked_sequences_from_fasta_file {
     # Replace original fasta file with filtered fasta
     unlink $self->masked_fasta or die "Could not remove " . $self->masked_fasta;
     Genome::Sys->copy_file($temp_file, $self->masked_fasta);
-    Genome::Sys->copy_file($temp_excluded, $self->masked_fasta . "_excluded");
+    Genome::Sys->copy_file($temp_excluded, $self->overly_masked_sequence_fasta);
     $output_fasta_io->close;
 
     return 1;
