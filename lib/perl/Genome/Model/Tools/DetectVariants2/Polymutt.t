@@ -17,7 +17,7 @@ if (Genome::Config->arch_os ne 'x86_64') {
     plan skip_all => 'requires 64-bit machine';
 }
 else {
-    plan tests => 15;
+    plan tests => 18;
 }
 
 use_ok('Genome::Model::Tools::DetectVariants2::::Polymutt');
@@ -38,18 +38,20 @@ my $expected_denovo_vcf_file = join('/', $expected_dir, 'snvs.denovo.vcf.gz');
 my $expected_standard_vcf_file = join('/', $expected_dir, 'snvs.standard.vcf.gz');
 my $expected_dat_file = join('/', $expected_dir, 'polymutt.dat');
 my $expected_glfindex_file = join('/', $expected_dir, 'polymutt.glfindex');
+my $expected_merged_vcf = join('/', $expected_dir, 'snvs.vcf.gz');
 
 ok(-s $expected_denovo_vcf_file, "expected denovo vcf file output $expected_denovo_vcf_file exists");
 ok(-s $expected_standard_vcf_file, "expected standard vcf file output $expected_standard_vcf_file exists");
 ok(-s $expected_dat_file, "expected dat file output $expected_dat_file exists");
 ok(-s $expected_glfindex_file, "expected glfindex file output $expected_glfindex_file exists");
+ok(-s $expected_merged_vcf, "expected merged vcf file output $expected_merged_vcf exists");
 
 my $output_dir = File::Temp::tempdir('DetectVariants2-PolymuttXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 my $output_denovo_vcf = join('/', $output_dir, 'snvs.denovo.vcf.gz');
 my $output_standard_vcf = join('/', $output_dir, 'snvs.standard.vcf.gz');
 my $output_dat = join('/', $output_dir, 'polymutt.dat');
 my $output_glfindex = join('/', $output_dir, 'polymutt.glfindex');
-
+my $output_merged_vcf = join("/", $output_dir, 'snvs.vcf.gz');
 my $reference = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
 is($reference->id,101947881, 'Found correct reference sequence');
 
@@ -64,11 +66,12 @@ my $detector_command = Genome::Model::Tools::DetectVariants2::Polymutt->create(
 $detector_command->dump_status_messages(1);
 isa_ok($detector_command, 'Genome::Model::Tools::DetectVariants2::Polymutt', 'created detector command');
 ok($detector_command->execute(), 'executed detector command');
-
 ok(-s $output_denovo_vcf, "denovo vcf output exists and has size");
 ok(-s $output_standard_vcf, "standard vcf output exists and has size");
 ok(-s $output_dat , "dat output exists and has size");
 ok(-s $output_glfindex , "glfindex output exists and has size");
+ok(-s $output_merged_vcf, "(denovo + standard) merged vcf output exists and has size");
+
 
 my $expected_denovo_text = `zcat $expected_denovo_vcf_file | grep -v '^##fileDate'`;
 my $test_denovo_text = `zcat $output_denovo_vcf | grep -v '^##fileDate'`;
@@ -83,3 +86,12 @@ my $test_standard_text = `zcat $output_standard_vcf | grep -v '^##fileDate'`;
 my $output_standard_diff = Genome::Sys->diff_text_vs_text($expected_standard_text, $test_standard_text);
 ok(!$output_standard_diff, 'standard output file matches expected result')
     or diag("diff:\n" . $output_standard_diff);
+
+
+my $expected_merged_text = `zcat $expected_merged_vcf | grep -v '^##fileDate'`;
+my $test_merged_text = `zcat $output_merged_vcf | grep -v '^##fileDate'`;
+
+
+my $output_merged_diff = Genome::Sys->diff_text_vs_text($expected_merged_text, $test_merged_text);
+ok(!$output_merged_diff, 'merged output file matches expected result')
+    or diag("diff:\n" . $output_merged_diff);

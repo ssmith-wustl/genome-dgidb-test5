@@ -35,7 +35,7 @@ sub _filter_name { 'PolymuttDenovo' };
 
 sub _filter_variants {
     my $self=shift;
-    my $vcf = $self->input_directory . "/snvs.denovo.vcf.gz"; # TODO this should probably just operate on snvs.vcf.gz and only filter denovo sites (info field?)
+    my $vcf = $self->input_directory . "/snvs.vcf.gz"; # TODO this should probably just operate on snvs.vcf.gz and only filter denovo sites (info field?)
     my $output_file = $self->_temp_staging_directory. "/snvs.vcf.gz";
 
     my $sites_file = Genome::Sys->create_temp_file_path();
@@ -49,7 +49,7 @@ sub _filter_variants {
         $vcf_fh = Genome::Sys->open_file_for_reading($vcf);
     }
 
-    my $sites_cmd = qq/ $cat_cmd $vcf | cut -f1,2 | grep -v "^#" | awk '{OFS="\t"}{print \$1, \$2, \$2}' > $sites_file/;
+    my $sites_cmd = qq/ $cat_cmd $vcf | grep -v "^#" | grep "DNGT" | awk '{OFS="\t"}{print \$1, \$2, \$2}' > $sites_file/;
 
     unless(-s $sites_file) {
         print STDERR "running $sites_cmd\n";
@@ -112,51 +112,49 @@ sub find_indexes_of_unaffecteds {
 
 sub output_passing_vcf {
     my($self, $input_filename, $r_output, $pvalue_cutoff, $output_filename, $unaffecteds) = @_;
+    $DB::single=1;
     my $pvalues = Genome::Sys->open_file_for_reading($r_output);
-    my $input_file = Genome::Sys->open_gzip_file_for_reading($input_filename);
-    my $output_file = Genome::Sys->open_gzip_file_for_writing($output_filename);
-    my $filter_name = $self->_filter_name;
+    my %pass_hash;    
 
-    my $input_line = $input_file->getline;
-    while ($input_line =~ /^#/) {
-        $output_file->print($input_line);
-        $input_line = $input_file->getline;
-    }
-    my ($vcf_chr, $vcf_pos) = split("\t", $input_line);
-
-    my (@unaffected, $pvalues_chr, $pvalues_pos, $affected);
-    while(my $pvalues_line = $pvalues->getline) {
-        #($pvalues_chr,$pvalues_pos, $unaffected[0], $unaffected[1], $affected) = split "\t", $pvalues_line; ###generic method for any kind of family later
+    while(my $pvalues_line = $pvalues->getline) { #parse pvalue returns and figure out who is gonna pass
         my @fields = split"\t", $pvalues_line;
         my $pvalues_chr = $fields[0];
         my $pvalues_pos = $fields[1];
         splice(@fields,0,2);
-        my $pass = 1;
+        my $pass = "PASS";
         for my $idx (@{$unaffecteds}) {
             my $unaff_pval = $fields[$idx];
 # debug            $self->status_message("Examining individual at index $idx, p-value $unaff_pval, line was $pvalues_line");
             if($unaff_pval < $pvalue_cutoff) {
-                $pass=0;
+                $pass=$self->_filter_name;
             }
         }
-
-        while(!($pvalues_chr eq $vcf_chr and $pvalues_pos eq $vcf_pos)) {
-            $input_line = $input_file->getline;
-            unless ($input_line) {
-                die $self->error_message("Failed to find a vcf line to match the chromosome $pvalues_chr and position $pvalues_pos from pvalues line $pvalues_line");
-            }
-            ($vcf_chr, $vcf_pos) = split("\t", $input_line);
-        }
-
-        unless ($pass) {
-            # FIXME replace this with sane methods (like calling $self->fail_vcf_line)
-            my @fields = split "\t", $input_line;
-            $fields[6] = $filter_name;
-            $input_line = join "\t", @fields;
-        }
-        $output_file->print($input_line);
+        $pass_hash{$pvalues_chr}{$pvalues_pos}=$pass;
     }
 
+    my $input_file = Genome::Sys->open_gzip_file_for_reading($input_filename);
+    my $output_file = Genome::Sys->open_gzip_file_for_writing($output_filename);
+    my $header_printed=0;
+    while(my $line = $input_file->getline) { #stream through whole file and only touch the members of the hash we filled out above 
+        
+        if($line =~m/^#/) {
+            if($line=~m/^##INFO/ && !$header_printed) {
+                $output_file->print(qq|##INFO=<ID=DNFT,Number=1,Type=String,Description="Percentage of Samples With Data">\n|);
+                $header_printed=1;
+            }
+            
+            $output_file->print($line);
+            next;
+        }
+        my ($vcf_chr, $vcf_pos, $id, $ref, $alt, $qual, $filter, $info, @fields) = split("\t", $line);
+        if(exists($pass_hash{$vcf_chr}{$vcf_pos})){
+            my $DNFT = "DNFT=" . $pass_hash{$vcf_chr}{$vcf_pos};
+            $info .= ";$DNFT";
+        }
+        $line = join "\t", ($vcf_chr, $vcf_pos, $id, $ref, $alt, $qual, $filter, $info,@fields);
+        $output_file->print($line);
+
+    }
     return 1;
 }
 
@@ -189,23 +187,20 @@ sub prepare_r_input {
     my ($r_input_fh,$r_input_path) = Genome::Sys->create_temp_file();
     while (my $line = $vcf_fh->getline) {
         next if ($line =~ m/^#/);
+        next unless($line =~m/DNGT/);
         chomp($line);
         my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @samples) = split "\t", $line;
         my @alts = split ",", $alt;
         my @possible_alleles = ($ref, @alts);
         my $novel = 0;
-
-        for (my $i = 0; $i < @samples; $i++) {
-            my ($gt, $rest) = split ":", $samples[$i];
-            my ($all1, $all2) = split "[|/]", $gt;
-            unless(grep {/$all1/} @possible_alleles) {
-                $novel = $all1;
-            }
-            unless(grep {/$all2/} @possible_alleles) {
-                $novel = $all2;
+        my @info_fields = split";", $info; 
+        for my $info_field (@info_fields) {
+            if($info_field =~m/^DA=/) {
+                my ($novel_idx) = ($info_field =~m/^DA=(\d+)/);
+                $novel = $possible_alleles[$novel_idx];
+                $self->status_message("Selecting base $novel as novel allele for line: $line\n");
             }
         }
-
         if($novel) {
             $r_input_fh->print("$chr\t$pos");
             for (my $i = 0; $i < @samples; $i++) {

@@ -83,6 +83,7 @@ $filter_command->dump_status_messages(1);
 isa_ok($filter_command, 'Genome::Model::Tools::DetectVariants2::Filter::PolymuttDenovo', 'created filter command');
 ok($filter_command->execute(), 'executed filter command');
 
+$DB::single=1;
 ok(-s $output_vcf, "vcf output exists and has size");
 
 my $expected_text = `zcat $expected_vcf_file | grep -v '^##fileDate'`;

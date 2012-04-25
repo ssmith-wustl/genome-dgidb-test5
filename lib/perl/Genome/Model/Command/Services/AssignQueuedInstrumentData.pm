@@ -210,9 +210,10 @@ sub execute {
         my @process_errors;
 
         if (@processing_profile_ids) {
-            if ( $instrument_data_type =~ /454/i and $subject->name =~ /^n\-cn?trl$/i ) { 
+            if ( $instrument_data_type =~ /454/i and $subject->name =~ /^n\-cn?trl$/i ) {
                 # Do not process 454 negative control (n-ctrl, n-cntrl)
                 $self->status_message('Skipping n-ctrl PSE '.$pse->id);
+                GSC::PSEParam->create(pse_id => $pse->id, param_name => 'failed_aqid', param_value => 1) unless $pse->added_param('failed_aqid');
                 next PSE;
             }
 
@@ -379,6 +380,7 @@ sub execute {
                 "Leaving queue instrument data PSE inprogress, due to errors. \n"
                     . join("\n",@process_errors)
             );
+            GSC::PSEParam->create(pse_id => $pse->id, param_name => 'failed_aqid', param_value => 1) unless $pse->added_param('failed_aqid');
         }
         else {
             # Set the pse as completed since this is the end of the line
@@ -394,6 +396,11 @@ sub execute {
     $self->status_message("Completing PSEs...");
     for my $pse (@completable_pses) {
         $pse->pse_status("completed");
+        $pse->{_instrument_data}->remove_attribute(attribute_label => 'tgi_lims_status');
+        $pse->{_instrument_data}->add_attribute(
+            attribute_label => 'tgi_lims_status',
+            attribute_value => 'processed',
+        );
     }
 
     return 1;
@@ -585,30 +592,41 @@ sub load_pses {
     }
     return unless @pses;
 
-    @pses = sort $pse_sorter @pses;
-
     $self->status_message('Found '.scalar(@pses));
 
+    my @fresh_pses = sort $pse_sorter grep{not $_->added_param('failed_aqid')}@pses;
+    my @previously_failed_pses = sort $pse_sorter grep{$_->added_param('failed_aqid')}@pses;
+
+    my @sorted_pses;
+    push @sorted_pses, @fresh_pses, @previously_failed_pses;
+
     # Don't try to check more PSEs than we might be able to hold information for in memory.
-    if(scalar(@pses) > $self->max_pses_to_check) {
-        @pses = splice(@pses, 0, $self->max_pses_to_check);
+    if(scalar(@sorted_pses) > $self->max_pses_to_check) {
+        @sorted_pses = splice(@sorted_pses, 0, $self->max_pses_to_check);
         $self->status_message('Limiting checking to ' . $self->max_pses_to_check);
     }
 
-    $self->preload_data(@pses); #The checking uses this data, so need to load it first
+    $self->preload_data(@sorted_pses); #The checking uses this data, so need to load it first
 
-    @pses = grep($self->check_pse($_), @pses);
-    $self->status_message('Of those, '.scalar(@pses). ' PSEs passed check pse.');
+    my @checked_pses;
+    for my $pse (@sorted_pses){
+        if($self->check_pse($pse)){
+            push @checked_pses, $pse;
+        } else {
+            GSC::PSEParam->create(pse_id => $pse->id, param_name => 'failed_aqid', param_value => 1) unless $pse->added_param('failed_aqid');
+        }
+    }
+    $self->status_message('Of those, '.scalar(@checked_pses). ' PSEs passed check pse.');
 
     # Don't bite off more than we can process in a couple hours
     my $max_pses = $self->max_pses;
 
-    if (@pses > $max_pses) {
-        @pses = splice(@pses, 0, $max_pses);
+    if (@checked_pses > $max_pses) {
+        @checked_pses = splice(@checked_pses, 0, $max_pses);
         $self->status_message('Limiting processing to ' . $max_pses);
     }
 
-    return @pses;
+    return @checked_pses;
 }
 
 #for efficiency--load these together instead of separate queries for each one
@@ -726,7 +744,7 @@ sub assign_instrument_data_to_models {
 
         if ($id_capture_target) {
             # keep only models with the specified capture target
-            @models = grep($_->can('target_region_set_name') && $_->target_region_set_name eq $id_capture_target, @models);
+            @models = grep($_->can('target_region_set_name') && $_->target_region_set_name && $_->target_region_set_name eq $id_capture_target, @models);
         } else {
             # keep only models with NO capture target
             my %capture_model_ids = map { $_->model_id => 1 } Genome::Model::Input->get(
@@ -1633,7 +1651,7 @@ sub _is_pcgp {
         my $project_id = $work_order->project_id;
         my $project_name = $work_order->research_project_name;
 
-        if ( grep($project_id eq $_, (2230523, 2230525, 2259255, 2342358)) or 
+        if ( grep($project_id eq $_, (2230523, 2230525, 2259255, 2342358)) or
              grep($project_name =~ /$_/, ('^PCGP','^Pediatric Cancer'))) {
             return 1;
         }

@@ -112,24 +112,25 @@ sub execute {
     my $glf_index= $self->glf_index;
     my $threads = $self->threads;
     my $output_vcf = $self->output_vcf;
+    my ($temp_output) = Genome::Sys->create_temp_file_path();
     my $cmd = $polymutt_cmd;
      $cmd .= " -p $ped_file";
      $cmd .= " -d $dat_file";
      $cmd .= " -g $glf_index";
      $cmd .= " --minMapQuality 1";
      $cmd .= " --nthreads $threads";
-     $cmd .= " --vcf $output_vcf";
+     $cmd .= " --vcf $temp_output";
     if($self->denovo) {
         $cmd .= " --denovo";
     }
 
-
+     
     my $rv = Genome::Sys->shellcmd(cmd=> $cmd);
     if($rv != 1) {
         return;
     }
     if($self->bgzip) {
-        my $cmd = "bgzip $output_vcf";
+        my $cmd = "bgzip -c $temp_output > $output_vcf";
         Genome::Sys->shellcmd(cmd=>$cmd); 
     }
 

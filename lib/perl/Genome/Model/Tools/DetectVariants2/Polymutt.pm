@@ -90,8 +90,9 @@ sub run_polymutt {
     #i.e. if 10 families reside in one pedfile, and we supply a glfindex for just one of those families, this code is bad
     chomp(my $family_id = `head -n 1 $ped_file | cut -f 1`); 
     #FIXME:
-    $inputs{output_denovo} = $self->output_directory . "/snvs.denovo.vcf";
-    $inputs{output_standard} = $self->output_directory . "/snvs.standard.vcf";
+    $inputs{output_denovo} = $self->output_directory . "/snvs.denovo.vcf.gz";
+    $inputs{output_standard} = $self->output_directory . "/snvs.standard.vcf.gz";
+    $inputs{output_merged}= $self->output_directory . "/snvs.vcf.gz";
     my $workflow = Workflow::Model->create(
         name=> "Run polymutt standard and denov",
         input_properties => [
@@ -100,6 +101,7 @@ sub run_polymutt {
         'ped_file',
         'output_denovo',
         'output_standard',
+        'output_merged',
         'denovo',
         'version',
         ],
@@ -140,12 +142,6 @@ sub run_polymutt {
             right_operation=>$op,
             right_property=>"version",
         );
-        $workflow->add_link(
-            left_operation=>$op,
-            left_property=>"output_vcf",
-            right_operation=>$workflow->get_output_connector,
-            right_property=>"output",
-        );
     }
     $workflow->add_link(
         left_operation=>$workflow->get_input_connector,
@@ -165,6 +161,37 @@ sub run_polymutt {
         right_operation=>$denovo_op,
         right_property=>"denovo",
     );
+    my $merge_op = $workflow->add_operation(
+        name=>"merge standard and denovo vcfs",
+        operation_type=>Workflow::OperationType::Command->get("Genome::Model::Tools::Relationship::MergeAndFixVcfs"),
+    );
+
+    $workflow->add_link(
+        left_operation=>$denovo_op,
+        left_property=>"output_vcf",
+        right_operation=>$merge_op,
+        right_property=>"denovo_vcf",
+    );
+    $workflow->add_link(
+        left_operation=>$standard_op,
+        left_property=>"output_vcf",
+        right_operation=>$merge_op,
+        right_property=>"standard_vcf",
+    );
+    $workflow->add_link(
+        left_operation=>$workflow->get_input_connector,
+        left_property=>'output_merged',
+        right_operation=>$merge_op,
+        right_property=>'output_vcf',
+    );
+     $workflow->add_link(
+        left_operation=>$merge_op,
+        left_property=>'output_vcf',
+        right_operation=>$workflow->get_output_connector,
+        right_property=>'output',
+    );
+   
+
     my @errors = $workflow->validate;
     $workflow->log_dir($self->output_directory);
     if (@errors) {
