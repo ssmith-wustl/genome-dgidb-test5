@@ -129,6 +129,11 @@ sub _validate_reference_seq_build {
 sub _validate_samples_and_get_builds {
     my $self = shift;
 
+    if ( ! $self->sample_names and ! $self->sample_list and ! $self->query_build_ids ) {
+        $self->error_message('You must supply sample name(s) or query build id(s)');
+        return;
+    }
+
     $self->error_message('Failed to validate reference sequence build of id: '.$self->reference_build_id) and return if not
         my $ref_seq_build = $self->_validate_reference_seq_build;
 
