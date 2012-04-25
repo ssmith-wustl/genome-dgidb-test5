@@ -32,6 +32,11 @@ sub repeat_masker_ace_file {
     return $self->data_directory . "/repeat_masker.ace";
 }
 
+sub overly_masked_sequence_fasta_file {
+    my $self = shift;
+    return $self->data_directory . "/repeat_masker.overly_masked.fasta";
+}
+
 sub repeat_masker_gff_file {
     my $self = shift;
     return $self->data_directory . "/repeat_masker.gff";
