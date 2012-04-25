@@ -110,10 +110,14 @@ sub execute {
             push @output_files, $chunk_fh->filename();
             $self->status_message("Created fasta chunk " . $chunk_fh->filename);
         }
+
         $seq_out->write_seq($seq);
     }
 
+    chmod 0666, @output_files;
     $self->fasta_files(\@output_files);
+
+    sleep(60) unless $ENV{UR_DBI_NO_COMMIT}; # This is the lamest thing I've ever done.
     $self->status_message("Done chunking!");
     return 1;
 }
