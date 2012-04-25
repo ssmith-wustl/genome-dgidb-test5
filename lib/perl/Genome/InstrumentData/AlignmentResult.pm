@@ -648,10 +648,10 @@ sub collect_inputs_and_run_aligner {
     }
 
     unless (@inputs) {
-        $self->error_message("Failed to gather fastq files: " . $self->error_message);
+        $self->error_message("Failed to gather input files: " . $self->error_message);
         die $self->error_message;
     }
-    $self->status_message("Got " . scalar(@inputs) . " fastq files");
+    $self->status_message("Got " . scalar(@inputs) . " input files");
     if (@inputs > 3) {
         $self->error_message("We don't support aligning with more than 3 inputs (the first 2 are treated as PE and last 1 is treated as SE)");
         die $self->error_message;
@@ -738,7 +738,6 @@ sub collect_inputs_and_run_aligner {
     my $fastq_rd_ct = 0;
 
     if ($self->requires_fastqs_to_align) {
-
         for my $pass (@passes) {
             for my $file (@$pass) {
                 my $line = `wc -l $file`;
@@ -754,13 +753,16 @@ sub collect_inputs_and_run_aligner {
                 $fastq_rd_ct += $wc_ct/4;
             }
         }
-    } else {
+    } 
+    else {
         $fastq_rd_ct = $self->determine_input_read_count_from_bam;
     }
+
     unless ($fastq_rd_ct) {
-        $self->error_message("Failed to get a read count before aligning.");
+        $self->error_message("Failed to get a read count in input files before aligning.");
         return;
     }
+    $self->_fastq_read_count($fastq_rd_ct);
 
     for my $pass (@passes) {
         $self->status_message("Aligning @$pass...");
@@ -781,13 +783,6 @@ sub collect_inputs_and_run_aligner {
             }
         }
     }
-
-    unless ($fastq_rd_ct) {
-        $self->error_message('Unable to count reads in FASTQ files');
-        return;
-    }
-
-    $self->_fastq_read_count($fastq_rd_ct);
 
     for (@inputs) {
        if ($_ =~ m/^\/tmp\/.*\.fastq$/) {
