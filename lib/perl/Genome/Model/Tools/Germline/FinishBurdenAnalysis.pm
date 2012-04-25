@@ -116,7 +116,7 @@ sub execute {                               # replace with real execution logic.
         my $header = $infh->getline;
         chomp($header);
         if ($first) {
-            print $fh_outfile "$header,Average_Position\n";
+            print $fh_outfile "$header,Chromosome,Average_Position\n";
             $first = 0;
         }
         while (my $line = $infh->getline) {
@@ -131,7 +131,7 @@ sub execute {                               # replace with real execution logic.
                 $average_position += $pos;
             }
             $average_position /= scalar(@chrpositions);
-            print $fh_outfile "$line,$average_position\n";
+            print $fh_outfile "$line,$chr,$average_position\n";
         }
     }
 
@@ -145,11 +145,11 @@ sub execute {                               # replace with real execution logic.
     }
     #-------------------------------------------------
     my $R_command_finisher = <<"_END_OF_R_";
-### This is option file for finishing the analysis of burdentest.R ###
-
 missing.data=c("NA",".","");
 
 x<-read.table("$output_file", sep = ",", header = TRUE);
+
+x[x == 0] = 0.0000000001;
 
 x\$CMC_log10=-log10(x\$CMC);
 x\$pCMC_log10=-log10(x\$pCMC);
@@ -159,37 +159,92 @@ x\$PWST_log10=-log10(x\$PWST);
 x\$SPWST_log10=-log10(x\$SPWST);
 x\$SPWST.up_log10=-log10(x\$SPWST.up);
 x\$SPWST.down_log10=-log10(x\$SPWST.down);
-rownames(x) <- paste(x\$Trait,x\$Gene);
+rownames(x) <- paste(x\$Trait,\"_\",x\$Gene,sep = \"\");
 
-#Select -log10 > 1.5 for text labels below
-x2 <- subset(x,x\$CMC_log10 > 1.5 | x\$pCMC_log10 > 1.5 | x\$WSS_log10 > 1.5 | x\$aSum_log10 > 1.5 | x\$PWST_log10 > 1.5 | x\$SPWST_log10 > 1.5 | x\$SPWST.up_log10 > 1.5 | x\$SPWST.down_log10 > 1.5, select=c(CMC_log10,pCMC_log10,WSS_log10,aSum_log10,PWST_log10,SPWST_log10,SPWST.up_log10,SPWST.down_log10));
-x3 <- subset(x,x\$CMC_log10 > 1.5 | x\$pCMC_log10 > 1.5 | x\$WSS_log10 > 1.5 | x\$aSum_log10 > 1.5 | x\$PWST_log10 > 1.5 | x\$SPWST_log10 > 1.5 | x\$SPWST.up_log10 > 1.5 | x\$SPWST.down_log10 > 1.5, select=c(Average_Position));
+chromosomes <- sort(unique(x\$Chromosome));
+
+#outfile_basename <- \"$output_file\";
 
 #BEGIN PLOTTING IMAGE
 pdf(file=\"$plot_file\",width=10,height=7.5,bg=\"white\");
-avg_pos <- x\$Average_Position;
 colors <- rainbow(8);
-ymax <- max(x\$CMC_log10,x\$pCMC_log10,x\$WSS_log10,x\$aSum_log10,x\$PWST_log10,x\$SPWST_log10,x\$SPWST.up_log10,x\$SPWST.down_log10,na.rm = TRUE);
+library(genefilter);
+for(k in 1:length(chromosomes)) {
+    current_chr <- chromosomes[k];
+#    outfile <- paste(outfile_basename,\"_chr\",current_chr,\".pdf\", sep = \"\");
+    x_chr <- subset(x,x\$Chromosome == current_chr);
+    avg_pos <- x_chr\$Average_Position;
+    ymax <- max(x\$CMC_log10,x\$pCMC_log10,x\$WSS_log10,x\$aSum_log10,x\$PWST_log10,x\$SPWST_log10,x\$SPWST.up_log10,x\$SPWST.down_log10,na.rm = TRUE);
 
-#BEGIN PLOTTING -LOG10 P-VALUES
-plot(avg_pos,x\$CMC_log10,type="p",pch=16,cex=0.8,col=colors[1],main=\"Burden Test Results by Average Gene-Snp Position\",xlab=\"Average Chromosomal Position For the Rare SNVs in the Gene\",ylab=\"-log10\(p-value\)\",ylim=c(0,ymax*1.25), xaxt="n");
-points(avg_pos,x\$pCMC_log10,type="p",pch=16,cex=0.8,col=colors[2]);
-points(avg_pos,x\$WSS_log10,type="p",pch=16,cex=0.8,col=colors[3]);
-points(avg_pos,x\$aSum_log10,type="p",pch=16,cex=0.8,col=colors[4]);
-points(avg_pos,x\$PWST_log10,type="p",pch=16,cex=0.8,col=colors[5]);
-points(avg_pos,x\$SPWST_log10,type="p",pch=16,cex=0.8,col=colors[6]);
-points(avg_pos,x\$SPWST.up_log10,type="p",pch=16,cex=0.8,col=colors[7]);
-points(avg_pos,x\$SPWST.down_log10,type="p",pch=16,cex=0.8,col=colors[8]);
-for(i in 1:length(x2)) {
-text(cbind(x3,x2[i]),lab=paste(rownames(x2[i])), cex=0.3, pos=4);
+#subset chromosomes with wide regions
+    max_avg_pos <- max(avg_pos);
+    min_avg_pos <- min(avg_pos);
+    diff_avg <- diff(sort(avg_pos));
+    max_diff <- max(diff_avg);
+    diff_position <- which(diff_avg==max_diff);
+    sort_avg_pos <- sort(avg_pos)[diff_position];
+
+    #library(genefilter)
+
+
+    if (length(unique(avg_pos)) > 1) {
+        if (max_diff > (0.5 * (max_avg_pos - min_avg_pos))){
+            x_chr\$avg_pos_scaled <- genescale(avg_pos, axis=1, method=c(\"R\"), na.rm=TRUE)
+print(x_chr\$avg_pos_scaled)[1:10];
+            x_chr\$avg_pos_scaled <- x_chr[order(x_chr\$avg_pos_scaled),]
+print(x_chr\$avg_pos_scaled)[1:10];
+#            avg_pos_scaled <- genescale(avg_pos, axis=1, method=c(\"Z\"), na.rm=TRUE)
+#            x_chr\$Average_Position <- avg_pos_scaled;
+        }
+    }
+
+
+
+if(current_chr == 1) {
+#print(x_chr\$Average_Position);
 }
-axis(1, at=unique(x\$Average_Position), lab=paste(unique(round(x\$Average_Position)),\"\\n\",unique(x\$Gene)), cex.axis=0.5, las=2)
+    gene_names <- unique((x_chr\$Gene));
+    trait_names <- unique((x_chr\$Trait));
 
-plot_types <- c("CMC","pCMC","WSS","aSum","PWST","SPWST","SPWST.up","SPWST.down");
-legend(x=\"topright\", title = \"Burden Tests\", legend=plot_types,col=colors,pch=16,ncol=2);
+    #BEGIN PLOTTING -LOG10 P-VALUES
+    for(j in 1:length(trait_names)) {
+        current_trait <- trait_names[j];
+        x_trait <- subset(x_chr,x_chr\$Trait == current_trait);
+        avg_pos_trait <- x_trait\$Average_Position;
+        avg_pos_range <- paste(round(min_avg_pos),\"-\",round(max_avg_pos),sep = \"\");
+        plot(avg_pos_trait,x_trait\$CMC_log10,type="p",pch=16,cex=0.8,col=colors[1],main=paste(\"Burden Test Results for Chromosome \",current_chr,\":\",avg_pos_range,\" by Phenotype: \",current_trait,sep = \"\"),xlab=\"Average Chromosomal Position For the Rare SNVs (MAF<1%) in the Gene\",ylab=\"-log10\(p-value\)\",ylim=c(0,ymax*1.25), xaxt="n");
+        points(avg_pos_trait,x_trait\$pCMC_log10,type="p",pch=16,cex=0.8,col=colors[2]);
+        points(avg_pos_trait,x_trait\$WSS_log10,type="p",pch=16,cex=0.8,col=colors[3]);
+        points(avg_pos_trait,x_trait\$aSum_log10,type="p",pch=16,cex=0.8,col=colors[4]);
+        points(avg_pos_trait,x_trait\$PWST_log10,type="p",pch=16,cex=0.8,col=colors[5]);
+        points(avg_pos_trait,x_trait\$SPWST_log10,type="p",pch=16,cex=0.8,col=colors[6]);
+        points(avg_pos_trait,x_trait\$SPWST.up_log10,type="p",pch=16,cex=0.8,col=colors[7]);
+        points(avg_pos_trait,x_trait\$SPWST.down_log10,type="p",pch=16,cex=0.8,col=colors[8]);
 
+        plot_types <- c("CMC","pCMC","WSS","aSum","PWST","SPWST","SPWST.up","SPWST.down");
+        legend(x=\"topright\", title = \"Burden Tests\", legend=plot_types,col=colors,pch=16,ncol=2);
 
-x_log10 <- subset(x, select=c(CMC_log10,pCMC_log10,WSS_log10,aSum_log10,PWST_log10,SPWST_log10,SPWST.up_log10,SPWST.down_log10));
+        #Select -log10 > 1.5 for text labels below
+        x2_trait <- subset(x_trait,x_trait\$CMC_log10 > 1.5 | x_trait\$pCMC_log10 > 1.5 | x_trait\$WSS_log10 > 1.5 | x_trait\$aSum_log10 > 1.5 | x_trait\$PWST_log10 > 1.5 | x_trait\$SPWST_log10 > 1.5 | x_trait\$SPWST.up_log10 > 1.5 | x_trait\$SPWST.down_log10 > 1.5, select=c(CMC_log10,pCMC_log10,WSS_log10,aSum_log10,PWST_log10,SPWST_log10,SPWST.up_log10,SPWST.down_log10));
+        x3_trait <- subset(x_trait,x_trait\$CMC_log10 > 1.5 | x_trait\$pCMC_log10 > 1.5 | x_trait\$WSS_log10 > 1.5 | x_trait\$aSum_log10 > 1.5 | x_trait\$PWST_log10 > 1.5 | x_trait\$SPWST_log10 > 1.5 | x_trait\$SPWST.up_log10 > 1.5 | x_trait\$SPWST.down_log10 > 1.5, select=c(Average_Position));
+        x4_trait <- subset(x_trait,x_trait\$CMC_log10 > 1.5 | x_trait\$pCMC_log10 > 1.5 | x_trait\$WSS_log10 > 1.5 | x_trait\$aSum_log10 > 1.5 | x_trait\$PWST_log10 > 1.5 | x_trait\$SPWST_log10 > 1.5 | x_trait\$SPWST.up_log10 > 1.5 | x_trait\$SPWST.down_log10 > 1.5, select=c(Gene));
+        if(dim(x2_trait)[1]) {
+            for(i in 1:length(x2_trait)) {
+                if (!is.na(x2_trait[i]) && (x2_trait[i] > 2.5)) {
+                    text(cbind(x3_trait,x2_trait[i]),lab=round(x2_trait[i],4), cex=0.7, pos=4);
+                }
+            }
+        }
+
+        # Make x axis tick marks without labels
+        axis(1, at=unique(x_trait\$Average_Position), lab=F, tck=-0.008);
+        # Plot x axis labels at default tick marks with labels at 45 degree angle
+        text(unique(x_trait\$Average_Position), par("usr")[3], srt=45, adj = c(1.1,1.2), labels=unique(x_trait\$Gene), xpd=T, cex=1);
+
+    }
+
+    x_log10 <- subset(x, select=c(CMC_log10,pCMC_log10,WSS_log10,aSum_log10,PWST_log10,SPWST_log10,SPWST.up_log10,SPWST.down_log10));
+}
 
 #Q-Q Plots
 for(i in 1:length(plot_types)) {
@@ -197,7 +252,7 @@ for(i in 1:length(plot_types)) {
     uni <- index/nrow(x_log10[i]);
     loguni <- -log10(uni);
     x_plot <- t(sort(loguni));
-    x_plot_label = paste(colnames(x_log10[i]),"_uniform");
+    x_plot_label = paste(colnames(x_log10[i]),"_uniform", sep = \"\");
 
     y_plot <- sort(t(x_log10[i]));
     y_plot_label <- colnames(x_log10[i]);

@@ -106,8 +106,10 @@ sub execute {
 
         my $first_nondone_step = '-';
         eval {
-            my $parent_workflow_instance = $latest_build->newest_workflow_instance;
-            $first_nondone_step = find_first_nondone_step($parent_workflow_instance) || '-';
+            if ($latest_build) {
+                my $parent_workflow_instance = $latest_build->newest_workflow_instance;
+                $first_nondone_step = find_first_nondone_step($parent_workflow_instance) || '-';
+            }
         };
 
         $first_nondone_step =~ s/^\d+\s+//;
@@ -120,7 +122,13 @@ sub execute {
         $model_name =~ s/\.?$pp_name\.?/.../;
 
         my $action;
-        if ($latest_build->status eq 'Scheduled' || $latest_build->status eq 'Running' || $model->build_requested) {
+        if (!$latest_build && $model->build_requested){
+            $action = 'none';
+        }
+        elsif (!$latest_build) {
+            $action = 'build-needed';
+        }
+        elsif ($latest_build->status eq 'Scheduled' || $latest_build->status eq 'Running' || $model->build_requested) {
             $action = 'none';
         }
         elsif ($latest_build && $latest_build->status eq 'Succeeded') {

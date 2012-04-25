@@ -286,7 +286,12 @@ sub _run_aligner {
         }
     }
 
-    #### STEP 3: Merge log files.
+    #### STEP 3: verify the samxe_logfile
+    unless ($self->_verify_bwa_samxe_did_happen($samxe_logfile)) {
+        die $self->error_message("bwa samxe seems to fail based on run log: $samxe_logfile");
+    }
+
+    #### STEP 4: Merge log files.
 
     my $log_input_fileset = join " ",  (@aln_log_files, $samxe_logfile);
     my $log_output_file   = $self->temp_staging_directory . "/aligner.log";
@@ -297,7 +302,7 @@ sub _run_aligner {
         input_files  => [ @aln_log_files, $samxe_logfile ],
         output_files => [ $log_output_file ],
         skip_if_output_is_present => 0,
-        );
+    );
 
     return 1;
 }
@@ -345,53 +350,42 @@ sub _filter_samxe_output {
     return 1;
 }
 
+#For very few cases, bwa samxe still silently runs and gives bad
+#output when ref_seq and sai become not accessible during the middle of
+#process that is caused by things like power outage. refer to #81719
+sub _verify_bwa_samxe_did_happen {
+    my ($self, $log_file) = @_;
 
-sub _verify_bwa_aln_did_happen {
-    my $self = shift;
-    my %p = @_;
-
-    unless (-e $p{sai_file} && -s $p{sai_file}) {
-        $self->error_message("Expected SAI file is $p{sai_file} nonexistent or zero length.");
-        return;
+    #If getting very few fastq (like in unit test), it's very likely to error out.
+    my $fq_rd_ct = $self->_fastq_read_count;
+    if ($fq_rd_ct and $fq_rd_ct <= 1000) {
+        $self->warning_message("fastq read count is $fq_rd_ct. Skip the samxe log check");
+        return 1;
     }
 
-    unless ($self->_inspect_log_file(log_file=>$p{log_file},
-                                     log_regex=>'(\d+) sequences have been processed')) {
-
-        $self->error_message("Expected to see 'X sequences have been processed' in the log file where 'X' must be a nonzero number.");
-        return 0;
-    }
-
-    return 1;
-}
-
-sub _inspect_log_file {
-    my $self = shift;
-    my %p = @_;
-
-    my $log_file = $p{log_file};
     unless ($log_file and -s $log_file) {
         $self->error_message("log file $log_file is not valid");
         return;
     }
 
-    my $last_line = `tail -1 $log_file`;
-    my $check_nonzero = 0;
+    my $fh = Genome::Sys->open_file_for_reading($log_file) or die "Failed to open $log_file for reading\n";
+    my $rv = 1;
 
-    my $log_regex = $p{log_regex};
-    if ($log_regex =~ m/\(\\d\+\)/) {
-        $check_nonzero = 1;
-    }
-
-    if ($last_line =~ m/$log_regex/) {
-        if ( !$check_nonzero || $1 > 0 ) {
-            $self->status_message('The last line of aligner.log matches the expected pattern');
-            return 1;
+    while (my $line = $fh->getline) {
+        if ($line =~ /\[infer_isize\] fail to infer insert size: too few good pairs/) {
+            $self->error_message("samxe failed to infer insert size");
+            $rv = 0 and last;
+        }
+        elsif ($line =~ /\[bwa_paired_sw\] 0 out of 0 Q\d+ singletons are mated/) {
+            $self->error_message('samxe failed because 0 out of 0 singletons are mated');
+            $rv = 0 and last;
+        }
+        elsif ($line =~ /\[bwa_paired_sw\] 0 out of 0 Q\d+ discordant pairs are fixed/) {
+            $self->error_message('samxe failed because 0 out of 0 discordant pairs are fixed');
+            $rv = 0 and last;
         }
     }
-
-    $self->error_message("The last line of $log_file is not valid: $last_line");
-    return;
+    return $rv;
 }
 
 

@@ -110,10 +110,16 @@ sub execute {
             push @output_files, $chunk_fh->filename();
             $self->status_message("Created fasta chunk " . $chunk_fh->filename);
         }
+
         $seq_out->write_seq($seq);
     }
 
+    chmod 0666, @output_files;
     $self->fasta_files(\@output_files);
+
+    # Okay, so this is a potential fix to a workflow problem. My hunch is that LSF jobs that finish too quickly
+    # can't be tracked by workflow and leads to failures. This sleep should help prevent that. Maybe. We'll see.
+    sleep(60) unless $ENV{UR_DBI_NO_COMMIT};
     $self->status_message("Done chunking!");
     return 1;
 }

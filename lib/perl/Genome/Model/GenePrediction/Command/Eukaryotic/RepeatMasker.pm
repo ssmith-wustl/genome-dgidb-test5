@@ -112,6 +112,12 @@ class Genome::Model::GenePrediction::Command::Eukaryotic::RepeatMasker {
             is_input => 1,
             doc => 'Sequences with an N content greater than this are omitted. Value is a percent',
         },
+        overly_masked_sequence_fasta => {
+            is => 'FilePath',
+            is_input => 1,
+            is_output => 1,
+            doc => 'If overly masked sequences are excluded from output fasta, those sequences are placed into this file',
+        },
     ], 
 };
 
@@ -196,6 +202,7 @@ sub execute {
     $self->_set_masked_fasta unless defined $self->masked_fasta;
     $self->_set_ace_file_location if $self->make_ace and not defined $self->ace_file_location;
     $self->_set_gff_file_location if $self->make_gff and not defined $self->gff_file_location;
+    $self->_set_excluded_sequence_file_location if $self->exclude_overly_masked and not defined $self->overly_masked_sequence_fasta;
 
     # Prepare for skip copies the input fasta to the output location, which is why the input fasta
     # needs to be checked first and the masked fasta location needs to be figured out. Also, the
@@ -297,6 +304,10 @@ sub _filter_masked_sequences_from_fasta_file {
     my $temp_file = $temp_file_fh->filename;
     $temp_file_fh->close;
 
+    my $temp_excluded_fh = File::Temp->new();
+    my $temp_excluded = $temp_excluded_fh->filename;
+    $temp_excluded_fh->close;
+
     my $input_fasta_io = Bio::SeqIO->new(
         -format => 'fasta',
         -file => $self->masked_fasta,
@@ -304,6 +315,10 @@ sub _filter_masked_sequences_from_fasta_file {
     my $output_fasta_io = Bio::SeqIO->new(
         -format => 'fasta',
         -file => ">$temp_file",
+    );
+    my $excluded_fasta_io = Bio::SeqIO->new(
+        -format => 'fasta',
+        -file => ">$temp_excluded",
     );
 
     while (my $seq_obj = $input_fasta_io->next_seq()) {
@@ -314,6 +329,7 @@ sub _filter_masked_sequences_from_fasta_file {
         # Need some record of what was excluded
         if ($n_percent > $self->maximum_percent_masked) {
             $self->status_message("Sequence " . $seq_obj->display_name . " $n_percent % masked, excluding from masked fasta file");
+            $excluded_fasta_io->write_seq($seq_obj);
             next;
         }
         $output_fasta_io->write_seq($seq_obj);
@@ -323,6 +339,7 @@ sub _filter_masked_sequences_from_fasta_file {
     # Replace original fasta file with filtered fasta
     unlink $self->masked_fasta or die "Could not remove " . $self->masked_fasta;
     Genome::Sys->copy_file($temp_file, $self->masked_fasta);
+    Genome::Sys->copy_file($temp_excluded, $self->overly_masked_sequence_fasta);
     $output_fasta_io->close;
 
     return 1;
@@ -405,6 +422,14 @@ sub _set_gff_file_location {
     my $default_gff_file = $self->fasta_file . ".repeat_masker.gff";
     $self->gff_file_location($default_gff_file);
     $self->status_message("Gff is file is being generated and location not given, defaulting to $default_gff_file");
+    return 1;
+}
+
+sub _set_excluded_sequence_file_location {
+    my $self = shift;
+    my $default_file = $self->fasta_file . ".overly_masked";
+    $self->overly_masked_sequence_fasta($default_file);
+    $self->status_message("Overly masked fasta file not given, defaulting to " . $self->overly_masked_sequence_fasta);
     return 1;
 }
 

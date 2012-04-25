@@ -112,7 +112,7 @@ sub help_synopsis {
         --bam-list /path/myBamList.tsv \\
         --maf-file /path/myMAF.tsv \\
         --numeric-clinical-data-file /path/myNumericData.tsv \\
-        --categoric-clinical-data-file /path/myClassData.tsv \\
+        --categorical-clinical-data-file /path/myClassData.tsv \\
         --output-dir /path/output_directory
 
  ... music survival \\
@@ -260,7 +260,7 @@ sub execute {
         for (my $i = 1; $i <= $#header_fields; $i++) { #sample ID should be in first column of file
             my $field = $header_fields[$i];
             if ($field =~ /vital_status|vitalstatus/i) { $vital_status_col = $i; $vital_status_flag++; }
-            if ($field =~ /days_to_last_follow_up|daystolastfollowup/i) { $days_to_last_follow_col = $i; $days_to_last_follow_flag++; }
+            if ($field =~ /days_to_last_(follow_up|followup)|daystolastfollowup/i) { $days_to_last_follow_col = $i; $days_to_last_follow_flag++; }
             if (scalar grep { /^$field$/i } @phenotypes_to_include) { $phenotypes_to_print{$field} = $i; }
         }
 
@@ -346,10 +346,6 @@ sub execute {
             return;
         }
     }
-
-    #THIS IS A TEST FIXME
-    `cp $survival_data_file /gscuser/ndees/git/genome/lib/perl/Genome/Model/Tools/Music/ov_survival/temp_files/`;
-    `cp $mutation_matrix /gscuser/ndees/git/genome/lib/perl/Genome/Model/Tools/Music/ov_survival/temp_files/`;
 
     # set up R command
     my $R_cmd = "R --slave --args < " . __FILE__ . ".R " . join(" ",$survival_data_file,$mutation_matrix,$legend_placement,$output_dir);

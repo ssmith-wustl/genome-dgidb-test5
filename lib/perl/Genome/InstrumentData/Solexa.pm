@@ -1058,14 +1058,14 @@ sub resolve_sd_insert_size {
 
 sub get_default_alignment_metrics { #means BWA
     my ($self, $metric_name) = @_;
-    my @sr = $self->get_default_alignment_results;
+    my $metrics = $self->get_default_alignment_metrics_hash;
 
-    for my $sr (@sr) {
-        my ($metric) = grep{$_->metric_name eq $metric_name}$sr->metrics;
-        if ($metric and $metric->metric_value) {
-            return $metric->metric_value;
-        }
+    unless ($metrics) {
+        $self->error_message('Failed to get default alignment metrics hash for instrument data: '.$self->id);
+        return;
     }
+
+    return $metrics->{$metric_name} if exists $metrics->{$metric_name};
     return;
 }
 
@@ -1080,6 +1080,21 @@ sub get_default_alignment_results {  #means BWA and created in auto-cron by apip
 
     #grep alignment results only created by apipe-builder and latest result list first
     return grep{$_->output_dir =~ /\-apipe\-builder\-/}sort{$b->id <=> $a->id}@sr;
+}
+
+#This method is used in GSC::IndexIllumina to get bwa alignment metrics to retire eland 
+sub get_default_alignment_metrics_hash {
+    my $self = shift;
+    my @ar   = $self->get_default_alignment_results;
+
+    my %metrics;
+
+    for my $ar (@ar) {
+        next unless grep{$_->metric_name eq 'read_1_pct_aligned'}$ar->metrics;
+        map{$metrics{$_->metric_name} = $_->metric_value}$ar->metrics;
+        last;
+    }
+    return \%metrics;
 }
 
 
