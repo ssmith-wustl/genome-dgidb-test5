@@ -76,7 +76,16 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <xsl:call-template name='object_link_button'>
                 <xsl:with-param name='type' select="'Genome::DruggableGene::DrugGeneInteractionReport::Set'"/>
                 <xsl:with-param name="keys" select='.'/>
-                <xsl:with-param name="linktext" select="interaction_type"/>
+                <xsl:with-param name="linktext">
+                  <xsl:choose>
+                    <xsl:when test="interaction_type = 'na'">
+                      <xsl:text>n/a</xsl:text>
+                    </xsl:when>
+                    <xsl:otherwise>
+                      <xsl:value-of select="interaction_type"/>
+                    </xsl:otherwise>
+                  </xsl:choose>
+                </xsl:with-param>
               </xsl:call-template>
             </th>
             <th>
