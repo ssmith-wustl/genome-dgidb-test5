@@ -260,7 +260,7 @@ sub execute {
         for (my $i = 1; $i <= $#header_fields; $i++) { #sample ID should be in first column of file
             my $field = $header_fields[$i];
             if ($field =~ /vital_status|vitalstatus/i) { $vital_status_col = $i; $vital_status_flag++; }
-            if ($field =~ /days_to_last_follow_up|daystolastfollowup/i) { $days_to_last_follow_col = $i; $days_to_last_follow_flag++; }
+            if ($field =~ /days_to_last_(follow_up|followup)|daystolastfollowup/i) { $days_to_last_follow_col = $i; $days_to_last_follow_flag++; }
             if (scalar grep { /^$field$/i } @phenotypes_to_include) { $phenotypes_to_print{$field} = $i; }
         }
 
