@@ -19,19 +19,21 @@ class Genome::Model::Tools::Germline::BurdenAnalysis {
     glm_clinical_data_file => { is => 'Text', doc => "Phenotype File" },
     VEP_annotation_file => { is => 'Text', doc => "List of mutations --VEP annotate then VEP parse" },
     project_name => { is => 'Text', doc => "The name of the project" },
-    base_R_commands => { is => 'Text', doc => "The base R command library", default => "$R_script_file" },
+#    base_R_commands => { is => 'Text', doc => "The base R command library", default => "$R_script_file" },
+    base_R_commands => { is => 'Text', doc => "The base R command library", default => "/gscuser/qzhang/gstat/burdentest/burdentest.R" },
     output_directory => { is => 'Text', doc => "Results of the Burden Analysis" },
     maf_cutoff => { is => 'Text', doc => "The cutoff to use to define which mutations are rare, 1 means no cutoff", default => '0.01' },
     permutations => { is => 'Text', doc => "The number of permutations to perform, typically from 100 to 10000, larger number gives more accurate p-value, but needs more time", default => '10000' },
+    p_value_permutations => { is => 'Text', doc => "The number of permutations to perform on the p-values, typically from 10 to 100, larger number gives more accurate p-value, but needs more time", default => '100' },
     trv_types => { is => 'Text', doc => "colon-delimited list of which trv types to use as significant rare variants or \"ALL\" if no exclusions", default => 'NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING:NMD_TRANSCRIPT,NON_SYNONYMOUS_CODING,SPLICE_SITE:NMD_TRANSCRIPT,STOP_LOST:NON_SYNONYMOUS_CODING:NON_SYNONYMOUS_CODING,SPLICE_SITE:STOP_GAINED:STOP_GAINED,SPLICE_SITE' },
     select_phenotypes => { is => 'Text', doc => "If specified, don't use all phenotypes from glm-model-file file, but instead only use these from a comma-delimited list -- this list's names must be an exact match to names specified in the glm-model-file", is_optional => 1},
     testing_mode => { is => 'Text', doc => "If specified, assumes you're just testing the code and will not bsub out the actual tests", default => '0'},
     sample_list_file => { is => 'Text', doc => "Limit Samples in the Variant Matrix to Samples Within this File - Sample_Id should be the first column of a tab-delimited file, all other columns are ignored", is_optional => 1,},
     missing_value_markers => { is => 'Text', doc => "Comma-delimited list of symbols that represent missing values such as \"NA\", \".\", or \"-\"", is_optional => 1, default => 'NA,.,-999'},
     glm_model_file => { is => 'Text', doc => 'File outlining the type of model, response variable, covariants, etc. for the GLM analysis. (See DESCRIPTION).',},
+    permutation_seed => { is => 'Text', doc => "If specified, uses the same permutation order for all analyses to keep correlations between traits", default => '123'},
   ],
 };
-
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
@@ -75,7 +77,7 @@ The GLM analysis accepts a mixed numeric and categoric clinical data file, input
 
 =item * The 'variant/gene_name' can either be the name of one or more columns from the --glm-clinical-data-file, or the name of one or more mutated gene names from the MAF, separated by "|". If this column is left blank, or instead contains "NA", then each column from either the variant mutation matrix (--use-maf-in-glm) or alternatively the --glm-clinical-data-file is used consecutively as the variant column in independent analyses. 
 
-=item * 'covariates' are the names of one or more columns from the --glm-clinical-data-file, separated by "+". For now, covariates must be the same for all phenotypes, but this flexibility will be added soon.
+=item * 'covariates' are the names of one or more columns from the --glm-clinical-data-file, separated by "+".
 
 =item * 'memo' is any note deemed useful to the user. It will be printed in the output data file for reference.
 
@@ -101,6 +103,8 @@ EOS
 sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
+    my $p_value_permutations = $self->p_value_permutations;
+    my $seed = $self->permutation_seed;
     my $mutation_file = $self->mutation_file;
     my $phenotype_file = $self->glm_clinical_data_file;
     my $VEP_annotation_file = $self->VEP_annotation_file;
@@ -121,7 +125,7 @@ sub execute {                               # replace with real execution logic.
     my $glm_header = $glm_model_fh->getline;
     chomp($glm_header);
     my %pheno_covar_type_hash;
-    my %covariates_hash;
+#    my %covariates_hash;
     while (my $line = $glm_model_fh->getline) {
         next if ($line =~ m/^#/);
         chomp($line);
@@ -141,12 +145,12 @@ sub execute {                               # replace with real execution logic.
             }
         }
         $pheno_covar_type_hash{$clinical_data_trait_name} = "$covariates\t$analysis_type";
-        my (@covariates) = split(/\+/,$covariates);
-        foreach my $covar (@covariates) {
-            $covariates_hash{$covar}++;
-        }
+#        my (@covariates) = split(/\+/,$covariates);
+#        foreach my $covar (@covariates) {
+#            $covariates_hash{$covar}++;
+#        }
     }
-    my $covariates = join("\+", keys(%covariates_hash));
+#    my $covariates = join("\+", keys(%covariates_hash));
     my $trv_types = $self->trv_types;
     my @trv_array = split(/:/, $trv_types);
     my $trv_types_to_use = "\"".join("\",\"", @trv_array)."\"";
@@ -307,19 +311,20 @@ vtype.use=c($trv_types_to_use)
 out.dir="$output_directory"
 if (!file.exists(out.dir)==T) dir.create(out.dir)
 
-covariates="$covariates"
+covariates="NONE"
 
 ########################### other options
 maf.cutoff=$maf_cutoff
 
 _END_OF_R_
+#covariates="$covariates"
     #-------------------------------------------------
 
     print $fh_R_option "$R_command_option\n";
 
 
     #now create bsub commands
-    #bsub -e err 'R --no-save < burdentest.R option_file_asms Q trigRES ABCA1 10000'
+    #bsub -e err 'R --no-save < burdentest.R option_file_asms Q trigRES ABCA1 10000 123'
     my $user = $ENV{USER};
     my $R_error_file = "$output_directory/R_error_file.err";
     my $bsub_base = "bsub -u $user\@genome.wustl.edu -e $R_error_file 'R --no-save \< $base_R_commands $R_option_file";
@@ -329,7 +334,15 @@ _END_OF_R_
             if ($gene eq '-' || $gene eq 'NA' ) {
                 next;
             }
-            my $bsub_cmd = "$bsub_base $analysis_data_type $phenotype $gene $permutations\'";
+
+            my $bsub_cmd;
+            if ($covariates && $covariates ne 'NONE') {
+                $bsub_cmd = "$bsub_base $analysis_data_type $phenotype $gene $permutations:$seed:$p_value_permutations $covariates\'";
+            }
+            else {
+                $bsub_cmd = "$bsub_base $analysis_data_type $phenotype $gene $permutations:$seed:$p_value_permutations\'";
+            }
+
             if ($self->testing_mode) {
                 print "$bsub_cmd\n";
             }
