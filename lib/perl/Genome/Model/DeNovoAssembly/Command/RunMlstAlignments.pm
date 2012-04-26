@@ -71,7 +71,7 @@ sub execute {
     
     # verify sample names and get builds, ids
     my ( $query_builds, $ref_seq_build ) = $self->_validate_samples_and_get_builds;
-    
+
     for my $build ( @$query_builds ) {
         # run nucmer
         my $nucmer_out_file = $self->output_dir.'/'.$build->subject_name.'.delta';
@@ -159,7 +159,7 @@ sub _validate_samples_and_get_builds {
             my $sample = Genome::Sample->get( name => $name );
             $self->status_message("Skipping .. can not get genome sample for name: $name") and next if
                 not $sample;
-            $self->status_message('Sample species name does not match ref seq build sample name') and next if
+            $self->warning_message('Sample species name: '. $sample->species_name.' does not match ref seq species name: '.$ref_seq_build->species_name.', for sample '.$sample->name) if
                 not $sample->species_name eq $ref_seq_build->species_name;
             my @builds = Genome::Model::Build->get(
                 subject_id    => $sample->id,

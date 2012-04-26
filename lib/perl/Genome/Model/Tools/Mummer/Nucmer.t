@@ -26,9 +26,10 @@ for my $file ( $query, $reference ) {
 }
 
 my $tool = Genome::Model::Tools::Mummer::Nucmer->create(
-    prefix    => $test_dir.'/OUT',
-    reference => $test_dir.'/'.$reference,
-    query     => $test_dir.'/'.$query,
+    use_version => '3.22-64',
+    prefix      => $test_dir.'/OUT',
+    reference   => $test_dir.'/'.$reference,
+    query       => $test_dir.'/'.$query,
 );
 ok( $tool, 'Created nucmer tool' );
 ok( $tool->execute, 'Executed nucmer tool' );
