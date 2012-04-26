@@ -30,7 +30,7 @@ These are the instructions for the manual version of what that script attempts t
     sudo dpkg -i *.deb
     R -e 'library(fooBaR) # test it
 
-6. It may still fail to test because of a "missing namespace".  
+6. It may still fail to test because of a "missing namespace".
     # go through the normal cirucus of making a vendor/r-cran-foobar sub-repo
     # put the code there and do an initial commit
     # copy the namespace file from the ubuntu-lucid-package-skel directory into it
@@ -47,6 +47,7 @@ These are the instructions for the manual version of what that script attempts t
     # findreplace PACKAGE r-cran-foobar debian/*
     # findreplace VERSION 1.2-1 debian/*
     # findreplace DATE with the standard tedious debian date format
+    # <two spaces> Wed, 25 Apr 2012 15:35:31 -0500
 
 WHEN DONE ALWAYS UPDATE THE R META-PACKAGE:
     cd $MY_GIT_REPO
@@ -64,8 +65,8 @@ WHEN DONE ALWAYS UPDATE THE R META-PACKAGE:
 THEN THE MASTER DEPS PACKAGE
     cd $MY_GIT_REPO
     cd genome-snapshot-deps
-    # the ubuntu-lucid-list should already have changes made by the above script
-    # if not ensure it shows the version number of your new R deps package above
+    # Change the genome-snapshot-deps-r line to show your version, e.g. (>= 2012.04.25-1)
+    vim ./ubuntu-lucid-list
     ./ubuntu-lucid-update
     ln -s ubuntu-lucid debian
     dpkg-buildpackage
@@ -85,7 +86,7 @@ For a description of the directory structure here, see the README for the top-le
 
 ** Setting up a working R environment. **
 
-We want to pull R packages from two main APT repositories: CRAN and Bioconductor.  In addition, where there are broken packages in those repos, we repair them and put them in the TGI repo.  
+We want to pull R packages from two main APT repositories: CRAN and Bioconductor.  In addition, where there are broken packages in those repos, we repair them and put them in the TGI repo.
 
 The following apt list files represent those repositories.  Note that the deb-src lines are only required to apt-get source for development, not for runtime locations.
 
@@ -100,11 +101,11 @@ The signing key for CRAN appears to be as follows:
 
 gpg --keyserver keyserver.ubuntu.com --recv 51716619E084DAB9
 gpg --export --armor E084DAB9 > E084DAB9.asc
-sudo apt-get add E084DAB9.asc
+sudo apt-key add E084DAB9.asc
 
 - Bioconductor
 
-cat > /etc/apt/sources.list.d$ cat r-bioconductor.list <<EOF
+cat > /etc/apt/sources.list.d/r-bioconductor.list <<EOF
 deb http://bioinformatics.rri.sari.ac.uk/cran2deb/rep testing main
 deb-src http://bioinformatics.rri.sari.ac.uk/cran2deb/rep testing main
 EOF
