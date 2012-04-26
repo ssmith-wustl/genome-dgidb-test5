@@ -44,9 +44,9 @@ HELP
 sub help_synopsis {
   return <<EOS
  ... music proximity \\
-    --maf-file input_dir/myMAF.tsv \\
-    --output-dir output_dir/ \\
-    --max-proximity 15
+        --maf-file input_dir/myMAF.tsv \\
+        --output-dir output_dir/ \\
+        --max-proximity 15
 EOS
 }
 
