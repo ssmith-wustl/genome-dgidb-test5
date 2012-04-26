@@ -374,17 +374,22 @@ sub _verify_bwa_samxe_did_happen {
     while (my $line = $fh->getline) {
         if ($line =~ /\[infer_isize\] fail to infer insert size: too few good pairs/) {
             $self->error_message("samxe failed to infer insert size");
-            $rv = 0 and last;
+            $rv = 0;
+            last;
         }
         elsif ($line =~ /\[bwa_paired_sw\] 0 out of 0 Q\d+ singletons are mated/) {
             $self->error_message('samxe failed because 0 out of 0 singletons are mated');
-            $rv = 0 and last;
+            $rv = 0;
+            last;
         }
         elsif ($line =~ /\[bwa_paired_sw\] 0 out of 0 Q\d+ discordant pairs are fixed/) {
             $self->error_message('samxe failed because 0 out of 0 discordant pairs are fixed');
-            $rv = 0 and last;
+            $rv = 0;
+            last;
         }
     }
+
+    $fh->close;
     return $rv;
 }
 
