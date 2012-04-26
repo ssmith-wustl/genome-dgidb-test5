@@ -175,3 +175,6 @@
 [submodule "vendor/libstatistics-robust-scale-perl"]
 	path = vendor/libstatistics-robust-scale-perl
 	url = git@github.com:genome-vendor/libstatistics-robust-scale-perl.git
+[submodule "vendor/r-cran-skat"]
+	path = vendor/r-cran-skat
+	url = git@github.com:genome-vendor/r-cran-skat.git
