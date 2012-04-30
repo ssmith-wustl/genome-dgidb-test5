@@ -4,7 +4,6 @@ use warnings;
 use strict;
 use Genome;
 use Cwd;
-use LSF::Job;
 
 class Genome::Model::Tools::Cmds::Execute {
     is => 'Command',
