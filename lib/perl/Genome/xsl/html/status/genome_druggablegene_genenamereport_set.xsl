@@ -144,6 +144,21 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     </div>
   </div>
 
+  <script type="text/javascript">
+    $(document).ready(function(){
+    $('.dataTable').dataTable({
+    "sScrollX": "100%",
+    "sScrollInner": "110%",
+    "bJQueryUI": true,
+    "sPaginationType": "full_numbers",
+    "bStateSave": true,
+    "iDisplayLength": 25,
+    'oLanguage': { 'sSearch': 'Filter results:' },
+    });
+    }
+    );
+  </script>
+
   <xsl:call-template name="footer">
     <xsl:with-param name="footer_text">
       <FORM><INPUT TYPE="button" VALUE="Back" onClick="history.go(-1);return true;" /></FORM>
