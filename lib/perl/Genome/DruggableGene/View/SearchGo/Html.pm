@@ -14,7 +14,7 @@ class Genome::DruggableGene::View::SearchGo::Html {
 };
 
 sub _title {
-    return 'The Drug-Gene Interactions Database Gene Ontology';
+    return 'The Drug-Gene Interactions Database Potentially Druggable Gene Families';
 }
 
 sub _html_body {
