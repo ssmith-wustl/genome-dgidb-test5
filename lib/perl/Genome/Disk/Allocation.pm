@@ -203,7 +203,7 @@ sub preserved {
         }
         return $self->__preserved($value);
     }
-    return $self->__preserved($value);
+    return $self->__preserved();
 }
 
 sub _create {
