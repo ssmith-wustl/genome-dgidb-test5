@@ -45,8 +45,9 @@ sub _run_aligner {
     # reference to align against
     my $reference_fasta = $self->reference_build->full_consensus_path('fa');
 
-    # version of nucmer to use
-    my $version_nucmer = Genome::Model::Tools::Nucmer->path_for_nucmer_version( $self->aligner_version );
+    # nucmer is subpackage of mummer
+    my $mummer = Genome::Model::Tools::Mummer->create( use_version => $self->aligner_version );
+    my $version_nucmer = $mummer->path_for_version.'/nucmer';
 
     # RUN ALIGNER
     # USAGE: nucmer  [options]  <Reference>  <Query>

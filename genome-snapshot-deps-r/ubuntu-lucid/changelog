@@ -1,3 +1,9 @@
+genome-snapshot-deps-r (2012.04.25-1) unstable; urgency=low
+
+  * added: r-cran-skat (>= 0.73)
+
+ -- The Genome Institute <gmt@genome.wustl.edu>  Wed, 25 Apr 2012 15:35:31 -0500
+
 genome-snapshot-deps-r (2012.04.12-3) unstable; urgency=low
 
   * added: r-bioc-biobase (>= 2.10.0-1cran1)

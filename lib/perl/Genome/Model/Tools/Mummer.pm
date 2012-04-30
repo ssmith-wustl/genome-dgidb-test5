@@ -38,7 +38,8 @@ my %VERSIONS = (
 sub path_for_version {
     my $self = shift;
     my $version = $self->use_version;
-    die ("No path for version: $version") if not exists $VERSIONS{$version};
+    die ("Invalid mummer version: $version, valid versions are: ".(join (', ', map {$_} keys %VERSIONS )."\n" ))
+        if not exists $VERSIONS{$version};
     return $VERSIONS{$version};
 }
 

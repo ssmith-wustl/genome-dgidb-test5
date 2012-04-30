@@ -2,7 +2,7 @@ DNAcopy
 RColorBrewer
 doMC
 foreach
-fpc      
+fpc
 gcrma
 genefilter
 ggplot2
@@ -30,3 +30,4 @@ pbh5
 affy
 Biobase
 lumi
+SKAT

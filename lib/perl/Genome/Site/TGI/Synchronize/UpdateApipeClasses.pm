@@ -63,6 +63,9 @@ sub sync_order {
 sub _suppress_status_messages {
     my $self = shift;
 
+    no warnings;
+    no strict 'refs';
+
     for my $class (qw/ 
         Genome::Model::Command::Define::Convergence
         Genome::Model::Command::Input::Update
@@ -72,14 +75,12 @@ sub _suppress_status_messages {
         UR::Object::Command::List
         /) {
         $class->__meta__;
-        no strict 'refs';
         *{$class.'::status_message'} = sub{return $_[0];};
     }
     for my $class (qw/ 
         UR::Object::Command::List::Style
         /) {
         eval("use $class");
-        no strict 'refs';
         *{$class.'::format_and_print'} = sub{return $_[0];};
     }
 
@@ -103,7 +104,16 @@ sub execute {
         return;
     }
 
+    # Suppress overly talkative classes
     $self->_suppress_status_messages;
+
+    # Load instrument data successful pidfas.
+    # We only sync instrument data the have a successful pidfa.
+    my $load_pidfas = $self->_load_successful_pidfas;
+    if ( not $load_pidfas ) {
+        $self->error_message('Failed to load instruemnt data successful pidfas!');
+        return;
+    }
 
     # Stores copied and missing IDs for each type
     my %report;
@@ -271,37 +281,49 @@ sub _get_direct_and_indirect_properties_for_object {
     return (\%direct_properties, \%indirect_properties);
 }
 
-sub _create_instrumentdata_imported {
-    my ($self, $original_object, $new_object_class) = @_;
+my %successful_pidfas;
+sub _load_successful_pidfas {
+    my $self = shift;
+    # This query/hash loading takes < 10 secs
+    $self->status_message('Load instrument data successful pidfas...');
 
-    # Instrument data is first made with just direct properties. Excluding indirect properties saves UR the 
-    # work of determining if the property is indirect and figuring out if the property needs to be updated or
-    # created.
-    my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
-        $original_object,
-        $new_object_class, 
-        qw/ sample_name sample_id _old_sample_name _old_sample_id /
-    );
-    
-    my $object = eval {
-        $new_object_class->create(
-            %{$direct_properties},
-            id => $original_object->id,
-            subclass_name => $new_object_class,
-        );
-    };
-    confess "Could not create new object of type $new_object_class based on object of type " .
-        $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
+    my $dbh = Genome::DataSource::GMSchema->get_default_handle;
+    if ( not $dbh ) {
+        $self->error_message('Failed to get dbh from gm schema!');
+        return;
+    }
+    my $sql = <<SQL;
+        select distinct(p.param_value)
+        from process_step_executions\@oltp pse
+        left join pse_param\@oltp p on p.pse_id = pse.pse_id and p.param_name = 'instrument_data_id'
+        where pse.ps_ps_id = 3870 and pse.pr_pse_result = 'successful'
+SQL
 
-    my $add_attrs = $self->_add_attributes_to_instrument_data($object, $indirect_properties);
-    Carp::confess('Failed to add attributes to instrument data: '.$object->__display_name__) if not $add_attrs;
+    my $sth = $dbh->prepare($sql);
+    if ( not $sth ) {
+        $self->error_message('Failed to prepare successful pidfa sql');
+        return;
+    }
+    my $execute = $sth->execute;
+    if ( not $execute ) {
+        $self->error_message('Failed to execute successful pidfa sql');
+        return;
+    }
+    while ( my ($instrument_data_id) = $sth->fetchrow_array ) {
+        $successful_pidfas{$instrument_data_id}++;
+    }
+    $sth->finish;
 
+    $self->status_message('Loaded '..scalar(keys %successful_pidfas).'successful PIDFAs');
     return 1;
 }
 
 sub _create_instrumentdata_solexa {
     my ($self, $original_object, $new_object_class) = @_;
 
+    # Successful PIDFA required!
+    return 0 unless $successful_pidfas{$original_object->id};
+    # Bam path required!
     return 0 unless $original_object->bam_path;
     
     my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
@@ -329,8 +351,12 @@ sub _create_instrumentdata_solexa {
 sub _create_instrumentdata_sanger {
     my ($self, $original_object, $new_object_class) = @_;
 
+    # Successful PIDFA required!
+    return 0 unless $successful_pidfas{$original_object->id};
     # Some sanger instrument don't have a library. If that's the case here, just don't create the object
-    return 0 unless defined $original_object->library_id or defined $original_object->library_name or defined $original_object->library_summary_id;
+    return 0 unless defined $original_object->library_id or defined $original_object->library_name
+        or defined $original_object->library_summary_id;
+
     my %library_params;
     if (defined $original_object->library_id) {
         $library_params{id} = $original_object->library_id;
@@ -369,6 +395,9 @@ sub _create_instrumentdata_sanger {
 
 sub _create_instrumentdata_454 {
     my ($self, $original_object, $new_object_class) = @_;
+
+    # Successful PIDFA required!
+    return 0 unless $successful_pidfas{$original_object->id};
 
     my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
         $original_object,
