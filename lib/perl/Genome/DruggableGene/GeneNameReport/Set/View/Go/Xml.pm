@@ -37,17 +37,24 @@ sub get_go_results {
     my $doc = $self->_xml_doc;
     my $go_results_node = $doc->createElement("definite_go_results");
 
+    my %existing_entries;
+
     while (my ($group_name, $group_data) = each %{$groups}){
         my $group = $group_data->{group};
         my @search_terms = @{$group_data->{search_terms}};
         my @go_genes = grep($_->nomenclature eq 'go_gene_name', $group->genes);
         my @go_category_names = map($_->category_value, grep($_->category_name eq 'go_short_name_and_id', map($_->gene_categories, @go_genes)));
         for my $go_category_name (@go_category_names){
-            $go_results_node->addChild($self->build_go_results_node(
-                $go_category_name,
-                $group_name,
-                $group_data->{search_terms},
-            ));
+            #skip duplicate entries
+            my $entry_key = join(":", $go_category_name, $group_name, join(', ', @{$group_data->{search_terms}}));
+            unless($existing_entries{$entry_key}){
+                $go_results_node->addChild($self->build_go_results_node(
+                    $go_category_name,
+                    $group_name,
+                    $group_data->{search_terms},
+                ));
+                $existing_entries{$entry_key}++;
+            }
         }
     }
 
