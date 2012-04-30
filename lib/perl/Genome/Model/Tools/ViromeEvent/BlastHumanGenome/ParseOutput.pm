@@ -96,8 +96,9 @@ sub execute {
 	}
 
 	unless (-s $blast_filtered) {
-	    $self->log_event("Failed to correctly parse $blast_out_file_name");
-	    return;
+	    #$self->log_event("Failed to correctly parse $blast_out_file_name");
+            $self->log_event("No human reads found in $blast_out_file_name");
+	    #return;
 	}
     }
 
