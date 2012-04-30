@@ -32,11 +32,11 @@ sub execute {
 
     for my $allocation ($self->allocations) {
         $self->debug_message("Preserving allocation " . $allocation->id);
-        my $rv = $allocation->preserve;
+        my $rv = $allocation->preserved(1);
         unless ($rv) {
             Carp::confess "Could not preserve allocation " . $allocation->id;
         }
-        $self->debug_message("Finished archiving allocation " . $allocation->id);
+        $self->debug_message("Finished preserving allocation " . $allocation->id);
     }
 
     $self->status_message("Done preserving, exiting");

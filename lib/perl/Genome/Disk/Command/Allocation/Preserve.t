@@ -88,7 +88,7 @@ use warnings;
 
 # Simulate command line execution
 my @args = ('genome', 'disk', 'allocation', 'preserve', $allocation->id);
-my $rv = Genome::Disk::Command::Allocation::Preserve->execute_with_shell_params_and_return_exit_code(@args);
+my $rv = Genome::Disk::Command::Allocation::Preserve->_execute_with_shell_params_and_return_exit_code(@args);
 ok($rv == 0, 'successfully execute command using simulated command line arguments');
 is($allocation->preserved, 1, 'allocation is preserved after executing command');
 
