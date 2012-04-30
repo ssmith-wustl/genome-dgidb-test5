@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Workflow;
+use Genome;
 
 class Genome::Model::Somatic::Command::Cmds {
     is => ['Genome::Command::Base', 'Workflow::Operation::Command'],
