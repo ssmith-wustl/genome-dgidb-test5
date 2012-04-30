@@ -960,7 +960,7 @@ sub _mark_read_only_closure {
         return unless -d $path and not $ENV{UR_DBI_NO_COMMIT};
 
         require File::Find;
-        sub wanted { 
+        sub mark_read_only { 
             my $file = $File::Find::name; 
             if (-d $file) { 
                 chmod 0555, $file;
@@ -971,7 +971,7 @@ sub _mark_read_only_closure {
         };
 
         print STDERR "Marking directory at $path read-only\n";
-        find(\&wanted, $path);
+        File::Find::find(\&mark_read_only, $path);
     };
 }
 
@@ -982,7 +982,7 @@ sub _set_default_permissions_closure {
         return unless -d $path and not $ENV{UR_DBI_NO_COMMIT};
 
         require File::Find;
-        sub wanted { 
+        sub set_default_perms { 
             my $file = $File::Find::name; 
             if (-d $file) { 
                 chmod 0775, $file;
@@ -993,7 +993,7 @@ sub _set_default_permissions_closure {
         };
 
         print STDERR "Setting permissions to defaults for $path\n";
-        find(\&wanted, $path);
+        File::Find::find(\&set_default_perms, $path);
     };
 }
 
