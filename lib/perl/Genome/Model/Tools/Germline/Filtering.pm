@@ -21,8 +21,14 @@ class Genome::Model::Tools::Germline::Filtering {
     },
     maf_genome_build => {
         is => 'String',
-        doc => 'specify \'build36\' or \'build37\' to describe the input MAF';
+        doc => 'specify \'build36\' or \'build37\' to describe the input MAF',
         default => 'build36',
+    },
+    check_transcript_position => {
+        is => 'Boolean',
+        doc => 'If set (the default option), all sites near the ends of a transcript will be excluded from the analysis if they are not in a functional domain and are not a splice site.',
+        default => 1,
+    },
     ],
     has_calculated_optional => [
     ],
@@ -40,7 +46,9 @@ EOS
 
 sub help_detail {
     return <<EOS
-    Write detailed help here...
+    This pipeline-like tool is intended to be used to take a germline MAF file and apply any relevant filters related to germline anlaysis to the variants contained within. The focus for some filters is on truncation events, and then genes which still appear to be relevant (which contain truncations) after elimination of non-essential truncation events are used as the filter to determine the relevancy of the non-truncation events.
+
+    The expected workflow prior to using this tool is 1) create a model-group of relevant somatic-variation models 2) run 'gmt capture somatic-variation-group' on the model-group (which will gather germline variants and run the false-positive-filter on germline SNVs, and hopefully soon this tool will run the homopolymer filter on germline indels) 3) run the homopolymer filter on all gathered germline indels 4) create a MAF containing all germline SNVs and indels. 
 
 EOS
 }
@@ -49,8 +57,11 @@ sub execute {
 
     # process input arguments
     my $self = shift;
+
+    $DB::single = 1;
+
     my $build = $self->maf_genome_build;
-    my @genes_to_exclude = split ",",$self->genes_to_exlude;
+    my @genes_to_exclude = split ",",$self->genes_to_exclude;
     my $maf = $self->maf_file;
     unless (-s $maf) {
         $self->error_message("MAF does not exist or has zero size.");
@@ -73,23 +84,23 @@ sub execute {
     # load transcript lengths based on input genome build
     my %tr_95perc_of_length;
     my $tr_length_file;
-    if ($build =~ /build36/i) { $tr_length_file = 'file??'; }
-    elsif ($build =~ /build37/i) { $tr_length_file = 'file??'; }
+    if ($build =~ /build36/i) { $tr_length_file = '/gscmnt/gc6111/info/medseq/transcript_lengths/54_36p_v4.transcript_lengths'; }
+    elsif ($build =~ /build37/i) { $tr_length_file = '/gscmnt/gc6111/info/medseq/transcript_lengths/58_37c_v2.transcript_lengths'; }
     else { $self->error_message("Please enter either 'build36' or 'build37' to describe the genome build of the MAF."); return; }
     my $tr_length_fh = new IO::File $tr_length_file,"r";
     while (my $line = $tr_length_fh->getline) {
         chomp $line;
+        next if ($line =~ /transcript_name/);
         my ($tr,$length,$ninety_five_perc) = split /\t/,$line;
         $tr_95perc_of_length{$tr} = $ninety_five_perc;
     }
     $tr_length_fh->close;
 
-    # create temporary file locations to separately store truncation SNVs, truncation indels, and non-truncation events
-    #my $temp_dir = Genome::Sys->create_temp_directory();
-    my $trunc_snv_file = Genome::Sys->create_temp_file_path(); my $trunc_snv_fh = new IO::File $trunc_snv_file,"w";
-    my $trunc_indel_file = Genome::Sys->create_temp_file_path(); my $trunc_indel_fh = new IO::File $trunc_indel_file,"w";
+    # create temporary file locations to separately store truncation events and non-truncation events # my $temp_dir = Genome::Sys->create_temp_directory();
+    my $trunc_file = Genome::Sys->create_temp_file_path(); my $trunc_fh = new IO::File $trunc_file,"w";
     my $non_trunc_file = Genome::Sys->create_temp_file_path(); my $non_trunc_fh = new IO::File $non_trunc_file,"w";
-    my @fhs = ($trunc_snv_fh,$trunc_indel_fh,$non_trunc_fh);
+    my @fhs = ($trunc_fh,$non_trunc_fh);
+    my $fhs_ref = \@fhs;
 
     # read through MAF to easily eliminate some sites and categorize the rest
     my $maf_fh = new IO::File $maf,"r";
@@ -99,30 +110,18 @@ sub execute {
     }
 
     # parse MAF header
-    my $maf_header = $maf_fh->getline;
-    while ($maf_header =~ /^#/) { 
-        for my $fh (@fhs) { $fh->print($maf_header); }
-        $maf_header = $maf_fh->getline;
-    }
     my %maf_columns;
-    if ($maf_header =~ /Chromosome/) {
-        chomp $maf_header;
-        # header exists; print to each file and record column identities
-        for my $fh (@fhs) { $fh->print($maf_header); }
-        my @header_fields = split /\t/,$maf_header;
-        for (my $col_counter = 0; $col_counter <= $#header_fields; $col_counter++) {
-            $maf_columns{$header_fields[$col_counter]} = $col_counter;
-        }
-    }
-    else {
-        $self->error_message("MAF does not seem to contain a header.");
-        return;
-    }
+    my $maf_columns_ref = \%maf_columns;
+    $maf_columns_ref = $self->parse_maf_header($maf_fh,$maf_columns_ref,$fhs_ref);
 
     # parse MAF variants and remove / categorize variants as necessary
     while (my $line = $maf_fh->getline) {
+
+        # separate fields
         chomp $line;
         my @fields = split /\t/,$line;
+
+        # read fields
         my $gene = $fields[$maf_columns{'Hugo_Symbol'}];
         my $variant_class = $fields[$maf_columns{'Variant_Classification'}];
         my $variant_type = $fields[$maf_columns{'Variant_Type'}];
@@ -146,58 +145,47 @@ sub execute {
         # remove non-coding RNA sites
         next if ($c_position =~ /^c\.NULL|^c\.-|^c\.\*/);
 
-        #FIXME MAKE THIS OPTIONAL
         # remove variants near the end of the transcript (>95% tr length) if domain == NULL and type != splice site
-        if ($domain eq 'NULL' && $variant_class ne 'Splice_Site') {
-            my ($c_pos_value = $c_position) =~ /[\._](\d+)$/;
-            next if ($c_pos_value > $tr_95perc_of_length{$transcript});
+        if ($self->check_transcript_position) {
+            if ($domain eq 'NULL' && $variant_class ne 'Splice_Site') {
+                (my $c_pos_value = $c_position) =~ /[\._](\d+)$/;
+                if (exists $tr_95perc_of_length{$transcript}) {
+                    next if ($c_pos_value > $tr_95perc_of_length{$transcript});
+                }
+                else {
+                    $self->status_message("Could not check variant in gene $gene on transcript $transcript for extremely 3' position.");
+                }
+            }
         }
 
+        # segregate truncations and print to files
+        if ($variant_class =~ /^Splice_Site|^Frame_Shift|^Nonsense|^Nonstop/i) {
+            print $trunc_fh "$line\n"; next;
+        }
+        else {
+            print $non_trunc_fh "$line\n"; next;
+        }
 
+    } # end of reading through MAF
 
+    # close open filehandles
+    for my $fh (@fhs) { $fh->close; }
 
-
-
-
-
-
-    #split file into snp and indel
-
-    
-
-    #INDELS: run homopolymer filter
-
-    #####################################
-    # Removals, etc.                    #
-    #####################################
-
-    #combine snvs and indels (or run the following tools on both separately)
-
-    #separate sites which are not truncation events (truncation = ^splice_site, ^frameshift, nonsense, nonstop)
-    #proceed with truncation events only
-
-    #OPTIONAL: exclude sites present on the last 5% of the transcript (c-terminal) - DO NOT USE on splice sites or if functional domain is not NULL
-    #to accomplish this - used script modified from bderickson's transcript iteration and found length of transcript, and 95% mark, then compared this to the c_position in the MAF
-
-
-
-
-    ############################################################
-    # append population frequencies                            #
-    ############################################################
-
-    #LIFTOVER TO BUILD 37 if sites are on BUILD 36 HERE
+    # if necessary, liftover files to build 37
+    if ($build =~ /build36/i) {
+        # use liftover script after turning into tool.
+    }
 
     #using dbsnp 135, append frequency of variant in the population. Dan has a script to merge maf and dbsnp freq (with zeros when variant not present)
-    
-    #using 1000 genomes files, append frequencies of all three populations for the site.
-    #remove site if the total freq > 1% (this could be done based on population structure)
+
+    #using 1000 genomes files (also build 37), append frequencies of all three populations for the site.
+    #remove site if the total freq >= 1% (this could be done based on population structure)
 
     #append NHLBI frequencies for future use (SNPs only, put NA for indels)
 
 
     ##########################################################
-    # VEP (OPTIONAL)                                         #
+    # VEP (OPTIONAL) (NEEDS build 37)                        #
     ##########################################################
 
     # convert to format for running VEP
@@ -209,16 +197,42 @@ sub execute {
     ################################
     # print output                 #
     ################################
-    
+
     # print truncation events to a file
 
     # limit missense file to only genes that are left in truncation file
 
     # print non-truncation events to a separate file
-    
+
 
 
     return 1;
 };
+
+sub parse_maf_header {
+
+    my $self = shift(@_);
+    my ($maf_fh,$maf_columns_ref,$output_file_handles_ref) = @_;
+    my $maf_header = $maf_fh->getline;
+    while ($maf_header =~ /^#/) { 
+        for my $fh (@{$output_file_handles_ref}) { $fh->print($maf_header); }
+        $maf_header = $maf_fh->getline;
+    }
+    if ($maf_header =~ /Chromosome/) {
+        chomp $maf_header;
+        # header exists; print to each output filehandle and record column identities
+        for my $fh (@{$output_file_handles_ref}) { $fh->print($maf_header); }
+        my @header_fields = split /\t/,$maf_header;
+        for (my $col_counter = 0; $col_counter <= $#header_fields; $col_counter++) {
+            $maf_columns_ref->{$header_fields[$col_counter]} = $col_counter;
+        }
+    }
+    else {
+        $self->error_message("MAF does not seem to contain a header.");
+        return;
+    }
+}
+
+
 
 1;
