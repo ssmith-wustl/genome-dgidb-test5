@@ -26,7 +26,10 @@ class Genome::Model::Tools::Music::MutationRelation {
 
 sub help_synopsis {
   return <<HELP
-... music mutation-relation --maf-file /path/myMAF.tsv --permutations 1000 --output-file /path/mutation_relation.csv
+ ... music mutation-relation \\
+        --maf-file /path/myMAF.tsv \\
+        --permutations 1000 \\
+        --output-file /path/mutation_relation.csv
 HELP
 }
 

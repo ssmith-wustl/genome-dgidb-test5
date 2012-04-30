@@ -627,44 +627,47 @@ _END_OF_R_
     #lines(c(10,100),c(25,25),lty=2,col="black");
     axis(side=2,at=c(0,25),labels=c(0,sprintf("%.3f", maxden)),las=1,cex.axis=0.6,hadj=0.6,lwd=0.5,lwd.ticks=0.5,tck=-0.01);
     lines(den2\$x,(finalfactor * den2factor),col="#67B32EAA",lwd=2);
-    lines(den1\$x,(finalfactor * den1factor),col="#1C3660AA",lwd=2);
-    lines(den3\$x,(finalfactor * den3factor),col="#F49819AA",lwd=2);
-    lines(den4\$x,(finalfactor * den4factor),col="#E52420AA",lwd=2);
-
+    if(!($plot_only_CN2)){
+        lines(den1\$x,(finalfactor * den1factor),col="#1C3660AA",lwd=2);
+        lines(den3\$x,(finalfactor * den3factor),col="#F49819AA",lwd=2);
+        lines(den4\$x,(finalfactor * den4factor),col="#E52420AA",lwd=2);
+    }
     ppos = c();
     if($only_label_highest_peak){
         ppos = which((cn1peakheight == max(cn1peakheight)) & (cn1peakheight > $minimum_labelled_peak_height));
     } else {
         ppos = which(cn1peakheight > $minimum_labelled_peak_height);
     }
-    if(!(length(ppos) == 0)){    
-        text(x=cn1peakpos[ppos], y=(finalfactor * cn1peakheight[ppos])+1.7,
+    if(!($plot_only_CN2)){
+        if(!(length(ppos) == 0)){    
+            text(x=cn1peakpos[ppos], y=(finalfactor * cn1peakheight[ppos])+1.7,
              labels=signif(cn1peakpos[ppos],3),
              cex=0.7, srt=0, col="#1C3660AA");
-    }
-    ppos = c();
-    if($only_label_highest_peak){
-        ppos = which((cn3peakheight == max(cn3peakheight)) & (cn3peakheight > $minimum_labelled_peak_height));
-    } else {
-        ppos = which(cn3peakheight > $minimum_labelled_peak_height);
-    }
-    if(!(length(ppos) == 0)){    
-        text(x=cn3peakpos[ppos],
-             y=(finalfactor * cn3peakheight[ppos])+1.7,
+        }
+        ppos = c();
+        if($only_label_highest_peak){
+            ppos = which((cn3peakheight == max(cn3peakheight)) & (cn3peakheight > $minimum_labelled_peak_height));
+        } else {
+            ppos = which(cn3peakheight > $minimum_labelled_peak_height);
+        }
+        if(!(length(ppos) == 0)){    
+            text(x=cn3peakpos[ppos],
+                 y=(finalfactor * cn3peakheight[ppos])+1.7,
              labels=signif(cn3peakpos[ppos],3),
              cex=0.7,srt=0,col="#F49819AA");
-    }
-    ppos = c();
-    if($only_label_highest_peak){
-        ppos = which((cn4peakheight == max(cn4peakheight)) & (cn4peakheight > $minimum_labelled_peak_height));
-    } else {
-        ppos = which(cn4peakheight > $minimum_labelled_peak_height);
-    }
-    if(!(length(ppos) == 0)){    
-        text(x=cn4peakpos[ppos],
-             y=(finalfactor * cn4peakheight[ppos])+1.7,
+        }
+        ppos = c();
+        if($only_label_highest_peak){
+            ppos = which((cn4peakheight == max(cn4peakheight)) & (cn4peakheight > $minimum_labelled_peak_height));
+        } else {
+            ppos = which(cn4peakheight > $minimum_labelled_peak_height);
+        }
+        if(!(length(ppos) == 0)){    
+            text(x=cn4peakpos[ppos],
+                 y=(finalfactor * cn4peakheight[ppos])+1.7,
              labels=signif(cn4peakpos[ppos],3),
              cex=0.7,srt=0,col="#E52420AA");
+        }
     }
     ##print(cn2peakpos);
     ppos = c();

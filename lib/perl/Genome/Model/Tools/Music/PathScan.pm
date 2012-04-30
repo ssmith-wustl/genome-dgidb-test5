@@ -28,12 +28,12 @@ class Genome::Model::Tools::Music::PathScan {
 sub help_synopsis {
   return <<HELP
  ... music path-scan \\
-  --bam-list input_dir/bam_file_list \\
-  --gene-covg-dir output_dir/gene_covgs/ \\
-  --maf-file input_dir/myMAF.tsv \\
-  --output-file output_dir/sm_pathways \\
-  --pathway-file input_dir/pathway_dbs/KEGG.txt \\
-  --bmr 8.7E-07
+        --bam-list input_dir/bam_file_list \\
+        --gene-covg-dir output_dir/gene_covgs/ \\
+        --maf-file input_dir/myMAF.tsv \\
+        --output-file output_dir/sm_pathways \\
+        --pathway-file input_dir/pathway_dbs/KEGG.txt \\
+        --bmr 8.7E-07
 HELP
 }
 

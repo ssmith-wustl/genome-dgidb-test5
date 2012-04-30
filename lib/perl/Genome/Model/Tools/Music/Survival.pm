@@ -112,7 +112,7 @@ sub help_synopsis {
         --bam-list /path/myBamList.tsv \\
         --maf-file /path/myMAF.tsv \\
         --numeric-clinical-data-file /path/myNumericData.tsv \\
-        --categoric-clinical-data-file /path/myClassData.tsv \\
+        --categorical-clinical-data-file /path/myClassData.tsv \\
         --output-dir /path/output_directory
 
  ... music survival \\

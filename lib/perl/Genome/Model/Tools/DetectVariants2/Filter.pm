@@ -173,7 +173,21 @@ sub _process_params {
         my($cmd_class,$params) = $self->class->resolve_class_and_params_for_argv(@param_list);
         # For each parameter set in params... use the class properties to assign the values
         for my $param_name (keys %$params) {
-            $self->$param_name($params->{$param_name});
+            if($self->$param_name) {
+                if(defined $params->{param}) {
+                    if(ref $params->{param} eq 'ARRAY') {
+                       if(scalar @{$params->{param}}) {
+                           die $self->error_message('Param ' . $param_name . ' specified in multiple ways: property: ' . $self->$param_name . ' values and --param ' . @{$params->{param}} . ' values');
+                       } else {
+                            #returned value from params is empty--accept current value
+                       }
+                    } else {
+                        die $self->error_message('Param ' . $param_name . ' specified in multiple ways: property: ' . $self->$param_name . ' and --param: ' . $params->{$param_name});
+                    }
+                }
+            } else {
+                $self->$param_name($params->{$param_name});
+            }
         }
     }
 

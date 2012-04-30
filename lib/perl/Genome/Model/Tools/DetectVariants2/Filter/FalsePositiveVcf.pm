@@ -1061,16 +1061,23 @@ sub generate_and_run_readcounts_in_parallel {
 }
 
 #override the default scratch directories in order to allow for network available temp dirs
+
 sub _create_temp_directories {
     my $self = shift;
-    $self->_temp_staging_directory($self->output_directory);
-    $self->_temp_scratch_directory($self->output_directory);
-    return 1;
+    local %ENV = %ENV;
+    $ENV{TMPDIR} = $self->output_directory;
+    return $self->SUPER::_create_temp_directories(@_);
 }
 
 sub _promote_staged_data {
     my $self = shift;
-    return 1;
+    my $output_dir = $self->SUPER::_promote_staged_data(@_);
+
+    #remove the staging directory before the reallocation occurs so that it doesn't get double counted.
+    my $staging_dir = $self->_temp_staging_directory;
+    Genome::Sys->remove_directory_tree($staging_dir);
+
+    return $output_dir;
 }
 
 1;

@@ -39,5 +39,6 @@ Depends: ${misc:Depends},
     r-cran-pbh5 (>= 2012.04.12-1),
     r-bioc-affy (>= 1.28.0-1cran1),
     r-bioc-biobase (>= 2.10.0-1cran1),
-    r-bioc-lumi (>= 1.6.3-1)
+    r-bioc-lumi (>= 1.6.3-1),
+    r-cran-skat (>= 0.73)
 Description: This meta-package installs all external R dependencies of the current internal TGI Genome Modeling System software snapshot.

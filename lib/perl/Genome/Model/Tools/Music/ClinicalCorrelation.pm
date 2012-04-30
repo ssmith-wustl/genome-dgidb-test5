@@ -97,7 +97,7 @@ sub help_synopsis {
         --genetic-data-type 'gene' \\
         --output-file /path/output_file
 
-... music clinical-correlation \\
+ ... music clinical-correlation \\
         --maf-file /path/myMAF.tsv \\
         --bam-list /path/myBamList.tsv \\
         --output-file /path/output_file \\

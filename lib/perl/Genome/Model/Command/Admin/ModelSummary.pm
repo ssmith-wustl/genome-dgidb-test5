@@ -53,23 +53,7 @@ sub execute {
     my $synchronous = ($self->auto and $self->auto_batch_size);  # whether we should start builds as we go or wait until the end
 
     my $models_changed_count = 0;
-    my %start_rv;
-    my @models_to_start;
-    my $start_build = sub {
-        my $model = shift;
-        if ($synchronous) {
-            my $cmd = Genome::Model::Build::Command::Start->create(models => [$model]);
-            $start_rv{$cmd->execute}++;
-            if ($self->auto_batch_size and ++$models_changed_count > $self->auto_batch_size) {
-                $self->status_message("\n\nCommitting progress so far...");
-                die "Commit failed!  Bailing out." unless UR::Context->commit;
-                $self->status_message("Continuing...\n");
-                $models_changed_count = 0;
-            }
-        } else {
-            push @models_to_start, $model;
-        }
-    };
+    my $build_requested_count = 0;
 
     my %cleanup_rv;
     my @models_to_cleanup;
@@ -106,8 +90,10 @@ sub execute {
 
         my $first_nondone_step = '-';
         eval {
-            my $parent_workflow_instance = $latest_build->newest_workflow_instance;
-            $first_nondone_step = find_first_nondone_step($parent_workflow_instance) || '-';
+            if ($latest_build) {
+                my $parent_workflow_instance = $latest_build->newest_workflow_instance;
+                $first_nondone_step = find_first_nondone_step($parent_workflow_instance) || '-';
+            }
         };
 
         $first_nondone_step =~ s/^\d+\s+//;
@@ -120,7 +106,13 @@ sub execute {
         $model_name =~ s/\.?$pp_name\.?/.../;
 
         my $action;
-        if ($latest_build->status eq 'Scheduled' || $latest_build->status eq 'Running' || $model->build_requested) {
+        if (!$latest_build && $model->build_requested){
+            $action = 'none';
+        }
+        elsif (!$latest_build) {
+            $action = 'build-needed';
+        }
+        elsif ($latest_build->status eq 'Scheduled' || $latest_build->status eq 'Running' || $model->build_requested) {
             $action = 'none';
         }
         elsif ($latest_build && $latest_build->status eq 'Succeeded') {
@@ -132,27 +124,22 @@ sub execute {
         }
         else {
             $action = 'rebuild';
-            $start_build->($model);
+            $model->build_requested(1, 'ModelSummary recommends rebuild');
+            $build_requested_count++;
         }
 
         next if (grep { lc $_ eq lc $latest_build_status } @hide_statuses);
         $self->print_message(join "\t", $model_id, $action, $latest_build_status, $first_nondone_step, $latest_build_revision, $model_name, $pp_name, $fail_count);
     }
 
-    $synchronous = 1;  # Now we'll actually start things running if they were just being noted before
-    if ($self->auto and @models_to_start) {
-        for my $model (@models_to_start) {
-            $start_build->($model);
-        }
-    }
+    $synchronous = 1;  # now we'll actually cleanup models if they were just being noted before
     if ($self->auto and @models_to_cleanup) {
         for my $model (@models_to_cleanup) {
             $cleanup_build->($model);
         }
     }
 
-    $self->print_message("Started " . $start_rv{1}) if $start_rv{1};
-    $self->print_message("Failed to start " . $start_rv{0}) if $start_rv{0};
+    $self->print_message("Requested builds for $build_requested_count models") if $build_requested_count;
     $self->print_message("Cleaned up " . $cleanup_rv{1}) if $cleanup_rv{1};
     $self->print_message("Failed to cleanup " . $cleanup_rv{0}) if $cleanup_rv{0};
     return 1;

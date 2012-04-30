@@ -36,7 +36,9 @@ class Genome::Model::Tools::Music::Pfam {
 
 sub help_synopsis {
     return <<EOS
- ... music pfam --maf-file myMAF.tsv --output-file myMAF.tsv.pfam
+ ... music pfam \\
+        --maf-file myMAF.tsv \\
+        --output-file myMAF.tsv.pfam
 EOS
 }
 

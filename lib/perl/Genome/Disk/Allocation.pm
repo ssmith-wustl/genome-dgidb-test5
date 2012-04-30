@@ -67,6 +67,11 @@ class Genome::Disk::Allocation {
         },
     ],
     has_optional => [
+        preserved => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'If set, the allocation cannot be deallocated',
+        },
         original_kilobytes_requested => {
             is => 'Number',
             doc => 'The disk space allocated in kilobytes',
@@ -182,6 +187,23 @@ sub is_archived {
 sub tar_path {
     my $self = shift;
     return join('/', $self->absolute_path, 'archive.tar');
+}
+
+sub preserved {
+    my ($self, $value) = @_;
+    if (@_ > 1) {
+        unless (Genome::Sys->current_user_is_admin) {
+            confess "Only admins can change the preservation status of an allocation!";
+        }
+        if ($value) {
+            $self->_create_observer($self->_mark_read_only_closure($self->absolute_path));
+        }
+        else {
+            $self->_create_observer($self->_set_default_permissions_closure($self->absolute_path));
+        }
+        return $self->__preserved($value);
+    }
+    return $self->__preserved();
 }
 
 sub _create {
@@ -319,6 +341,11 @@ sub _delete {
         confess "Could not find allocation with id $id" unless $self;
     }
     my $absolute_path = $self->absolute_path;
+
+    if ($self->preserved) {
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess "Allocation " . $self->id . " has been marked as preserved, cannot deallocate!";
+    }
 
     $self->status_message("Beginning deallocation process for allocation " . $self->id);
 
@@ -923,6 +950,50 @@ sub _mark_for_deletion_closure {
             print STDERR "Marking directory at $path as deallocated\n";
             system("touch $path/ALLOCATION_DELETED"); 
         }
+    };
+}
+
+# Changes an allocation directory to read-only
+sub _mark_read_only_closure {
+    my ($class, $path) = @_;
+    return sub {
+        return unless -d $path and not $ENV{UR_DBI_NO_COMMIT};
+
+        require File::Find;
+        sub mark_read_only { 
+            my $file = $File::Find::name; 
+            if (-d $file) { 
+                chmod 0555, $file;
+            }
+            else { 
+                chmod 0444, $file
+            }
+        };
+
+        print STDERR "Marking directory at $path read-only\n";
+        File::Find::find(\&mark_read_only, $path);
+    };
+}
+
+# Changes an allocation directory to default permissions
+sub _set_default_permissions_closure {
+    my ($class, $path) = @_;
+    return sub {
+        return unless -d $path and not $ENV{UR_DBI_NO_COMMIT};
+
+        require File::Find;
+        sub set_default_perms { 
+            my $file = $File::Find::name; 
+            if (-d $file) { 
+                chmod 0775, $file;
+            }
+            else { 
+                chmod 0664, $file
+            }
+        };
+
+        print STDERR "Setting permissions to defaults for $path\n";
+        File::Find::find(\&set_default_perms, $path);
     };
 }
 
