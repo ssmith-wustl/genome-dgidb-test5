@@ -52,14 +52,14 @@ sub sh {
     die if $e;
 }
 
-
-open(OLD_STDERR,">&STDERR") or die "Failed to save STDERR";
-open(STDERR,">/dev/null") or die "Failed to redirect STDERR";
-my $rv = eval {
-    Genome::Command::Base->_ask_user_question('Can I talk to you?');
-};
+{
+    local *STDERR;
+    open(STDERR,">/dev/null") or die "Failed to redirect STDERR";
+    my $rv = eval {
+        Genome::Command::Base->_ask_user_question('Can I talk to you?');
+    };
+}
 ok($@ =~ /Attempting to ask user question but cannot interact with user!/, "correctly died when unable to interact with user");
-open(STDERR,">&OLD_STDERR") or die "Failed to restore STDERR";
 
 __END__
 my $e = Genome::Command->_execute_with_shell_params_and_return_exit_code(
