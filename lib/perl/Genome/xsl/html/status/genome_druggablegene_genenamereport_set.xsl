@@ -129,7 +129,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:call-template name="control_bar_view"/>
 
   <xsl:call-template name="view_header">
-    <xsl:with-param name="label_name" select="'The Drug-Gene Interactions Database'" />
+    <xsl:with-param name="label_name" select="'The Drug-Gene Interactions Database Potentially Druggable Gene Families'" />
     <xsl:with-param name="icon" select="'genome_genename_32'" />
   </xsl:call-template>
 
@@ -143,6 +143,21 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       </div>
     </div>
   </div>
+
+  <script type="text/javascript">
+    $(document).ready(function(){
+    $('.dataTable').dataTable({
+    "sScrollX": "100%",
+    "sScrollInner": "110%",
+    "bJQueryUI": true,
+    "sPaginationType": "full_numbers",
+    "bStateSave": true,
+    "iDisplayLength": 25,
+    'oLanguage': { 'sSearch': 'Filter results:' },
+    });
+    }
+    );
+  </script>
 
   <xsl:call-template name="footer">
     <xsl:with-param name="footer_text">

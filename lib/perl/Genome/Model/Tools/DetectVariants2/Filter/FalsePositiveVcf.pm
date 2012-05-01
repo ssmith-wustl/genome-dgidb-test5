@@ -179,7 +179,7 @@ sub _filter_variants {
     }
     $output_fh->print(join("",@$header));
     my @sample_names = $self->get_samples_from_header($header);
-
+    $DB::single = 1;
     ## Parse the variants file ##
     while(my $line = $input_fh->getline) {
         # FIXME should just pass in a single sample here instead of a whole line. Or a sample joined with a line to make a whole single sample vcf line?
@@ -565,6 +565,11 @@ sub get_variant_for_sample {
 
     unless (defined $alt and defined $gt) {
         die $self->error_message("Either alt or gt are undefined. Alt: $alt, GT:$gt");
+    }
+
+    if($gt eq '.') {
+        #there is no genotype here and thus no variant!
+        return;
     }
 
     my @alts = split(",",$alt);
