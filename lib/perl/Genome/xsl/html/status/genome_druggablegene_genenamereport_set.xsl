@@ -33,6 +33,37 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 </xsl:template>
 
+<xsl:template name="gene_go_summary_table">
+  <xsl:param name="name"/>
+  <xsl:param name="go_results_summary"/>
+
+  <div class="box_header span-24 last rounded-top">
+    <div class="box_title"><h3 class="genome_genenamereport_16 span-7 last"><xsl:value-of select="$name"/></h3></div>
+  </div>
+
+  <div class="box_content rounded-bottom span-24 last">
+    <table class='dataTable' id='interactions'>
+        <thead>
+          <tr>
+            <th>GO Category</th>
+            <th>Gene Count</th>
+            <th>Genes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <xsl:for-each select="$go_results_summary/item">
+            <tr>
+              <th><xsl:value-of select="go_category_name"/></th>
+              <th><xsl:value-of select="gene_count"/></th>
+              <th><xsl:value-of select="gene_names"/></th>
+            </tr>
+          </xsl:for-each>
+        </tbody>
+    </table>
+  </div>
+
+</xsl:template>
+
 <xsl:template name="drug_gene_interactions_table">
   <xsl:param name="name"/>
   <xsl:param name="interactions"/>
@@ -139,6 +170,13 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         <xsl:call-template name="gene_go_results_table">
           <xsl:with-param name="name" select="'Definite GO Results'" />
           <xsl:with-param name="definite_go_results" select="definite_go_results" />
+        </xsl:call-template>
+      </div>
+
+      <div class="span_24_box_masonry">
+        <xsl:call-template name="gene_go_summary_table">
+          <xsl:with-param name="name" select="'GO Results Summary'" />
+          <xsl:with-param name="go_results_summary" select="go_results_summary" />
         </xsl:call-template>
       </div>
     </div>

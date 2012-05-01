@@ -5,6 +5,7 @@ use warnings;
 use Genome;
 use Data::Dumper;
 use XML::LibXML;
+use List::MoreUtils qw/ uniq /;
 
 class Genome::DruggableGene::GeneNameReport::Set::View::Go::Xml {
     is => 'Genome::View::Status::Xml',
@@ -26,6 +27,7 @@ sub _generate_content {
 
     my $data = $self->data;
     $go_results->addChild($self->get_go_results($data->{definite_groups}));
+    $go_results->addChild($self->get_go_summary($data->{definite_groups}));
 
     $doc->setDocumentElement($go_results);
     return $doc->toString(1);
@@ -61,6 +63,35 @@ sub get_go_results {
     return $go_results_node;
 }
 
+sub get_go_summary {
+    my $self = shift;
+    my $groups = shift;
+    my $doc = $self->_xml_doc;
+    my $go_summary_node = $doc->createElement("go_results_summary");
+    my %go_summary;
+
+    while (my ($group_name, $group_data) = each %{$groups}){
+        my $group = $group_data->{group};
+        my @go_genes = grep($_->nomenclature eq 'go_gene_name', $group->genes);
+        my @go_category_names = map($_->category_value, grep($_->category_name eq 'go_short_name_and_id', map($_->gene_categories, @go_genes)));
+        for my $go_category_name (@go_category_names){
+            $go_summary{$go_category_name} = ($go_summary{$go_category_name} ? join(",", $go_summary{$go_category_name}, $group_name) : $group_name);
+        }
+    }
+
+    while(my ($go_category_name, $group_names) = each %go_summary){
+        my @group_names = split(',', $group_names);
+        my @uniq_group_names = uniq @group_names;
+        $go_summary_node->addChild($self->build_go_summary_node(
+            $go_category_name,
+            scalar(@uniq_group_names),
+            join(',', @uniq_group_names)
+        ));
+    }
+
+    return $go_summary_node;
+}
+
 sub build_go_results_node {
     my $self = shift;
     my $go_category_name = shift;
@@ -80,6 +111,27 @@ sub build_go_results_node {
     my $search_terms_node = $doc->createElement('search_terms');
     $search_terms_node->addChild($doc->createTextNode(join(', ', @{$search_terms})));
     $item->addChild($search_terms_node);
+
+    return $item;
+}
+
+sub build_go_summary_node {
+    my $self = shift;
+    my $category_name = shift;
+    my $count = shift;
+    my $group_names = shift;
+    my $doc = $self->_xml_doc;
+    my $item = $doc->createElement('item');
+
+    my $go_category_name_node = $doc->createElement('go_category_name');
+    $go_category_name_node->addChild($doc->createTextNode($category_name));
+    $item->addChild($go_category_name_node);
+    my $count_node = $doc->createElement('gene_count');
+    $count_node->addChild($doc->createTextNode($count));
+    $item->addChild($count_node);
+    my $gene_names_node = $doc->createElement('gene_names');
+    $gene_names_node->addChild($doc->createTextNode($group_names));
+    $item->addChild($gene_names_node);
 
     return $item;
 }
