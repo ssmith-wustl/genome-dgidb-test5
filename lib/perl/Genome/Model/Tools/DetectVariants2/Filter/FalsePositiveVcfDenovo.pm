@@ -601,6 +601,10 @@ sub get_variant_for_sample {
         die $self->error_message("Either alt or gt are undefined. Alt: $alt, GT:$gt");
     }
 
+    if($gt eq '.') {
+        return;
+    }
+
     my @alts = split(",",$alt);
     my @gt = split("/", $gt);
 
