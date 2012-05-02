@@ -175,7 +175,10 @@ sub _filter_variants {
     #here embed the filter codes. This should be more centralized to be less craptastic
     $self->generate_filter_names;
     for my $filter (values %{$self->_filters}) {
-        $self->add_filter_to_vcf_header($header,@$filter);
+        my $filter_name = $filter->[0];
+        unless(grep {/$filter_name/} @$header) {
+            $self->add_filter_to_vcf_header($header,@$filter);
+        }
     }
     $output_fh->print(join("",@$header));
     my @sample_names = $self->get_samples_from_header($header);
