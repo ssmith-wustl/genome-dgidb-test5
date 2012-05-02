@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 138;
+use Test::More tests => 139;
 use Test::MockObject;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData') or die;
@@ -457,6 +457,10 @@ ok($rna_command->execute(), 'assign-queued-instrument-data executed successfully
 
 my $rna_new_models = $rna_command->_newly_created_models;
 is(scalar(keys %$rna_new_models), 1, 'the cron created 1 rna model');
+
+#test that the annotion build input is set on the model
+my ($rna_model) = values %$rna_new_models;
+ok($rna_model->annotation_build, 'the cron set the annotation_build input on the rna model');
 
 my $instrument_data_3 = Genome::InstrumentData::Solexa->create(
     id => '-102',
