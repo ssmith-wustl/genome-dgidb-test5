@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::DruggableGene::DrugGeneInteractionReport {
-    is => 'UR::Object',
+    is => 'Genome::Searchable',
     id_generator => '-uuid',
     table_name => 'dgidb.drug_gene_interaction_report',
     schema_name => 'dgidb',
@@ -24,6 +24,13 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
         drug_name => {
             via => 'drug',
             to => 'name',
+        },
+        human_readable_drug_name => {
+            is => 'text',
+            calculate_from => ['drug'],
+            calculate => q|
+                return $drug->human_readable_name;
+            |,
         },
         gene_id => { is => 'Text', column_name => 'gene_name_report_id'},
         gene => {
@@ -44,10 +51,19 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
             is_many => 1,
         },
         citation => {
+            is => 'Genome::DruggableGene::Citation',
             calculate_from => ['source_db_name', 'source_db_version'],
             calculate => q|
                 my $citation = Genome::DruggableGene::Citation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
                 return $citation;
+            |,
+        },
+        gene_group_name => {
+            is => 'text',
+            calculate_from => ['gene_id'],
+            calculate => q|
+                my $bridge = Genome::DruggableGene::GeneNameGroupBridge->get(gene_id => $gene_id);
+                return $bridge->group->name;
             |,
         },
         is_known_action => {
