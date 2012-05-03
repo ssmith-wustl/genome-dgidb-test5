@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 139;
+use Test::More;
 use Test::MockObject;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData') or die;
@@ -58,12 +58,24 @@ my $library = Genome::Library->create(
 isa_ok($library, 'Genome::Library');
 isa_ok($sample, 'Genome::Sample');
 
+my (@instrument_data, @pses);
 my $ii = Test::MockObject->new();
-
 $ii->set_always('get_work_orders', ($gsc_workorder));
 no warnings;
+my $instrument_data_get = Genome::InstrumentData->can('get');
+*Genome::InstrumentData::get = sub {
+    my ($class, %params) = @_;
+    if ( $params{'attributes.attribute_label'} ) { # getting new inst data, only return what we just created
+        return grep { $_->attributes(attribute_label => 'tgi_lims_status')->attribute_value eq 'new' } @instrument_data;
+    } 
+    else {
+        return $instrument_data_get->(@_);
+    } 
+};
+sub GSC::PSE::get { return grep { $_->pse_status eq 'inprogress' } @pses; }
 *Genome::InstrumentData::Solexa::index_illumina = sub{ return $ii };
 use warnings;
+
 my $instrument_data_1 = Genome::InstrumentData::Solexa->create(
     id => '-100',
     library_id => $library->id,
@@ -75,6 +87,11 @@ my $instrument_data_1 = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
 );
+$instrument_data_1->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $instrument_data_1;
 ok($instrument_data_1, 'Created an instrument data');
 
 my $processing_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
@@ -96,6 +113,7 @@ my $pse_1 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
+push @pses, $pse_1;
 
 $pse_1->add_param('instrument_data_type', 'solexa');
 $pse_1->add_param('instrument_data_id', $instrument_data_1->id);
@@ -115,6 +133,11 @@ my $instrument_data_2 = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
 );
+$instrument_data_2->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $instrument_data_2;
 
 my $pse_2 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
@@ -122,6 +145,7 @@ my $pse_2 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
+push @pses, $pse_2;
 
 $pse_2->add_param('instrument_data_type', 'solexa');
 $pse_2->add_param('instrument_data_id', $instrument_data_2->id);
@@ -179,9 +203,9 @@ my @models_for_sample = Genome::Model->get(
 is(scalar(@models_for_sample), 1, 'found one model created for the subject');
 is($models_for_sample[0], $new_model, 'that model is the same one the cron claims it created');
 
-my @instrument_data = $new_model->instrument_data;
-is(scalar(@instrument_data), 2, 'the first new model has two instrument data assigned');
-is_deeply([sort(@instrument_data)], [sort($instrument_data_1, $instrument_data_2)], 'those two instrument data are the ones for our PSEs');
+my @model_instrument_data = $new_model->instrument_data;
+is(scalar(@model_instrument_data), 2, 'the first new model has two instrument data assigned');
+is_deeply([sort(@model_instrument_data)], [sort($instrument_data_1, $instrument_data_2)], 'those two instrument data are the ones for our PSEs');
 
 is($pse_1->pse_status, 'completed', 'first pse completed');
 is($pse_2->pse_status, 'completed', 'second pse completed');
@@ -210,6 +234,11 @@ my $instrument_data_ignored = Genome::InstrumentData::Solexa->create(
     rev_clusters => 65536,
     ignored => 1,
 );
+$instrument_data_ignored->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $instrument_data_ignored;
 
 my $pse_ignored = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
@@ -217,9 +246,7 @@ my $pse_ignored = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
-
-
-
+push @pses, $pse_ignored;
 $pse_ignored->add_param('instrument_data_type', 'solexa');
 $pse_ignored->add_param('instrument_data_id', $instrument_data_2->id);
 $pse_ignored->add_param('subject_class_name', 'Genome::Sample');
@@ -231,11 +258,8 @@ $pse_ignored->add_reference_sequence_build_param_for_processing_profile( $proces
 my $command_ignored = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
 );
-
 ok($command_ignored->execute(), 'assign-queued-instrument-data executed successfully.');
-
-my $new_models = $command_ignored->_newly_created_models;
-is(scalar(keys %$new_models), 0, 'the cron created no models from ignores.');
+is(scalar(keys %{$command_ignored->_newly_created_models}), 0, 'the cron created no models from ignores.');
 
 # Test AML build 36
 my $aml_sample = Genome::Sample->get(name => "H_KA-758168-0912815");
@@ -253,13 +277,20 @@ my $aml_instrument_data = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
 );
+$aml_instrument_data->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $aml_instrument_data;
 ok($aml_instrument_data, 'Created instrument data');
+
 my $aml_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-765431235235',
     ps_id => 3733,
     ei_id => '464681',
 );
+push @pses, $aml_pse;
 $aml_pse->add_param('instrument_data_type', 'solexa');
 $aml_pse->add_param('instrument_data_id', $aml_instrument_data->id);
 $aml_pse->add_param('subject_class_name', 'Genome::Sample');
@@ -279,11 +310,9 @@ for my $model (values(%aml_new_models)) {
 
 
 # Test MEL build 36
-my $aml_sample = Genome::Sample->get(name => "H_KA-758168-0912815");
-my $aml_library = Genome::Library->create(id => '-12345', sample_id => $aml_sample->id);
-isa_ok($aml_sample, 'Genome::Sample');
-isa_ok($aml_library, 'Genome::Library');
-my $aml_instrument_data = Genome::InstrumentData::Solexa->create(
+my $aml_library_2 = Genome::Library->create(id => '-12345', sample_id => $aml_sample->id);
+isa_ok($aml_library_2, 'Genome::Library');
+my $aml_instrument_data_2 = Genome::InstrumentData::Solexa->create(
     id => '-113242342355',
     library_id => $aml_library->id,
     flow_cell_id => 'TM-021',
@@ -294,26 +323,33 @@ my $aml_instrument_data = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
 );
-ok($aml_instrument_data, 'Created instrument data');
-my $aml_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+$aml_instrument_data_2->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $aml_instrument_data_2;
+ok($aml_instrument_data_2, 'Created instrument data');
+
+my $aml_pse_2 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-7654312352355',
     ps_id => 3733,
     ei_id => '464681',
 );
-$aml_pse->add_param('instrument_data_type', 'solexa');
-$aml_pse->add_param('instrument_data_id', $aml_instrument_data->id);
-$aml_pse->add_param('subject_class_name', 'Genome::Sample');
-$aml_pse->add_param('subject_id', $aml_sample->id);
-$aml_pse->add_param('processing_profile_id', $processing_profile->id);
-$aml_pse->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
-my $aml_command = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
+push @pses, $aml_pse_2;
+$aml_pse_2->add_param('instrument_data_type', 'solexa');
+$aml_pse_2->add_param('instrument_data_id', $aml_instrument_data->id);
+$aml_pse_2->add_param('subject_class_name', 'Genome::Sample');
+$aml_pse_2->add_param('subject_id', $aml_sample->id);
+$aml_pse_2->add_param('processing_profile_id', $processing_profile->id);
+$aml_pse_2->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
+my $aml_command_2 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
 );
 
-ok($aml_command->execute(), 'assign-queued-instrument-data executed successfully.');
-my %aml_new_models = %{$aml_command->_newly_created_models};
-for my $model (values(%aml_new_models)) {
+ok($aml_command_2->execute(), 'assign-queued-instrument-data executed successfully.');
+my %aml_new_models_2 = %{$aml_command_2->_newly_created_models};
+for my $model (values(%aml_new_models_2)) {
     is($model->reference_sequence_build_id, 101947881, 'aml model uses correct reference sequence');
 }
 
@@ -352,6 +388,11 @@ my $mouse_instrument_data = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
 );
+$mouse_instrument_data->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $mouse_instrument_data;
 ok($mouse_instrument_data, 'Created an instrument data');
 
 my $mouse_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
@@ -360,6 +401,7 @@ my $mouse_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
+push @pses, $mouse_pse;
 
 $mouse_pse->add_param('instrument_data_type', 'solexa');
 $mouse_pse->add_param('instrument_data_id', $mouse_instrument_data->id);
@@ -413,6 +455,11 @@ my $rna_instrument_data = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
 );
+$rna_instrument_data->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $rna_instrument_data;
 ok($rna_instrument_data, 'Created an instrument data');
 
 my $rna_454_instrument_data = Genome::InstrumentData::454->create(
@@ -431,6 +478,7 @@ my $rna_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
+push @pses, $rna_pse;
 
 $rna_pse->add_param('instrument_data_type', 'solexa');
 $rna_pse->add_param('instrument_data_id', $rna_instrument_data->id);
@@ -443,7 +491,7 @@ my $rna_454_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
-
+push @pses, $rna_454_pse;
 $rna_454_pse->add_param('instrument_data_type', '454');
 $rna_454_pse->add_param('instrument_data_id', $rna_454_instrument_data->id);
 $rna_454_pse->add_param('subject_class_name', 'Genome::Sample');
@@ -475,6 +523,11 @@ my $instrument_data_3 = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
 );
+$instrument_data_3->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $instrument_data_3;
 
 my $pse_3 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
@@ -482,6 +535,7 @@ my $pse_3 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
+push @pses, $pse_3;
 $pse_3->add_param('instrument_data_type', 'solexa');
 $pse_3->add_param('instrument_data_id', $instrument_data_3->id);
 $pse_3->add_param('subject_class_name', 'Genome::Sample');
@@ -511,6 +565,11 @@ my $instrument_data_4 = Genome::InstrumentData::Solexa->create(
     rev_clusters => 65536,
     target_region_set_name => 'test-capture-data',
 );
+$instrument_data_4->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $instrument_data_4;
 
 my $sample_pool = Genome::Sample->create(
     id => '-10001',
@@ -538,6 +597,11 @@ my $instrument_data_pool = Genome::InstrumentData::Solexa->create(
     rev_clusters => 65536,
     target_region_set_name => 'test-capture-data',
 );
+$instrument_data_pool->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $instrument_data_pool;
 
 my $pse_4 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
@@ -545,6 +609,7 @@ my $pse_4 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
+push @pses, $pse_4;
 $pse_4->add_param('instrument_data_type', 'solexa');
 $pse_4->add_param('instrument_data_id', $instrument_data_4->id);
 $pse_4->add_param('subject_class_name', 'Genome::Sample');
@@ -592,9 +657,9 @@ for my $m (@new_refalign_models) {
 
     ok($m->region_of_interest_set_name, 'the new model has a region_of_interest_set_name defined');
 
-    my @instrument_data = $m->instrument_data;
-    is(scalar(@instrument_data),1, 'only one instrument data assigned');
-    is($instrument_data[0],$instrument_data_4,'the instrument data is the capture data');
+    my @model_instrument_data = $m->instrument_data;
+    is(scalar(@model_instrument_data),1, 'only one instrument data assigned');
+    is($model_instrument_data[0],$instrument_data_4,'the instrument data is the capture data');
 }
 
 @models_for_sample = Genome::Model->get(
@@ -632,6 +697,11 @@ my $instrument_data_5 = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
 );
+$instrument_data_5->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $instrument_data_5;
 
 my $pse_5 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
@@ -639,6 +709,7 @@ my $pse_5 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
+push @pses, $pse_5;
 $pse_5->add_param('instrument_data_type', 'solexa');
 $pse_5->add_param('instrument_data_id', $instrument_data_5->id);
 $pse_5->add_param('subject_class_name', 'Genome::Sample');
@@ -680,6 +751,11 @@ my $instrument_data_6 = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
 );
+$instrument_data_6->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $instrument_data_6;
 
 my $de_novo_processing_profile = Genome::ProcessingProfile::DeNovoAssembly->get(2354215); #apipe-test-de_novo_velvet_solexa
 
@@ -689,6 +765,7 @@ my $pse_6 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
+push @pses, $pse_6;
 $pse_6->add_param('instrument_data_type', 'solexa');
 $pse_6->add_param('instrument_data_id', $instrument_data_6->id);
 $pse_6->add_param('subject_class_name', 'Genome::Sample');
@@ -736,8 +813,8 @@ is($pse_5_genome_model_id, undef, 'genome_model_id parameter remains unset on fi
 is($pse_6_genome_model_id, $new_de_novo_model->id, 'genome_model_id parameter set correctly for sixth pse');
 
 ##Cleanup failure case from previous test
-$pse_5 = undef;
-$instrument_data_5->delete;
+#$pse_5 = undef;
+#$instrument_data_5->delete;
 ##
 
 my $sample_2 = Genome::Sample->create(
@@ -776,6 +853,11 @@ my $instrument_data_7 = Genome::InstrumentData::Solexa->create(
     rev_clusters => 65536,
     target_region_set_name => 'BRC10 capture chip set',
 );
+$instrument_data_7->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $instrument_data_7;
 ok($instrument_data_7, 'Created an instrument data');
 
 my $pse_7 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
@@ -784,7 +866,7 @@ my $pse_7 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
-
+push @pses, $pse_7;
 $pse_7->add_param('instrument_data_type', 'solexa');
 $pse_7->add_param('instrument_data_id', $instrument_data_7->id);
 $pse_7->add_param('subject_class_name', 'Genome::Sample');
@@ -836,6 +918,11 @@ my $instrument_data_8 = Genome::InstrumentData::Solexa->create(
     rev_clusters => 65536,
     target_region_set_name => 'BRC10 capture chip set',
 );
+$instrument_data_8->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $instrument_data_8;
 ok($instrument_data_8, 'Created an instrument data');
 
 my $pse_8 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
@@ -844,7 +931,7 @@ my $pse_8 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
-
+push @pses, $pse_8;
 $pse_8->add_param('instrument_data_type', 'solexa');
 $pse_8->add_param('instrument_data_id', $instrument_data_8->id);
 $pse_8->add_param('subject_class_name', 'Genome::Sample');
@@ -906,6 +993,11 @@ my $instrument_data_9 = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
 );
+$instrument_data_9->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $instrument_data_9;
 ok($instrument_data_9, 'Created an instrument data');
 
 my $instrument_data_10 = Genome::InstrumentData::Solexa->create(
@@ -919,6 +1011,11 @@ my $instrument_data_10 = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
 );
+$instrument_data_10->add_attribute(
+    attribute_label => 'tgi_lims_status',
+    attribute_value => 'new',
+);
+push @instrument_data, $instrument_data_10;
 ok($instrument_data_10, 'Created an instrument data');
 
 my $pse_9 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
@@ -927,6 +1024,7 @@ my $pse_9 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
+push @pses, $pse_9;
 $pse_9->add_param('instrument_data_type', 'solexa');
 $pse_9->add_param('instrument_data_id', $instrument_data_9->id);
 $pse_9->add_param('subject_class_name', 'Genome::Sample');
@@ -940,6 +1038,7 @@ my $pse_10 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     ps_id => 3733,
     ei_id => '464681',
 );
+push @pses, $pse_10;
 $pse_10->add_param('instrument_data_type', 'solexa');
 $pse_10->add_param('instrument_data_id', $instrument_data_10->id);
 $pse_10->add_param('subject_class_name', 'Genome::Sample');
@@ -966,3 +1065,7 @@ ok(grep($_ ==  $somatic_variation_2->tumor_model, @tumor_2), 'somatic variation 
 is($normal_2, $somatic_variation_2->normal_model, 'somatic variation has the correct normal model');
 is(scalar @{[$normal_2->instrument_data]}, 1, 'one instrument data is assigned to the normal');
 is($normal->build_requested, 1, 'the normal model has build requested since there is instrument data is assigned to it');
+
+done_testing();
+exit;
+

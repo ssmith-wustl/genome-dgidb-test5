@@ -20,8 +20,17 @@ my $qidfgm_cnt = 0;
 my $sample_cnt = 0;
 my (@samples, @instrument_data, @index_illumina, @pses, @pse_params);
 no warnings;
-sub GSC::PSE::get { return @pses; }
-sub GSC::PSEParam::get { return @pse_params; }
+my $instrument_data_get = Genome::InstrumentData->can('get');
+*Genome::InstrumentData::get = sub {
+    my ($class, %params) = @_;
+    if ( $params{'attributes.attribute_label'} ) { # getting new inst data, only return what we just created
+        return grep { $_->attributes(attribute_label => 'tgi_lims_status')->attribute_value eq 'new' } @instrument_data;
+    } 
+    else {
+        return $instrument_data_get->(@_);
+    } 
+};
+sub GSC::PSE::get { return grep { $_->pse_status eq 'inprogress' } @pses; }
 sub GSC::IndexIllumina::get { my ($class, $id) = @_; for my $index_illumina ( @index_illumina ) { return $index_illumina if $index_illumina->id == $id; } }
 use warnings;
 
@@ -40,9 +49,7 @@ is_deeply(
 );
 is(@pses, $qidfgm_cnt, "create $qidfgm_cnt pses");
 
-my $cmd = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
-    test => 1,
-);
+my $cmd = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(test => 1);
 ok($cmd, 'create aqid');
 ok($cmd->execute, 'execute');
 my @new_models = values %{$cmd->_newly_created_models};
@@ -64,6 +71,11 @@ is_deeply(
     [ map { $_->attribute_value } map { $_->attributes(attribute_label => 'tgi_lims_status') } @instrument_data ],
     [ map { 'processed' } @instrument_data ],
     'set tgi lims status to processed',
+);
+is_deeply(
+    [ map { $_->attribute_value } map { $_->attributes(attribute_label => 'tgi_lims_status') } @instrument_data ],
+    [ map { 'processed' } @instrument_data ],
+    'set tgi lims status to processed for all instrument data',
 );
 
 done_testing();

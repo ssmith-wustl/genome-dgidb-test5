@@ -9,7 +9,7 @@ require Carp;
 use Data::Dumper;
 
 class Genome::Model::Command::Services::AssignQueuedInstrumentData {
-    is  => 'Command',
+    is  => 'Command::V2',
     has => [
         test => {
             is          => 'String',
@@ -36,11 +36,6 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
             is_optional => 1,
             default     => 0,
             doc         => 'Process newest PSEs first',
-        },
-        pse_id => {
-            is          => 'Number',
-            is_optional => 1,
-            doc         => 'Ignore other parameters and only process this PSE.',
         },
         _existing_models_with_existing_assignments => {
             is => 'HASH',
@@ -564,35 +559,32 @@ sub is_tcga_reference_alignment {
 sub load_pses {
     my $self = shift;
 
-    my $pse_sorter;
+    # Get 'new' instrument data
+    $self->status_message('Getting "new" instrument data...');
+    my %instrument_data = map { $_->id => $_ } Genome::InstrumentData->get(
+       'attributes.attribute_label' => 'tgi_lims_status',
+       'attributes.attribute_value' => 'new',
+       -hint => 'sample',
+    );
+    $self->status_message('Found '.scalar(keys %instrument_data).' instrument data');
+    return if not %instrument_data;
 
+    # Get the QIDFGM for each instrument data
+    $self->status_message('Getting inprogress QIDFGM PSEs...');
+    my @pses = GSC::PSE->get(
+        ps_id => 3733,
+        pse_status => 'inprogress',
+    );
+    $self->status_message('Found '.scalar(@pses).' QIDFGM PSEs');
+    return unless @pses;
+
+    my $pse_sorter;
     if ($self->newest_first) {
         $pse_sorter = sub { $b->id <=> $a->id };
     }
     else {
         $pse_sorter = sub { $a->id <=> $b->id };
     }
-
-    my @pses;
-    if($self->pse_id) { #process a specific PSE
-        @pses = GSC::PSE->get(
-            ps_id => 3733,
-            pse_status => 'inprogress',
-            id => $self->pse_id,
-        );
-    } else {
-        @pses = GSC::PSE->get(
-            ps_id      => 3733,
-            pse_status => 'inprogress',
-        );
-
-        if($self->test) {
-            @pses = grep($_->pse_id < 0, @pses);
-        }
-    }
-    return unless @pses;
-
-    $self->status_message('Found '.scalar(@pses));
 
     my @fresh_pses = sort $pse_sorter grep{not $_->added_param('failed_aqid')}@pses;
     my @previously_failed_pses = sort $pse_sorter grep{$_->added_param('failed_aqid')}@pses;
@@ -606,10 +598,20 @@ sub load_pses {
         $self->status_message('Limiting checking to ' . $self->max_pses_to_check);
     }
 
-    $self->preload_data(@sorted_pses); #The checking uses this data, so need to load it first
+    $self->preload_data(\%instrument_data); #The checking uses this data, so need to load it first
 
     my @checked_pses;
-    for my $pse (@sorted_pses){
+    for my $pse ( @sorted_pses ) {
+        my ($instrument_data_id) = $pse->added_param('instrument_data_id');
+        if ( not $instrument_data_id ) {
+            $self->warning_message('No instrument_data_id for QIDGFM PSE: '.$pse->id);
+            next;
+        }
+        $pse->{_instrument_data} = delete $instrument_data{$instrument_data_id};
+        if ( not $pse->{_instrument_data} ) {
+            $self->warning_message("Expected to find 'new' instrument data ($instrument_data_id) for inprogress QIDFGM PSE ".$pse->id." but did not. It could have the incorrect status or be double processed.");
+            next;
+        }
         if($self->check_pse($pse)){
             push @checked_pses, $pse;
         } else {
@@ -631,25 +633,11 @@ sub load_pses {
 
 #for efficiency--load these together instead of separate queries for each one
 sub preload_data {
-    my $self = shift;
-    my @pses = @_;
+    my ($self, $instrument_data) = @_;
 
-    my @pse_params = GSC::PSEParam->get(pse_id => [ map { $_->pse_id } @pses ]);
-
-    my @instrument_data_ids =
-    map { $_->param_value }
-    grep { $_->param_name eq 'instrument_data_id' }
-    @pse_params;
-
-    $self->status_message("Pre-loading " . scalar(@instrument_data_ids) . " instrument data");
-    my @instrument_data = Genome::InstrumentData->get(\@instrument_data_ids);
-    my @sample_ids = map { $_->sample_id } @instrument_data;
-
-    $self->status_message("Pre-loading " . scalar(@sample_ids) . " samples");
-    my @samples = Genome::Sample->get(\@sample_ids);
-
-    $self->status_message("Pre-loading models for " . scalar(@sample_ids) . " samples");
-    my @models = Genome::Model->get(subject_id => \@sample_ids);
+    my @samples = map { $_->sample } values %$instrument_data;
+    $self->status_message("Pre-loading models for " . scalar(@samples) . " samples");
+    my @models = Genome::Model->get(subject_id => [ map { $_->id } @samples ]);
     $self->status_message("  got " . scalar(@models) . " models");
 
     my %taxon_ids = map { $_->taxon_id => 1 } grep($_->taxon_id, @samples);
@@ -684,7 +672,7 @@ sub check_pse {
         return;
     }
 
-    my $instrument_data = Genome::InstrumentData->get($instrument_data_id);
+    my $instrument_data = $pse->{_instrument_data};
     if ( not $instrument_data and $instrument_data_type eq 'sanger' ) {
         my $analyze_traces_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
         my $run_name = $analyze_traces_pse->run_name();
@@ -694,6 +682,7 @@ sub check_pse {
         }
         $instrument_data_id = $run_name;
         $instrument_data = Genome::InstrumentData->get($instrument_data_id);
+        $pse->{_instrument_data} = $instrument_data;
     }
 
     unless ( $instrument_data ) {
@@ -702,7 +691,6 @@ sub check_pse {
             . " id '$instrument_data_id'.  PSE_ID is '$pse_id'");
         return;
     }
-    $pse->{_instrument_data} = $instrument_data;
 
     if ( $instrument_data_type eq 'solexa' ) {
         if($instrument_data->target_region_set_name) {
