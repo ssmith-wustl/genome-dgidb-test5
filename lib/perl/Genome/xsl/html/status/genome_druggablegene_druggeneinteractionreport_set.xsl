@@ -11,6 +11,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
+      <xsl:with-param name="label_name" select="'Interaction of'" />
       <xsl:with-param name="display_name" select="/object/aspect[@name='members']/object/display_name" />
       <xsl:with-param name="icon" select="'genome_druggeneinteractionreport_32'" />
     </xsl:call-template>
@@ -47,9 +48,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <div class="box_content rounded-bottom span-12 last">
             <table class="name-value">
               <tbody>
-                <tr><td class="name"><a>
-                      Source database citation
-                </a></td></tr>
                 <tr>
                   <td class="name">Drug Name:
                   </td>
@@ -58,7 +56,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                       <xsl:with-param name='type' select="'Genome::DruggableGene::DrugNameReport::Set'"/>
                       <xsl:with-param name="key" select="'name'"/>
                       <xsl:with-param name="id" select="normalize-space(aspect[@name='drug_name']/value)"/>
-                      <xsl:with-param name="linktext" select="normalize-space(aspect[@name='drug_name']/value)"/>
+                      <xsl:with-param name="linktext" select="normalize-space(aspect[@name='human_readable_drug_name']/value)"/>
                     </xsl:call-template>
                   </td>
                 </tr>
@@ -67,10 +65,10 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                   </td>
                   <td class="value">
                     <xsl:call-template name='object_link_button'>
-                      <xsl:with-param name='type' select="'Genome::DruggableGene::GeneNameReport::Set'"/>
+                      <xsl:with-param name='type' select="'Genome::DruggableGene::GeneNameGroup'"/>
                       <xsl:with-param name="key" select="'name'"/>
-                      <xsl:with-param name="id" select="normalize-space(aspect[@name='gene_name']/value)"/>
-                      <xsl:with-param name="linktext" select="normalize-space(aspect[@name='gene_name']/value)"/>
+                      <xsl:with-param name="id" select="normalize-space(aspect[@name='gene_group_name']/value)"/>
+                      <xsl:with-param name="linktext" select="normalize-space(aspect[@name='gene_group_name']/value)"/>
                     </xsl:call-template>
                   </td>
                 </tr>
@@ -116,6 +114,14 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                         </li>
                       </xsl:for-each>
                     </ul>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="name">Citation:
+                  </td>
+                  <td class="value">
+                    <xsl:value-of select="normalize-space(aspect[@name='citation']/object/aspect/value)"/>
                   </td>
                 </tr>
 

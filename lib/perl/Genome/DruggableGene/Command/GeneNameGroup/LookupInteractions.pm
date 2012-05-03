@@ -3,6 +3,7 @@ package Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions;
 use strict;
 use warnings;
 use Genome;
+use Set::Scalar;
 use List::MoreUtils qw/ uniq /;
 
 class Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions {
@@ -15,16 +16,16 @@ class Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions {
 #            doc => "Output interactions to specified file. Defaults to STDOUT if no file is supplied.",
 #            default => "STDOUT",
 #        },
-#        filter => {
-#            is => 'Text',
-#            doc => 'Filter results based on the parameters.  See below for how to.',
-#            shell_args_position => 2,
-#        },
 #        headers => {
 #            is => 'Boolean',
 #            default => 1,
 #            doc => 'Do include headers',
 #        },
+        filter => {
+            is => 'Text',
+            doc => 'Filter results based on the parameters.  See below for how to.',
+            shell_args_position => 2,
+        },
         gene_file => {
             is => 'Path',
             is_input => 1,
@@ -86,38 +87,48 @@ sub execute {
 #Populate a data structure containing each search term
 # Maybe the names given were: 'stk1','flt3','cdk7','asdf'
 # and we found 1 possible group for flt3 and cdk7, and two possible groups for stk1, and no groups for asdf
-#$result =
-#\ {
-#    ambiguous_search_terms        {
-#        STK1   {
-#            CDK7   {
-#                group               $GeneNameGroup1,
-#                number_of_matches   2
-#            },
-#            FLT3   {
-#                group               $GeneNameGroup2,
-#                number_of_matches   1
-#            }
-#        }
-#    },
-#    definite_groups               {
-#        CDK7   {
-#            group          $GeneNameGroup1,
-#            search_terms   [
-#                [0] "CDK7"
-#            ]
-#        },
-#        FLT3   {
-#            group          $GeneNameGroup2,
-#            search_terms   [
-#                [0] "FLT3"
-#            ]
-#        }
-#    },
-#    search_terms_without_groups   [
-#        [0] "ASDF"
-#    ]
-#} #This output is compliments of Data::Printer
+#
+#                     THE DATA
+#
+#    definite_groups
+#        CDK7
+#            group
+#                $group
+#            search_terms
+#                "CDK7"
+#            interactions
+#                $interaction
+#            filtered_interations
+#                $interaction1
+#        FLT3
+#            group
+#                $group
+#            search_terms
+#                "FLT3"
+#    ambiguous_search_terms
+#        STK1
+#            CDK7
+#                group
+#                    $group
+#                number_of_matches
+#                    2
+#                interactions
+#                    $interaction
+#                    $interaction
+#                filtered_interactions
+#                    $interaction
+#                    $interaction
+#            FLT3
+#                group
+#                    $group
+#                number_of_matches
+#                    1
+#                interactions
+#                    $interaction
+#                    $interaction
+#    search_terms_without_groups
+#        "ASDF"
+#
 sub find_groups_and_interactions{
     my $self = shift;
     my @gene_names = @_;
@@ -136,18 +147,24 @@ sub find_groups_and_interactions{
         unless($group) {
             #Cycle alternate names, and their group association
             for(Genome::DruggableGene::GeneAlternateNameReport->get(alternate_name=>$name)){
-                my $ambiguous_group = Genome::DruggableGene::GeneNameGroupBridge->get(gene_id=>$_->gene_id)->group;
-                push @groups, $ambiguous_group;#record a uniq list of groups
-                $group_matches{$ambiguous_group->name}++;#record how many times each group was matched
+                my $ambiguous_group_bridge = Genome::DruggableGene::GeneNameGroupBridge->get(gene_id=>$_->gene_id);
+                if($ambiguous_group_bridge){
+                    my $ambiguous_group = $ambiguous_group_bridge->group;
+                    push @groups, $ambiguous_group;#record a uniq list of groups
+                    $group_matches{$ambiguous_group->name}++;#record how many times each group was matched
+                }
             }
             @groups = uniq @groups;
 
             ($group) = @groups if @groups == 1;
             push @{$result->{search_terms_without_groups}}, $name if @groups == 0;
-            if(@groups > 1){
+            if(@groups > 1){ #Found multiple indirect groups from ambiguous search term
                 for my $ambiguous_group (@groups){
                     $result->{ambiguous_search_terms}{$name}{$ambiguous_group->name}{group} = $ambiguous_group;
                     $result->{ambiguous_search_terms}{$name}{$ambiguous_group->name}{number_of_matches} = $group_matches{$ambiguous_group->name};
+                    my ($interactions, $filtered_interactions) = $self->filter_interactions(map{$_->interactions}$ambiguous_group->genes);
+                    push @{$result->{ambiguous_search_terms}{$name}{$ambiguous_group->name}{interactions}}, $interactions->members if $interactions;
+                    push @{$result->{ambiguous_search_terms}{$name}{$ambiguous_group->name}{filtered_interactions}}, $filtered_interactions->members if $filtered_interactions;
                 }
             }
         }
@@ -155,8 +172,29 @@ sub find_groups_and_interactions{
         if($group){ #found single direct or indirect group
             $result->{definite_groups}{$group->name}{group} = $group;
             push @{$result->{definite_groups}{$group->name}{search_terms}}, $name;
+            my ($interactions, $filtered_interactions) = $self->filter_interactions(map{$_->interactions}$group->genes);
+            push @{$result->{definite_groups}{$group->name}{interactions}}, $interactions->members if $interactions;
+            push @{$result->{definite_groups}{$group->name}{filtered_interactions}}, $filtered_interactions->members if $filtered_interactions;
         }
     }
     return $result;
+}
+
+sub filter_interactions {
+    my $self = shift;
+    my $all_interactions = Set::Scalar->new(@_);
+    my $filter = $self->filter . ',id';
+    if(@$all_interactions){
+        $filter .= '=' if @$all_interactions == 1;
+        $filter .= ':' if @$all_interactions > 1;#if we have multiple sources, we need to use : with / delimited list for boolean expr syntax
+        $filter .= join '/', map{$_->id}@$all_interactions;
+        my $interactions = Set::Scalar->new(
+            Genome::DruggableGene::DrugGeneInteractionReport->get(
+                UR::BoolExpr->resolve_for_string('Genome::DruggableGene::DrugGeneInteractionReport', $filter)
+            )
+        );
+        my $filtered_interactions = $all_interactions - $interactions;
+        return ($interactions, $filtered_interactions);
+    }
 }
 1;

@@ -4,13 +4,13 @@
         <input type='file' id='file' name='file'/>
         <br />and/or<br />
         <span style='font-weight: bold'>Paste a gene list or </span>
-        <button id='insert-example-genes'>Insert Example Genes</button>
+        <a class='mini btn' id='insert-example-genes'>Insert Example Genes</a>
         <br />
-        <textarea id='genes' name='genes'/>
+        <textarea id='genes' name='genes' />
         <br />
         Exclusively Use Sources, leave unchecked to not limit sources:<br />
-        <input type="checkbox" name="ttd" value='1' checked='true'/><a href='http://bidd.nus.edu.sg/group/ttd/ttd.asp'>TTD</a><br />
-        <input type="checkbox" name="db" value='1' checked='true'/><a href='http://www.drugbank.ca/'>Drug Bank</a><br />
+        <input type="checkbox" name="ttd" value='1' checked='true'/><a class='mini btn' href='http://bidd.nus.edu.sg/group/ttd/ttd.asp'>TTD</a><br />
+        <input type="checkbox" name="db" value='1' checked='true'/><a class='mini btn' href='http://www.drugbank.ca/'>Drug Bank</a><br />
         <br />
         Filters: <br />
         <input type='radio' name='filter' value='default' checked='true' />Basic<br />
@@ -31,7 +31,11 @@
 </div>
 <script>
     $('#insert-example-genes').click(function(){
-        $('#genes')[0].value = "STK1\nFLT\nFLT3\nASDF\nQWER\nHER2\nERBB2\nLOC100508755";
+        $('#genes')[0].value = "FLT1\nFLT2\nFLT3\nSTK1\nMM1\nLOC100508755\nFAKE1";
+        return false;
+    });
+    $('#filters-toggle').click(function(){
+        $('#filters').slideToggle();
         return false;
     });
 </script>
