@@ -199,7 +199,10 @@ sub execute {
         my $subject = $instrument_data->sample;
 
         if($instrument_data->ignored() ) {
-            next;
+            $self->status_message('Skipping ignored data ' . $instrument_data->id . ' on PSE '.$pse->id);
+            $pse->add_param('no_model_generation_attempted',1);
+            push @completable_pses, $pse;
+            next PSE;
         }
 
         my @process_errors;
@@ -208,7 +211,8 @@ sub execute {
             if ( $instrument_data_type =~ /454/i and $subject->name =~ /^n\-cn?trl$/i ) {
                 # Do not process 454 negative control (n-ctrl, n-cntrl)
                 $self->status_message('Skipping n-ctrl PSE '.$pse->id);
-                GSC::PSEParam->create(pse_id => $pse->id, param_name => 'failed_aqid', param_value => 1) unless $pse->added_param('failed_aqid');
+                $pse->add_param('no_model_generation_attempted',1);
+                push @completable_pses, $pse;
                 next PSE;
             }
 
@@ -744,10 +748,12 @@ sub assign_instrument_data_to_models {
     }
 
     #we don't want to (automagically) assign rna seq and non-rna seq data to the same model.
-    if (@models and $self->_is_rna_instrument_data($genome_instrument_data)){
-        @models = grep($_->isa('Genome::Model::RnaSeq'), @models);
-    }else{
-        @models = grep(!($_->isa('Genome::Model::RnaSeq')), @models);
+    unless ($genome_instrument_data->isa('Genome::InstrumentData::454')) { #454 data should be allowed to be in MC16S models that it's explicitly looking for
+        if (@models and $self->_is_rna_instrument_data($genome_instrument_data)){
+            @models = grep($_->isa('Genome::Model::RnaSeq'), @models);
+        }else{
+            @models = grep(!($_->isa('Genome::Model::RnaSeq')), @models);
+        }
     }
 
     if($reference_sequence_build) {
