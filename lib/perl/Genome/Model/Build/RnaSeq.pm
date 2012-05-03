@@ -232,5 +232,25 @@ sub workflow_instances {
     return @instances;
 }
 
+sub ensure_annotation_build_provided {
+    my $self = shift;
+    my @tags = ();
+    unless ( ($self->model->annotation_reference_transcripts_mode eq 'de novo') or $self->annotation_build ) {
+        push @tags, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => [qw/ annotation_build /],
+            desc => "Processing Profile calls for " . $self->model->annotation_reference_transcripts_mode . " mode, but this model does not have an annotation_build set",
+        );
+    }
+    return @tags;
+}
+
+sub validate_for_start_methods {
+    my $self = shift;
+    my @methods = $self->SUPER::validate_for_start_methods;
+    push @methods, 'ensure_annotation_build_provided';
+    return @methods;
+}
+
 1;
 
