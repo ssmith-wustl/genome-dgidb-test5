@@ -144,7 +144,7 @@ is_deeply(
 );
 is( # only processed 3 of 4
     scalar(grep { $_->attributes(attribute_label => 'tgi_lims_status')->attribute_value  eq 'processed' } @instrument_data),
-    3,
+    4,
     'set tgi lims status to processed for all instrument data',
 );
 

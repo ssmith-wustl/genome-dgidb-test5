@@ -127,6 +127,11 @@ sub _qidfgm {
     );
     ok($instrument_data, 'created instrument data '.$qidfgm_cnt);
     push @instrument_data, $instrument_data;
+    $instrument_data->add_attribute(
+        attribute_label => 'tgi_lims_status',
+        attribute_value => 'new',
+    );
+
     my $index_illumina = Test::MockObject->new();
     push @index_illumina, $index_illumina;
     $index_illumina->set_always(id => $instrument_data->id);
