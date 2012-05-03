@@ -37,12 +37,6 @@ ok($reader, 'create sam reader for bad file');
 ok(!eval{$reader->read;}, 'read bad sam failed');
 like($@, qr|^Length of sequence|, 'correct error for seq length diff');
 
-$bad = $dir.'/bad2.sam';
-$reader = Genome::Model::Tools::Sx::SamReader->create(file => $bad);
-ok($reader, 'create sam reader for bad file');
-ok(!eval{$reader->read;}, 'read bad sam failed');
-like($@, qr|^Invalid bit flag in sequence:|, 'correct error for invalid bit flag');
-
 #print "$tmpdir\n"; <STDIN>;
 done_testing();
 exit;

@@ -110,7 +110,7 @@ sub resolve_average_insert_size_for_instrument_data {
     my $instrument_data = shift;
     my $insert_size;
 
-    if ($instrument_data->resolve_median_insert_size) {
+    if ($instrument_data->can('resolve_median_insert_size') and $instrument_data->resolve_median_insert_size) {
         $insert_size = $instrument_data->resolve_median_insert_size;
     }
     elsif ($instrument_data->original_est_fragment_size) {

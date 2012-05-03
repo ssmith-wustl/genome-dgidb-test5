@@ -79,7 +79,7 @@ sub execute {
     }
 
     $self->status_message('Process instrument data');
-    INST_DATA: for my $instrument_data ( @instrument_data ) {
+    INST_DATA: for my $instrument_data ( reverse @instrument_data ) {
         my $process_ok = $self->_process_instrument_data($instrument_data);
         return if not $process_ok;
         my $update_metrics = $self->_update_metrics;

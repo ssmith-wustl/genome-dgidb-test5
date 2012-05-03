@@ -29,14 +29,19 @@ sub read {
         Carp::confess("No $attr on line: $line") if not defined $seq->{$attr};
     }
 
-    if ( $seq->{flag} & 0x40 ) { # forward
+    if ( $seq->{flag} & 0x1 ) { # paired
+        if ( $seq->{flag} & 0x40 ) { # forward
+            $seq->{id} .= '/1';
+        }
+        elsif ( $seq->{flag} & 0x80 ) { # reverse
+            $seq->{id} .= '/2';
+        }
+        else { # maybe update this later to an unknown ext?
+            Carp::confess('Failed to determine forward/reverse from bit flag in sequence: '.Data::Dumper::Dumper($seq));
+        }
+    }
+    else { # unpaired or invalid, do we care?
         $seq->{id} .= '/1';
-    }
-    elsif ( $seq->{flag} & 0x80 ) { # forward
-        $seq->{id} .= '/2';
-    }
-    else {
-        Carp::confess('Invalid bit flag in sequence: '.Data::Dumper::Dumper($seq));
     }
 
     if ( length $seq->{seq} != length $seq->{qual} ) {
