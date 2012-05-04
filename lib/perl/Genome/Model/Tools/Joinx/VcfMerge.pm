@@ -27,6 +27,11 @@ class Genome::Model::Tools::Joinx::VcfMerge {
             default => 0,
             doc => 'Allow input files with overlapping samples (-s option)',
         },
+        ratio_filter => {
+            is => 'Text',
+            doc => 'Require this ratio of inputs to agree on calls or else be filtered. Provide as a string: "ratio,filter name,filter description".\ 
+                I.E. "1.0,CNS,Sample consensus filter" will mark any variant where all input files did not agree (on position) as filtered with "CNS".',
+        },
         output_file => {
             is => 'Text',
             is_output => 1,
@@ -96,6 +101,9 @@ sub execute {
     }
     if ($self->merge_samples) {
         $flags .= " -s";
+    }
+    if ($self->ratio_filter) {
+        $flags .= ' -R "' . $self->ratio_filter . '"';
     }
     my $cmd = $self->joinx_bin_path . " vcf-merge $flags " . join(" ", @inputs);
     if(defined($self->output_file) && not defined($self->use_bgzip)){

@@ -16,7 +16,7 @@ if (Genome::Config->arch_os ne 'x86_64') {
     plan skip_all => 'requires 64-bit machine';
 }
 else {
-    plan tests => 11;
+    plan tests => 16;
 }
 
 use_ok('Genome::Model::Tools::DetectVariants2::Result::Vcf::Combine');
@@ -25,10 +25,13 @@ use_ok('Genome::Model::Tools::DetectVariants2::Result::Vcf::Combine');
 #TODO this could really use its own very tiny dataset--we don't care about the results in this test so much as the process
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Result-Vcf-Combine';
 my $inputs = $test_dir."/inputs";
-my $expected_dir = $test_dir."/expected";
 
-my $detector_expected_file = $expected_dir."/detector_test/snvs.vcf.gz";
-my $filter_expected_file = $expected_dir."/filter_test/snvs.vcf.gz";
+my $expected_dir = $test_dir."/expected.v2";
+
+my $detector_union_expected_file = $expected_dir."/detector_test/union_snvs.vcf.gz";
+my $filter_union_expected_file = $expected_dir."/filter_test/union_snvs.vcf.gz";
+my $detector_intersect_expected_file = $expected_dir."/detector_test/intersect_snvs.vcf.gz";
+my $filter_intersect_expected_file = $expected_dir."/filter_test/intersect_snvs.vcf.gz";
 
 my $varscan_detector_directory = $inputs."/varscan";
 my $varscan_detector_vcf_directory = $inputs."/varscan_vcf_result";
@@ -136,18 +139,24 @@ my $false_positive_filter_vcf_result = Genome::Model::Tools::DetectVariants2::Re
 
 $false_positive_filter_result->add_user(user => $false_positive_filter_vcf_result, label => 'uses');
 
-#Test combining detector results
-run_combine_test($samtools_detector_result,$varscan_detector_result, $detector_expected_file);
+#Test combining detector results with union
+run_combine_test($samtools_detector_result,$varscan_detector_result, $detector_union_expected_file, "Union");
 
-#Test combining filter results
-run_combine_test($snp_filter_result,$false_positive_filter_result, $filter_expected_file);
+#Test combining filter results with union
+run_combine_test($snp_filter_result,$false_positive_filter_result, $filter_union_expected_file, "Union");
 
+#Test combining detector results with intersection
+# FIXME for now, do not test this because joinx doesnt like it that the input VCFs do not have a FORMAT tag for FT (unfiltered thus far)
+#run_combine_test($samtools_detector_result,$varscan_detector_result, $detector_intersect_expected_file, "Intersect");
 
+#Test combining filter results with intersection
+run_combine_test($snp_filter_result,$false_positive_filter_result, $filter_intersect_expected_file, "Intersect");
 
 sub run_combine_test {
     my $result_a = shift;
     my $result_b = shift;
     my $expected_file = shift;
+    my $operation = shift;
 
     my $test_working_dir = File::Temp::tempdir('DetectVariants2-Result-Vcf-CombineXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 
@@ -157,10 +166,11 @@ sub run_combine_test {
         output_directory => $test_working_dir,
     );
 
-    my $command = Genome::Model::Tools::DetectVariants2::Combine::UnionSnv->create(%command_params);
+    my $command_type = "Genome::Model::Tools::DetectVariants2::Combine::" . $operation . "Snv";
+    my $command = $command_type->create(%command_params);
 
-    isa_ok($command, 'Genome::Model::Tools::DetectVariants2::Combine::UnionSnv', 'created UnionSnv operation');
-    ok($command->execute, 'executed UnionSnv command');
+    isa_ok($command, "$command_type", "created $command_type operation");
+    ok($command->execute, "executed $command_type command");
 
     my $combine_vcf_result = $command->_vcf_result;
     isa_ok($combine_vcf_result, 'Genome::Model::Tools::DetectVariants2::Result::Vcf::Combine','created a combine_vcf_result');
@@ -176,3 +186,5 @@ sub run_combine_test {
     ok(!$diff, 'output matched expected result')
         or diag("diff results:\n" . $diff);
 }
+
+

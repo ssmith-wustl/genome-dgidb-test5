@@ -141,9 +141,7 @@ sub shortcut_vcf {
 
 sub _try_vcf {
     my $self = shift;
-    unless($self->class =~ m/Union/i){
-        return 0;
-    }
+
     my $vcf_count = 0;
     for my $input_id ($self->input_a_id,$self->input_b_id){
         my $input_result = Genome::Model::Tools::DetectVariants2::Result::Base->get($input_id);
