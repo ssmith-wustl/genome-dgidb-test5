@@ -25,31 +25,95 @@ sub _generate_content {
     my $drug_gene_interaction = $doc->createElement("drug_gene_interaction");
 
     my $data = $self->data;
-    $drug_gene_interaction->addChild($self->get_interactions($data->{definite_groups}));
-    $drug_gene_interaction->addChild($self->get_ambiguous_interactions($data->{ambiguous_search_terms}));
+
+    my ($interactions_node, $filtered_interactions_node) = $self->get_interactions($data->{definite_groups});
+    $drug_gene_interaction->addChild($interactions_node);
+    $drug_gene_interaction->addChild($filtered_interactions_node);
+
+    ($interactions_node, $filtered_interactions_node) = $self->get_ambiguous_interactions($data->{ambiguous_search_terms});
+    $drug_gene_interaction->addChild($interactions_node);
+    $drug_gene_interaction->addChild($filtered_interactions_node);
     $drug_gene_interaction->addChild($self->get_missing_interactions($data->{definite_groups}));
     $drug_gene_interaction->addChild($self->get_missing_ambiguous_interactions($data->{ambiguous_search_terms}));
     $drug_gene_interaction->addChild($self->get_search_terms_without_groups($data->{search_terms_without_groups}));
-#    $drug_gene_interaction->addChild($self->get_no_interaction_genes_node);
-#    $drug_gene_interaction->addChild($self->get_filtered_out_interactions_node);
 
     $doc->setDocumentElement($drug_gene_interaction);
     return $doc->toString(1);
 }
 
-sub get_search_terms_without_groups {
+sub get_interactions {
     my $self = shift;
-    my $search_terms_without_groups = shift;
+    my $groups = shift;
     my $doc = $self->_xml_doc;
-    my $search_terms_without_groups_node = $doc->createElement("search_terms_without_groups");
+    my $interactions_node = $doc->createElement("interactions");
+    my $filtered_interactions_node = $doc->createElement("filtered_interactions");
 
-    for my $name (@{$search_terms_without_groups}){
-        my $item = $doc->createElement('item');
-        $item->addChild($doc->createTextNode($name));
-        $search_terms_without_groups_node->addChild($item);
+    while (my ($group_name, $group_data) = each %{$groups}){
+        my $group = $group_data->{group};
+        if($group_data->{interactions}){
+            for my $interaction (@{$group_data->{interactions}}){
+                $interactions_node->addChild($self->build_interaction_node(
+                        $interaction,
+                        $group_name,
+                        $group_data->{search_terms},
+                    ));
+            }
+        }
+        if($group_data->{filtered_interactions}){
+            for my $interaction (@{$group_data->{filtered_interactions}}){
+                $filtered_interactions_node->addChild($self->build_interaction_node(
+                        $interaction,
+                        $group_name,
+                        $group_data->{search_terms},
+                    ));
+            }
+        }
     }
+    return $interactions_node, $filtered_interactions_node;
+}
 
-    return $search_terms_without_groups_node;
+sub get_ambiguous_interactions {
+    my $self = shift;
+    my $ambiguous_terms_to_gene_groups = shift;
+    my $doc = $self->_xml_doc;
+    my $interactions_node = $doc->createElement("ambiguous_interactions");
+    my $filtered_interactions_node = $doc->createElement("filtered_ambiguous_interactions");
+
+    while (my ($ambiguous_term, $gene_groups) = each %{$ambiguous_terms_to_gene_groups}){
+        while (my ($gene_group_name, $gene_group_data) = each %{$gene_groups}){
+            my $group = $gene_group_data->{group};
+
+            if($gene_group_data->{interactions}){
+                for my $interaction (@{$gene_group_data->{interactions}}){
+                    my $interaction_node = ($self->build_interaction_node(
+                            $interaction,
+                            $gene_group_name,
+                            [$ambiguous_term],
+                        ));
+
+                    my $matches_node = $doc->createElement('number_of_matches');
+                    $matches_node->addChild($doc->createTextNode($gene_group_data->{number_of_matches}));
+                    $interaction_node->addChild($matches_node);
+                    $interactions_node->addChild($interaction_node);
+                }
+            }
+            if($gene_group_data->{filtered_interactions}){
+                for my $interaction (@{$gene_group_data->{filtered_interactions}}){
+                    my $interaction_node = ($self->build_interaction_node(
+                            $interaction,
+                            $gene_group_name,
+                            [$ambiguous_term],
+                        ));
+
+                    my $matches_node = $doc->createElement('number_of_matches');
+                    $matches_node->addChild($doc->createTextNode($gene_group_data->{number_of_matches}));
+                    $interaction_node->addChild($matches_node);
+                    $filtered_interactions_node->addChild($interaction_node);
+                }
+            }
+        }
+    }
+    return $interactions_node, $filtered_interactions_node;
 }
 
 sub get_missing_interactions {
@@ -104,52 +168,19 @@ sub get_missing_ambiguous_interactions {
     return $missing_interactions_node;
 }
 
-sub get_interactions {
+sub get_search_terms_without_groups {
     my $self = shift;
-    my $groups = shift;
+    my $search_terms_without_groups = shift;
     my $doc = $self->_xml_doc;
-    my $interactions_node = $doc->createElement("interactions");
+    my $search_terms_without_groups_node = $doc->createElement("search_terms_without_groups");
 
-    while (my ($group_name, $group_data) = each %{$groups}){
-        my $group = $group_data->{group};
-        my @search_terms = @{$group_data->{search_terms}};
-
-        for my $interaction (map{$_->interactions}$group->genes){
-            $interactions_node->addChild($self->build_interaction_node(
-                    $interaction,
-                    $group_name,
-                    $group_data->{search_terms},
-                ));
-        }
+    for my $name (@{$search_terms_without_groups}){
+        my $item = $doc->createElement('item');
+        $item->addChild($doc->createTextNode($name));
+        $search_terms_without_groups_node->addChild($item);
     }
-    return $interactions_node;
-}
 
-sub get_ambiguous_interactions {
-    my $self = shift;
-    my $ambiguous_terms_to_gene_groups = shift;
-    my $doc = $self->_xml_doc;
-    my $interactions_node = $doc->createElement("ambiguous_interactions");
-
-    while (my ($ambiguous_term, $gene_groups) = each %{$ambiguous_terms_to_gene_groups}){
-        while (my ($gene_group_name, $gene_group_data) = each %{$gene_groups}){
-            my $group = $gene_group_data->{group};
-
-            for my $interaction (map{$_->interactions}$group->genes){
-                my $interaction_node = ($self->build_interaction_node(
-                        $interaction,
-                        $gene_group_name,
-                        [$ambiguous_term],
-                    ));
-
-                my $matches_node = $doc->createElement('number_of_matches');
-                $matches_node->addChild($doc->createTextNode($gene_group_data->{number_of_matches}));
-                $interaction_node->addChild($matches_node);
-                $interactions_node->addChild($interaction_node);
-            }
-        }
-    }
-    return $interactions_node;
+    return $search_terms_without_groups_node;
 }
 
 sub build_interaction_node {
@@ -187,58 +218,10 @@ sub build_interaction_node {
     my $source_node = $doc->createElement('source');
     $source_node->addChild($doc->createTextNode($interaction->source_db_name));
     $item->addChild($source_node);
+    my $source_url_node = $doc->createElement('source_url');
+    $source_url_node->addChild($doc->createTextNode(Genome::DruggableGene::Citation->source_db_name_to_url($interaction->source_db_name)));
+    $item->addChild($source_url_node);
 
     return $item;
-}
-
-sub get_filtered_out_interactions_node {
-    my $self = shift;
-    my $doc = $self->_xml_doc;
-    my $interactions= $doc->createElement("filtered_out_interactions");
-
-    for my $interaction ($self->filtered_out_interactions){
-        my $item = $doc->createElement('item');
-        $interactions->addChild($item);
-        my $drug = $doc->createElement('drug');
-        $drug->addChild($doc->createAttribute('key', 'drug_name'));
-        $drug->addChild($doc->createTextNode($interaction->drug_name));
-        $item->addChild($drug);
-        my $human_readable_drug_name = $doc->createElement('human_readable_drug_name');
-        $human_readable_drug_name->addChild($doc->createTextNode($interaction->drug->human_readable_name));
-        $item->addChild($human_readable_drug_name);
-        my $human_readable_gene_name = $doc->createElement('human_readable_gene_name');
-        $human_readable_gene_name->addChild($doc->createTextNode($interaction->gene->human_readable_name));
-        $item->addChild($human_readable_gene_name);
-        my $gene = $doc->createElement('gene');
-        $gene->addChild($doc->createAttribute('key', 'gene_name'));
-        $gene->addChild($doc->createTextNode($interaction->gene_name));
-        $item->addChild($gene);
-        my $bridge = Genome::DruggableGene::GeneNameGroupBridge->get(gene=>Genome::DruggableGene::GeneNameReport->get(name=>$interaction->gene_name));
-        if($bridge){
-            my $group = $doc->createElement('group');
-            $group->addChild($doc->createTextNode(
-                    $bridge->group->name
-                ));
-            $item->addChild($group);
-        }
-        my $interaction_types = $doc->createElement('interaction_type');
-        $interaction_types->addChild($doc->createTextNode(join(', ', $interaction->interaction_types)));
-        $item->addChild($interaction_types);
-        my $identifier = $doc->createElement('identifier');
-        $item->addChild($identifier);
-
-        my @identifiers;
-        IDENTIFIER: while (my ($identifier, $genes) = each %{$self->identifier_to_genes}){
-            for my $identified_gene (@$genes){
-                if($identified_gene == $interaction->gene){
-                    push @identifiers, $identifier;
-                    next IDENTIFIER;
-                }
-            }
-        }
-        $identifier->addChild($doc->createTextNode(join(', ', @identifiers)));
-    }
-
-    return $interactions;
 }
 1;

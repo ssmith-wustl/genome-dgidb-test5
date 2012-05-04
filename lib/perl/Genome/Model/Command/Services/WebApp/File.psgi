@@ -99,9 +99,11 @@ sub dispatch_request {
             push @filter, $filter;
         }
 
+        my $filter = join ',', @filter;
+
         my $command = Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions->execute(
             gene_identifiers => \@gene_names,
-#            filter => join(',',@filter),
+            filter => $filter,
         );
         my %params = (
             data => $command->result,

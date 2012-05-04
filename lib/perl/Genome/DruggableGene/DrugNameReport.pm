@@ -19,6 +19,11 @@ class Genome::DruggableGene::DrugNameReport {
         nomenclature => { is => 'Text'},
         source_db_name => { is => 'Text'},
         source_db_version => { is => 'Text'},
+        source_db_url => {
+            is => 'Text',
+            calculate_from => ['source_db_name'],
+            calculate => q| Genome::DruggableGene::Citation->source_db_name_to_url($source_db_name) |,
+        },
         description => {
             is => 'Text',
             is_optional => 1,
@@ -45,6 +50,7 @@ class Genome::DruggableGene::DrugNameReport {
             is_many => 1,
         },
         citation => {
+            is => 'Genome::DruggableGene::Citation',
             calculate_from => ['source_db_name', 'source_db_version'],
             calculate => q|
                 my $citation = Genome::DruggableGene::Citation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
