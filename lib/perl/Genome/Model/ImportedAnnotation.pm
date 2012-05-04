@@ -17,7 +17,7 @@ class Genome::Model::ImportedAnnotation{
             is => 'UR::Value',
             via => 'inputs',
             to => 'value_id',
-            where => [ name => 'species_name' ],
+            where => [ name => 'species_name', value_class_name => 'UR::Value'],
             is_mutable => 1,
         },
         reference_sequence_id => {
