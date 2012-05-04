@@ -12,14 +12,16 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Status::Xml {
         default_aspects => {
             is => 'ARRAY',
             value => [
-               {
+                {
                     name => 'members',
                     perspective => 'default',
                     toolkit => 'xml',
                     subject_class_name => 'Genome::DruggableGene::DrugGeneInteractionReport',
                     aspects => [
                         'drug_name',
+                        'human_readable_drug_name',
                         'gene_name',
+                        'gene_group_name',
                         'interaction_types',
                         'source_db_name',
                         'source_db_version',
@@ -32,8 +34,16 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Status::Xml {
                                 'value',
                             ],
                         },
+                        {
+                            name => 'citation',
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            aspects => [
+                                'citation',
+                            ],
+                        },
                     ],
-               },
+                },
             ],
         },
     ],

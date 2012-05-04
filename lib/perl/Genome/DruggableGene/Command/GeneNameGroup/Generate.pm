@@ -43,7 +43,11 @@ sub load {
     my $self = shift;
 
     print "Preloading all genes\n";
-    Genome::DruggableGene::GeneNameReport->get;#Preload
+    Genome::DruggableGene::GeneNameReport->get;
+
+    print "Preloading all groups\n";
+    Genome::DruggableGene::GeneNameGroup->get;
+    Genome::DruggableGene::GeneNameGroupBridge->get;
 
     print "Loading alternate names and creating hash\n";
     my %alt_to_entrez;
@@ -87,7 +91,7 @@ sub create_groups {
             $group = Genome::DruggableGene::GeneNameGroup->create(name => $alt);
             Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $_->id, group_id => $group->id) for @genes;
         }
-        print "$progress_counter : created new group for $alt\n" if rand() < .001;
+        print "$progress_counter : created/refreshed group for $alt\n" if rand() < .001;
     }
 
     print "\n****\nFinished $progress_counter.\n****\n\n";
@@ -117,7 +121,7 @@ sub add_members {
             for my $alt_gene (@alt_genes){
                 #Get the group if it exists and add it to our list of indirectly found groups
                 my $bridge = Genome::DruggableGene::GeneNameGroupBridge->get(gene_id => $alt_gene->id);
-                $indirect_groups{$bridge->gene->name}++ if $bridge;
+                $indirect_groups{$bridge->group->name}++ if $bridge;
             }
         }
 
@@ -125,7 +129,7 @@ sub add_members {
         if(scalar keys %direct_groups == 1){
             my ($group_name) = keys %direct_groups;
             my $group_id = Genome::DruggableGene::GeneNameGroup->get(name=>$group_name)->id;
-            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $gene->id, gene_id => $group_id);
+            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $gene->id, group_id => $group_id);
             print "$progress_counter : added $gene_name to $group_name directly\n" if rand() < .001;
             next;
         }
@@ -133,7 +137,7 @@ sub add_members {
         if(scalar keys %direct_groups == 0 and scalar keys %indirect_groups == 1){
             my ($group_name) = keys %indirect_groups;
             my $group_id = Genome::DruggableGene::GeneNameGroup->get(name=>$group_name)->id;
-            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $gene->id, gene_id => $group_id);
+            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $gene->id, group_id => $group_id);
             print "$progress_counter : added $gene_name to $group_name indirectly\n" if rand() < .001;
             next;
         }

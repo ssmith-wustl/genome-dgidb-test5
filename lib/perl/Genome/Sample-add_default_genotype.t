@@ -59,9 +59,8 @@ my $sample_2 = create_test_sample();
 my $orig_library_id = $genotype_data->library_id;
 my $library = create_library_from_sample($sample_2);
 $genotype_data->library_id($library->id);
-$genotype_check = eval { $sample->check_genotype_data($genotype_data) };
-ok(!$genotype_check, 'genotype data failed check, as expected');
-ok($sample->error_message =~ /Instrument data does not come from sample/, 'got expected error message');
+$genotype_check = $sample->check_genotype_data($genotype_data);
+ok($genotype_check, 'genotype checks out when sample is changed but it still comes from the same individual');
 
 # Change the sample back
 $genotype_data->library_id($orig_library_id);

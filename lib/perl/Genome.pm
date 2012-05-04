@@ -3,7 +3,7 @@ package Genome;
 use warnings;
 use strict;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 use UR;
 use File::Temp;
@@ -129,6 +129,7 @@ those tools.
  Ken Chen
  Lei Chen
  Eric Clark
+ Adam Coffman
  Kevin Crouse
  Indraniel Das
  Nathan Dees
@@ -141,6 +142,7 @@ those tools.
  James Eldred
  Xian Fan
  Ian Ferguson
+ Malachi Griffith
  Chris Harris
  Amy Hawkins
  Todd Hepler
@@ -154,6 +156,7 @@ those tools.
  Phil Kimmey
  Michael Kiwala
  Daniel Koboldt
+ James Koval
  Karthik Kota
  Kim Kyung
  David Larson
@@ -164,6 +167,7 @@ those tools.
  Justin Lolofie
  Robert Long
  Charles Lu
+ Chris Maher
  John Martin
  Josh McMichael
  Rick Meyer
@@ -175,6 +179,7 @@ those tools.
  Josh Peck
  Jerome Peirick
  Craig Pohl
+ Allison Regier
  Ryan Richt
  Noorus Sahar Abubucker
  Gabriel Sanderson
@@ -194,7 +199,7 @@ those tools.
 
 =head1 LICENSE
 
-Copyright (C) 2007-2011 Washington University in St. Louis.
+Copyright (C) 2007-2012 Washington University in St. Louis.
 
 It is released under the Lesser GNU Public License (LGPL) version 3.  See the 
 associated LICENSE file in this distribution.
@@ -202,7 +207,7 @@ associated LICENSE file in this distribution.
 =head1 BUGS
 
 For defects with any software in the genome namespace,
-contact genome-dev ~at~ genome.wustl.edu.
+contact gmt ~at~ genome.wustl.edu.
 
 =cut
 
