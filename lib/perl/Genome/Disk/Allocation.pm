@@ -72,6 +72,11 @@ class Genome::Disk::Allocation {
             default => 0,
             doc => 'If set, the allocation cannot be deallocated',
         },
+        archivable => {
+            is => 'Boolean',
+            default => 1,
+            doc => 'If set, this allocation can be archived',
+        },
         original_kilobytes_requested => {
             is => 'Number',
             doc => 'The disk space allocated in kilobytes',
@@ -830,7 +835,11 @@ sub _execute_system_command {
         my $cmd = "perl $includes -e \"use above Genome; $class->$method($param_string); UR::Context->commit;\"";
 
         unless (eval { system($cmd) } == 0) {
-            confess "Could not perform allocation action!";
+            my $msg = "Could not perform allocation action!";
+            if ($@) {
+                $msg .= " Error: $@";
+            }
+            confess $msg;
         }
         $allocation = $class->_reload_allocation($params{allocation_id});
     }
