@@ -96,8 +96,7 @@ sub execute {
     # An unlock observer is added at end of execute (not here) because
     # this command periodically commits (which triggers the observer).
     my $lock = Genome::Sys->lock_resource(
-        resource_lock => '/gscuser/ebelter/sychronize-update-apipe-classes',
-        #resource_lock => '/gsc/var/lock/sychronize-update-apipe-classes',
+        resource_lock => '/gsc/var/lock/sychronize-update-apipe-classes',
         max_try => 1,
     );
     if ( not $lock ) {
@@ -115,7 +114,6 @@ sub execute {
         $self->error_message('Failed to load instruemnt data successful pidfas!');
         return;
     }
-    return 1;
 
     # Stores copied and missing IDs for each type
     my %report;
