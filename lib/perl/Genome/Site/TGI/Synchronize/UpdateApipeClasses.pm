@@ -96,7 +96,8 @@ sub execute {
     # An unlock observer is added at end of execute (not here) because
     # this command periodically commits (which triggers the observer).
     my $lock = Genome::Sys->lock_resource(
-        resource_lock => '/gsc/var/lock/sychronize-update-apipe-classes',
+        resource_lock => '/gscuser/ebelter/sychronize-update-apipe-classes',
+        #resource_lock => '/gsc/var/lock/sychronize-update-apipe-classes',
         max_try => 1,
     );
     if ( not $lock ) {
@@ -284,8 +285,10 @@ sub _get_direct_and_indirect_properties_for_object {
 my %successful_pidfas;
 sub _load_successful_pidfas {
     my $self = shift;
-    # This query/hash loading takes < 10 secs
-    $self->status_message('Load instrument data successful pidfas...');
+    print STDERR "Load instrument data successful pidfas...\n";
+
+    # This query/hash loading takes 10-15 secs
+    # Currently, the only 'output' on a pidfa pse is a genotype file, which is only valid for genotype data
 
     my $dbh = Genome::DataSource::GMSchema->get_default_handle;
     if ( not $dbh ) {
@@ -293,9 +296,11 @@ sub _load_successful_pidfas {
         return;
     }
     my $sql = <<SQL;
-        select distinct(p.param_value)
+        select p.param_value, pseo.data_value
         from process_step_executions\@oltp pse
-        left join pse_param\@oltp p on p.pse_id = pse.pse_id and p.param_name = 'instrument_data_id'
+        inner join pse_param\@oltp p on p.pse_id = pse.pse_id and p.param_name = 'instrument_data_id'
+        left join process_step_outputs\@oltp pso on pso.ps_ps_id = pse.ps_ps_id and pso.output_description = 'genotype_file'
+        left join pse_data_outputs\@oltp pseo on pseo.pso_pso_id = pso.pso_id
         where pse.ps_ps_id = 3870 and pse.pr_pse_result = 'successful'
 SQL
 
@@ -309,12 +314,12 @@ SQL
         $self->error_message('Failed to execute successful pidfa sql');
         return;
     }
-    while ( my ($instrument_data_id) = $sth->fetchrow_array ) {
-        $successful_pidfas{$instrument_data_id}++;
+    while ( my ($instrument_data_id, $genotype_file) = $sth->fetchrow_array ) {
+        $successful_pidfas{$instrument_data_id} = $genotype_file if not defined $successful_pidfas{$instrument_data_id};
     }
     $sth->finish;
 
-    $self->status_message('Loaded '..scalar(keys %successful_pidfas).'successful PIDFAs');
+    print STDERR 'Loaded '.scalar(keys %successful_pidfas).' successful PIDFAs';
     return 1;
 }
 
