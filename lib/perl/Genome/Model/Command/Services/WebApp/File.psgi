@@ -38,6 +38,10 @@ sub dispatch_request {
         @gene_names = grep{/[\w\d]/}@gene_names;
         @gene_names = map{uc $_}@gene_names;
 
+        my @go_gene_families;
+        push @go_gene_families, split(/[\r\n]/,$params->{'families'});
+        #TODO: figure out how to make a filter out of families if they exist
+
         my $command = Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions->execute(
                 gene_identifiers => \@gene_names,
                 );
