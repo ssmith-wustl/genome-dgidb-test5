@@ -60,7 +60,7 @@ sub dispatch_request {
                             rest      => '/view',
                             resources => '/view/genome/resource.html',
                         },
-                        );
+                    );
                 return [200, ['Content-type' => "text/html"], [$html->content]];
             } elsif(/tsv/) {
                 return [200, ['Content-type' => "text/tsv"], [join("\n", $command->output)]];

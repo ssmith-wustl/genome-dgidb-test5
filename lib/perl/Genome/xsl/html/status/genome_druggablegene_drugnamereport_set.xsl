@@ -70,14 +70,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             </tr>
 
             <tr>
-              <td class="name">Nomenclature:
-              </td>
-              <td class="value">
-                  <xsl:value-of select="normalize-space(aspect[@name='nomenclature']/value)"/>
-              </td>
-            </tr>
-
-            <tr>
               <td class="name">Source Database Name:
               </td>
               <td class="value">
