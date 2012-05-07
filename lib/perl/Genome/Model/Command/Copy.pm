@@ -9,7 +9,7 @@ use Regexp::Common;
 
 class Genome::Model::Command::Copy {
     class_name => __PACKAGE__,    
-    is => 'Genome::Command::Base',
+    is => 'Command::V2',
     has => [
         model => {
             is => 'Genome::Model',

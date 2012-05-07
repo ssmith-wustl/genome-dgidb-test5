@@ -130,8 +130,40 @@ sub execute {
     # End preloading.  From here the only queries hitting the DB should be to get sequences,
     # and to check the DB for models that already exist with our generated names from this copy.
 
+    my @model_changes;
+    my @param_changes;
+    my @input_changes;
+    my $rx = UR::BoolExpr->_old_filter_regex_for_string();
+    my $meta = $from_models[0]->__meta__;
+    my $changes_pp = 0;
+    for my $change (@changes) {
+        my ($name,$op,$value) = ($change =~ $rx);
+        if ($name eq 'processing_profile_id') {
+            $changes_pp = Genome::ProcessingProfile->get($value);
+            unless ($changes_pp) {
+                die "failed to find processing profile $value!";
+            }
+        }
+
+        my $pmeta = $meta->property($name);
+        die "no property $name found on model " . $from_models[0]->__display_name__ unless $pmeta;
+        if ($pmeta->can('is_param') and $pmeta->is_param) {
+            push @param_changes, $change;
+        }
+        elsif ($pmeta->can('is_input') and $pmeta->is_input) {
+            push @input_changes, $change;
+        }
+        else {
+            push @model_changes, $change;
+        }
+    }
+
+    if ($changes_pp and @param_changes) {
+        die "Cannot change the processing_profile_id explicitly and also make parameter changes, which imply changint the processing profile id"; 
+    }
+
     my %pp_mapping;
-    if (@changes) {
+    if (@param_changes) {
         my @from_profiles = sort map { $_->processing_profile } @from_models;
         my $last_profile;
         for my $from_profile (@from_profiles) {
@@ -144,7 +176,7 @@ sub execute {
             delete $prev{supercedes};
             delete $prev{reference_sequence_name};
 
-            my $bx = UR::BoolExpr->resolve_for_string($from_profile->class,join(",",@changes));
+            my $bx = UR::BoolExpr->resolve_for_string($from_profile->class,join(",",@param_changes));
             my %changes = $bx->params_list;
             delete $changes{-order};
             delete $changes{-hints};
@@ -219,7 +251,7 @@ sub execute {
     my $n = 0;
     for my $from_model (@from_models) {
         my $from_profile = $from_model->processing_profile;
-        my $to_profile = $pp_mapping{$from_profile};
+        my $to_profile = ($changes_pp or $pp_mapping{$from_profile});
         my $to_model;
         $n++;
         if ($to_profile or $force_copy_models) {
@@ -242,20 +274,23 @@ sub execute {
             # );            
             
             # Until fixed, we need to call the command instead of the method:
+            $DB::single = 1;
             Genome::Model::Command::Copy->execute(
-                from => $from_model, 
-                to => $new_name, 
-                overrides => ["processing_profile_name=" . $to_profile->name ]
+                model => $from_model, 
+                overrides => ["processing_profile=" . $to_profile->id, "name=" . $new_name ]
             );
 
             $to_model = Genome::Model->get(name => $new_name);
+            unless ($to_model) {
+                die "failed to find new model with name $new_name\n";
+            }
             push @new_models, $to_model;
         }
         else {
             $self->status_message(" adding model from old group to the new group: " . $from_model->__display_name__);
             $to_model = $from_model;
         }
-        $to->add_model_bridge(model => $to_model);
+        $to->add_model_bridge(model_id => $to_model->id);
     }
    
     $self->status_message("Monitor this group at: " . Genome::Config->base_web_uri . "/genome/model-group/status.html?id=" . $to->id);
