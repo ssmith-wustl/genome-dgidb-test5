@@ -342,6 +342,8 @@ sub _filter_fasta_file {
     my $self = shift;
     my $barcodes = shift;
     my $metrics = {}; my $fasta = {};
+    $metrics->{sample_count} = 0;
+    $metrics->{read_count} = 0;
     my $barcode_length = $self->_get_barcode_lengths($barcodes);
     my $pb_seq = $self->_pb_seq;
     my $comp_pb_seq = $self->_comp_pb_seq();

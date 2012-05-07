@@ -51,16 +51,22 @@ sub execute {
     my $self = shift;
     print "Gathering data\n" if $self->debug;
     my (%build_to_metrics, %index_to_builds, %pool_to_builds);
+
+    my @ref_align_models = grep { $_->isa('Genome::Model::ReferenceAlignment') } $self->models;
+    unless (@ref_align_models) {
+        die "None of the provided models were reference alignment!";
+    }
+
     my @models;
     if ($self->find_qc_models) {
-        my @instrument_data = map{$_->instrument_data}$self->models;
+        my @instrument_data = map{$_->instrument_data} @ref_align_models;
         @models = Genome::Model::ReferenceAlignment->default_lane_qc_model_for_instrument_data(@instrument_data);
         my $missing_qc_models = (@instrument_data - @models);
         if ($missing_qc_models) {
             warn "Missing $missing_qc_models lane qc model(s).\n";
         }
     } else {
-        @models = $self->models;
+        @models = @ref_align_models;
     }
     for my $model (@models) {
         my $build = $model->last_succeeded_build || next;

@@ -1,3 +1,10 @@
+genome-snapshot-deps-perl (2012.05.07-1) unstable; urgency=low
+
+  * added: libdatetime-format-natural-perl (>= 0.91-1)
+  * added: libstatistics-robust-perl (>= 0.01-1)
+
+ -- The Genome Institute <gmt@genome.wustl.edu>  Mon, 07 May 2012 10:46:11 -0500
+
 genome-snapshot-deps-perl (2012.04.09-3) unstable; urgency=low
 
   * Test rebuild.  No changes.

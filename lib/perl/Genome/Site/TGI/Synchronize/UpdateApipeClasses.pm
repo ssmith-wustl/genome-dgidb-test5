@@ -281,11 +281,11 @@ sub _get_direct_and_indirect_properties_for_object {
     return (\%direct_properties, \%indirect_properties);
 }
 
-my %successful_pidfas;
+my %instrument_data_with_successful_pidfas;
 sub _load_successful_pidfas {
     my $self = shift;
-    # This query/hash loading takes < 10 secs
-    $self->status_message('Load instrument data successful pidfas...');
+    # This query/hash loading takes 10-15 secs
+    print STDERR "Load instrument data successful pidfas...\n";
 
     my $dbh = Genome::DataSource::GMSchema->get_default_handle;
     if ( not $dbh ) {
@@ -293,10 +293,12 @@ sub _load_successful_pidfas {
         return;
     }
     my $sql = <<SQL;
-        select distinct(p.param_value)
+        select p1.param_value, p2.param_value
         from process_step_executions\@oltp pse
-        left join pse_param\@oltp p on p.pse_id = pse.pse_id and p.param_name = 'instrument_data_id'
+        inner join pse_param\@oltp p1 on p1.pse_id = pse.pse_id and p1.param_name = 'instrument_data_id'
+        left join pse_param\@oltp p2 on p2.pse_id = pse.pse_id and p2.param_name = 'genotype_file'
         where pse.ps_ps_id = 3870 and pse.pr_pse_result = 'successful'
+        order by p1.param_value desc
 SQL
 
     my $sth = $dbh->prepare($sql);
@@ -309,12 +311,14 @@ SQL
         $self->error_message('Failed to execute successful pidfa sql');
         return;
     }
-    while ( my ($instrument_data_id) = $sth->fetchrow_array ) {
-        $successful_pidfas{$instrument_data_id}++;
+    while ( my ($instrument_data_id, $genotype_file) = $sth->fetchrow_array ) {
+        # Going in reverse id order...use the most recent genotype file for duplicate pidfas
+        $instrument_data_with_successful_pidfas{$instrument_data_id} = $genotype_file if not defined $instrument_data_with_successful_pidfas{$instrument_data_id};
     }
     $sth->finish;
 
-    $self->status_message('Loaded '..scalar(keys %successful_pidfas).'successful PIDFAs');
+    print STDERR 'Loaded '.scalar(keys %instrument_data_with_successful_pidfas)." successful PIDFAs\n";
+    print STDERR 'Loaded '.scalar(grep { defined } values %instrument_data_with_successful_pidfas)." genotype files\n";
     return 1;
 }
 
@@ -322,7 +326,7 @@ sub _create_instrumentdata_solexa {
     my ($self, $original_object, $new_object_class) = @_;
 
     # Successful PIDFA required!
-    return 0 unless $successful_pidfas{$original_object->id};
+    return 0 unless exists $instrument_data_with_successful_pidfas{$original_object->id};
     # Bam path required!
     return 0 unless $original_object->bam_path;
     
@@ -352,7 +356,7 @@ sub _create_instrumentdata_sanger {
     my ($self, $original_object, $new_object_class) = @_;
 
     # Successful PIDFA required!
-    return 0 unless $successful_pidfas{$original_object->id};
+    return 0 unless exists $instrument_data_with_successful_pidfas{$original_object->id};
     # Some sanger instrument don't have a library. If that's the case here, just don't create the object
     return 0 unless defined $original_object->library_id or defined $original_object->library_name
         or defined $original_object->library_summary_id;
@@ -397,7 +401,7 @@ sub _create_instrumentdata_454 {
     my ($self, $original_object, $new_object_class) = @_;
 
     # Successful PIDFA required!
-    return 0 unless $successful_pidfas{$original_object->id};
+    return 0 unless exists $instrument_data_with_successful_pidfas{$original_object->id};
 
     my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
         $original_object,

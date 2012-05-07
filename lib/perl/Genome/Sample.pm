@@ -274,8 +274,12 @@ sub check_genotype_data {
     Carp::confess $self->error_message("Instrument data is not a 'genotype file' format.")
        unless $genotype_instrument_data->import_format && $genotype_instrument_data->import_format eq 'genotype file';
 
-    Carp::confess $self->error_message("Instrument data does not come from sample " . $self->id)
-        unless $genotype_instrument_data->sample_id eq $self->id;
+    my $genotype_sample = $genotype_instrument_data->sample;
+    my $genotype_source = $genotype_sample->source;
+    unless ($self->source->class eq $genotype_source->class and $self->source->id eq $genotype_source->id) {
+        Carp::confess $self->error_message("Genotype instrument data has source " . $genotype_source->__display_name__ .
+            " but sample has source " . $self->source->__display_name__);
+    }
 
     return 1;
 }

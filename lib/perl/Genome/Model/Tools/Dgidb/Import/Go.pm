@@ -92,12 +92,14 @@ sub input_to_tsv {
 
     my %xml_files = $self->import_go_category_xml_files;
 
-    my $headers = join("\t", 'go_id', 'go_short_name', 'go_term', 'go_full_name', 'go_description', 'secondary_go_term', 'go_name', 'alternate_symbol_references');
+    my $headers = join("\t", 'go_id', 'go_short_name', 'human_readable_name', 'go_term', 'go_full_name', 'go_description', 'secondary_go_term', 'go_name', 'alternate_symbol_references');
     $out_fh->print($headers, "\n");
 
-    for my $go_short_name_and_id (keys %xml_files){
-        my $xml = $xs->XMLin($xml_files{$go_short_name_and_id}, KeyAttr => ['rdf:about']);
-        my ($short_name, $go_id) = split("\t", $go_short_name_and_id);
+    for my $go_human_readable_name_short_name_and_id (keys %xml_files){
+        chomp $go_human_readable_name_short_name_and_id;
+        my ($human_readable_name, $short_name, $go_id) = split('_', $go_human_readable_name_short_name_and_id);
+        my $go_short_name_and_id = join('_', $short_name, $go_id);
+        my $xml = $xs->XMLin($xml_files{$go_human_readable_name_short_name_and_id}, KeyAttr => ['rdf:about']);
         my %terms = %{$xml->{'rdf:RDF'}->{'go:term'}};
         for my $url (keys %terms){
             my $secondary_go_term;
@@ -105,11 +107,11 @@ sub input_to_tsv {
             if($terms{'rdf:about'}){
                 $terms{'rdf:about'} =~ /.*GO:(\d+)/;
                 $secondary_go_term = $1;
-                @output_lines = $self->xml_term_to_output_lines(go_id => $go_id, short_name => $short_name, secondary_go_term => $secondary_go_term, term => \%terms);
+                @output_lines = $self->xml_term_to_output_lines(go_id => $go_id, short_name => $short_name, human_readable_name => $human_readable_name, secondary_go_term => $secondary_go_term, term => \%terms);
             }elsif(ref($terms{$url})){
                 $url =~ /.*GO:(\d+)/;
                 $secondary_go_term = $1;
-                @output_lines = $self->xml_term_to_output_lines(go_id => $go_id, short_name => $short_name, secondary_go_term => $secondary_go_term, term => $terms{$url});
+                @output_lines = $self->xml_term_to_output_lines(go_id => $go_id, short_name => $short_name, human_readable_name => $human_readable_name, secondary_go_term => $secondary_go_term, term => $terms{$url});
             }
             $out_fh->print(join("\n", @output_lines), "\n") if @output_lines;
         }
@@ -131,17 +133,20 @@ sub import_genes {
     my $version = $self->version;
     my $genes_outfile = shift;
     my @genes;
-    my @headers = qw/go_id go_short_name go_term go_full_name go_description secondary_go_term go_name alternate_symbol_references/;
+    my @headers = qw/go_id go_short_name human_readable_name go_term go_full_name go_description secondary_go_term go_name alternate_symbol_references/;
     my $parser = Genome::Utility::IO::SeparatedValueReader->create(
         input => $genes_outfile,
         headers => \@headers,
         separator => "\t",
         is_regex => 1,
     );
-
+    
     $parser->next; #eat the headers
     while(my $go_input = $parser->next){
         my $gene_name = $self->_create_gene_name_report($go_input->{'go_name'}, 'go_gene_name', 'GO', $version, '');
+        my $human_readable_name = $go_input->{'human_readable_name'};
+        $human_readable_name =~ s/-/ /g;
+        my $human_readable = $self->_create_gene_alternate_name_report($gene_name, $human_readable_name, 'human_readable_name', '');
         my $alternate_symbol_references = $go_input->{'alternate_symbol_references'};
         my @alternates = split(/\|/, $alternate_symbol_references);
         for my $alternate (@alternates){
@@ -165,6 +170,7 @@ sub xml_term_to_output_lines {
     my $short_name = $params{'short_name'};
     my $secondary_go_term = $params{'secondary_go_term'};
     my $term = $params{'term'};
+    my $human_readable_name = $params{'human_readable_name'};
     my @output_lines;
 
     my $go_name = $term->{'go:name'};
@@ -190,7 +196,7 @@ sub xml_term_to_output_lines {
                 $alternate_symbol_references = join("|", $alternate_symbol_references, join("/", $product_ref->{'go:database_symbol'}, $product_ref->{'go:reference'}));
             }
 
-            my $output_line = join("\t", $go_id, $short_name, $go_accession, $go_name, $go_definition, $secondary_go_term, $gene_name, $alternate_symbol_references);
+            my $output_line = join("\t", $go_id, $short_name, $human_readable_name, $go_accession, $go_name, $go_definition, $secondary_go_term, $gene_name, $alternate_symbol_references);
             push @output_lines, $output_line;
         }
     }
@@ -223,9 +229,12 @@ sub import_go_category_xml_files {
             $header = 0;
             next();
         }
-        my $go_id = $line_parts[2];
+        my $go_id = $line_parts[3];
         $go_terms{$go_id}{short_name} = $line_parts[0];
         $go_terms{$go_id}{long_name} = $line_parts[1];
+        my $human_readable_name = $line_parts[2];
+        $human_readable_name =~ s/\s/-/g;
+        $go_terms{$go_id}{human_readable_name} = $human_readable_name;
 
         my $go_digits;
         if ($go_id =~ /GO(\d+)/){
@@ -243,14 +252,16 @@ sub import_go_category_xml_files {
     foreach my $go_id (sort keys %go_terms){
         print "Retrieving $go_id files";
         my $go_digits = $go_terms{$go_id}{go_digits};
-        my $short_name_and_id = join("\t", $go_terms{$go_id}{short_name}, $go_id);
 
 #Get XML file
 #wget "http://amigo.geneontology.org/cgi-bin/amigo/term-assoc.cgi?gptype=all&speciesdb=all&taxid=9606&evcode=all&term_assocs=all&term=GO%3A0016301&action=filter&format=rdfxml" -O KinaseActivity_GO0016301.xml
-        my $go_outfile_xml = $go_terms{$go_id}{short_name} . "_" . $go_id . ".xml";
+        my $go_outfile_xml = join("_", $go_terms{$go_id}{human_readable_name}, $go_terms{$go_id}{short_name}, $go_id) . ".xml";
+        my $key = $go_outfile_xml;
+        $key =~ s/.xml$//;
+        print $go_outfile_xml, "\n";
         my $wget_cmd_xml = "wget \"http://amigo.geneontology.org/cgi-bin/amigo/term-assoc.cgi?gptype=all&speciesdb=all&taxid=9606&evcode=all&term_assocs=all&term=GO%3A$go_digits&action=filter&format=rdfxml\" -O $tmp_dir/$go_outfile_xml";
         system($wget_cmd_xml);
-        $xml_files{$short_name_and_id} = "$tmp_dir/$go_outfile_xml";
+        $xml_files{$key} = "$tmp_dir/$go_outfile_xml";
     }
     
     return %xml_files;

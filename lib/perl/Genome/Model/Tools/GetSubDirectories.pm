@@ -49,15 +49,13 @@ sub execute
     opendir(DH, $dir) or die "Can not open dir $dir!\n";
     foreach my $name (sort readdir DH) 
     { 
-	if (!($name =~ /\./)) 
-        {
-            my $full_path = $dir."/".$name;
-	    if (-d $full_path) 
-            { 
-                # is a directory
-                push @sub_dirs, $full_path; #use absolute paths instead of relative
-            }
-	}
+        next if $name eq '.' or $name eq '..';
+        my $full_path = $dir."/".$name;
+        if (-d $full_path) 
+        { 
+            # is a directory
+            push @sub_dirs, $full_path; #use absolute paths instead of relative
+        }
     }
     $self->sub_directories(\@sub_dirs);
     return 1;

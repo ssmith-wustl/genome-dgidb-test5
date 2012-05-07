@@ -89,7 +89,12 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       <tbody>
         <xsl:for-each select="$interactions/item">
           <tr>
-            <th><xsl:value-of select='source' /></th>
+            <th><a class='mini btn'>
+                <xsl:attribute name="href">
+                  <xsl:value-of select='source_url'/>
+                </xsl:attribute>
+                <xsl:value-of select='source' />
+            </a></th>
             <th>
               <xsl:call-template name='object_link_button'>
                 <xsl:with-param name='type' select="'Genome::DruggableGene::DrugNameReport::Set'"/>
@@ -232,8 +237,12 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:with-param name="name" select="'Ambiguously Matched Interactions'" />
         </xsl:call-template>
         <xsl:call-template name="drug_gene_interactions_table">
-          <xsl:with-param name="interactions" select="filtered_out_interactions" />
-          <xsl:with-param name="name" select="'Filtered Out Interactions (Not Yet Implemented)'" />
+          <xsl:with-param name="interactions" select="filtered_interactions" />
+          <xsl:with-param name="name" select="'Filtered Interactions'" />
+        </xsl:call-template>
+        <xsl:call-template name="drug_gene_interactions_table">
+          <xsl:with-param name="interactions" select="filtered_ambiguous_interactions" />
+          <xsl:with-param name="name" select="'Filtered Ambiguously Matched Interactions'" />
         </xsl:call-template>
       </div>
 
@@ -370,112 +379,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       <br/>
     </xsl:with-param>
   </xsl:call-template>
-
-</xsl:template>
-
-<xsl:template name="genome_genenamereport_box">
-
-  <div class="span_12_box_masonry">
-    <div class="box_header span-12 last rounded-top">
-      <div class="box_title"><h3 class="genome_genenamereport_16 span-7 last">Report</h3></div>
-    </div>
-
-    <div class="box_content rounded-bottom span-12 last">
-      <table class="name-value">
-        <tbody>
-          <tr>
-            <td class="name">ID:
-            </td>
-            <td class="value"><xsl:value-of select="@id"/>
-            </td>
-          </tr>
-
-          <tr>
-            <td class="name">Name:
-            </td>
-            <td class="value">
-              <xsl:choose>
-                <xsl:when test="string(normalize-space(aspect[@name='name']/value))">
-                  <xsl:value-of select="normalize-space(aspect[@name='name']/value)"/>
-                </xsl:when>
-              </xsl:choose>
-            </td>
-          </tr>
-
-          <tr>
-            <td class="name">Nomenclature:
-            </td>
-            <td class="value">
-              <xsl:choose>
-                <xsl:when test="string(normalize-space(aspect[@name='nomenclature']/value))">
-                  <xsl:value-of select="normalize-space(aspect[@name='nomenclature']/value)"/>
-                </xsl:when>
-              </xsl:choose>
-            </td>
-          </tr>
-
-          <tr>
-            <td class="name">Source Database Name:
-            </td>
-            <td class="value">
-              <xsl:choose>
-                <xsl:when test="string(normalize-space(aspect[@name='source_db_name']/value))">
-                  <xsl:value-of select="normalize-space(aspect[@name='source_db_name']/value)"/>
-                </xsl:when>
-              </xsl:choose>
-            </td>
-          </tr>
-
-          <tr>
-            <td class="name">Source Database Version:
-            </td>
-            <td class="value">
-              <xsl:choose>
-                <xsl:when test="string(normalize-space(aspect[@name='source_db_version']/value))">
-                  <xsl:value-of select="normalize-space(aspect[@name='source_db_version']/value)"/>
-                </xsl:when>
-              </xsl:choose>
-            </td>
-          </tr>
-
-          <tr>
-            <td class="name">Source Database Citation:
-            </td>
-            <td class="value">
-              <xsl:choose>
-                <xsl:when test="string(normalize-space(aspect[@name='original_data_source_url']/value))">
-                  <a target="_blank">
-                    <xsl:attribute name="href">
-                      <xsl:value-of select="normalize-space(aspect[@name='original_data_source_url']/value)"/>
-                    </xsl:attribute>
-                    <xsl:value-of select="normalize-space(aspect[@name='name']/value)"/>
-                  </a>
-                </xsl:when>
-              </xsl:choose>
-            </td>
-          </tr>
-
-
-          <tr>
-            <td class="name">Alternate Names:
-            </td>
-            <td class="value">
-              <ul>
-                <xsl:for-each select="aspect[@name='gene_alt_names']/object">
-                  <li>
-                    <xsl:value-of select="normalize-space(aspect[@name='alternate_name']/value)"/>
-                    <xsl:text>  </xsl:text>
-                    (<xsl:value-of select="normalize-space(aspect[@name='nomenclature']/value)"/>)
-                  </li>
-                </xsl:for-each>
-              </ul>
-            </td>
-          </tr>
-
-        </tbody>
-      </table>
-    </div>
-  </div>
 
 </xsl:template>
 

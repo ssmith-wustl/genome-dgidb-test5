@@ -22,7 +22,7 @@ sub help_sub_commands {
 
 sub doc_copyright_license {
    return <<EOS
-Copyright (C) 2007-2011 Washington University in St. Louis.
+Copyright (C) 2007-2012 Washington University in St. Louis.
 
 It is released under the Lesser GNU Public License (LGPL) version 3.  See the 
 associated LICENSE file in this distribution.
@@ -35,12 +35,12 @@ EOS
 
 =head1 NAME
 
-Genome::Model::Tools - base namespace for command modules 
+Genome::Model::Tools - base namespace for GMT tools 
 
 =head1 DESCRIPTION
 
 Modules with names starting with Genome::Model::Tools are directly invokable by
-the "genome" command, installed with the core Genome package.
+the "gmt" command, installed with the core Genome package.
 
 These modules all inherit from Command and use UR for their class definitions.
 
@@ -76,11 +76,11 @@ this distribution.
 =head1 BUGS
 
 For defects with any software in the genome namespace,
-contact genome-dev@genome.wustl.edu.
+contact gmt (at) genome.wustl.edu.
 
 =head1 SEE ALSO
 
-B<genome>, B<Genome>
+B<genome>
 
 =cut
 

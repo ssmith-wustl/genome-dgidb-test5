@@ -913,6 +913,8 @@
                   </span>
                   <xsl:call-template name="object_link_button">
                     <xsl:with-param name="linktext" select="aspect[@name='processing_profile']/object/@id" />
+                    <xsl:with-param name="type" select="aspect[@name='processing_profile']/object/@type" />
+                    <xsl:with-param name="id" select="aspect[@name='processing_profile']/object/@id" />
                     <xsl:with-param name="icon" select="'sm-icon-extlink'" />
                   </xsl:call-template>
                   <xsl:text> </xsl:text>

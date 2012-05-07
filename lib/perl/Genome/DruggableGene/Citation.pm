@@ -22,3 +22,16 @@ class Genome::DruggableGene::Citation {
     ],
     doc => 'Citation for druggable gene object',
 };
+
+#Hard code the front page of sources rather than keep these urls in the database
+sub source_db_name_to_url {
+    my $class = shift;
+    my $source_db_name = shift;
+    for ($source_db_name) {
+        return 'http://www.drugbank.ca/' if /drugbank/i;
+        return 'http://ensembl.org/index.html' if /ensembl/i;
+        return 'http://www.ncbi.nlm.nih.gov/gene' if /entrez/i;
+        return 'http://bidd.nus.edu.sg/group/ttd/ttd.asp' if /ttd/i;
+    }
+    return "http://lmgtfy.com/?q=$source_db_name";#let me google that for you
+}
