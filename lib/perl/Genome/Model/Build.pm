@@ -973,7 +973,7 @@ sub _launch {
     }
     else {
         my $user = getpwuid($<);
-        $job_group_spec = ' -g /build2/' . $user;
+        $job_group_spec = ' -g /build/' . $user;
     }
 
     die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
