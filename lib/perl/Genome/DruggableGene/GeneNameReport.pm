@@ -103,6 +103,11 @@ sub original_data_source_url {
         $url = $base_url . $source_id;
     }elsif($self->source_db_name eq 'Entrez'){
         $url = $base_url . $source_id;
+    }elsif($self->source_db_name eq 'GO'){
+        my ($go_short_name_and_id) = map($_->category_value, grep($_->category_name eq 'go_short_name_and_id', $self->gene_categories));
+        my (undef, $go_id) = split('_', $go_short_name_and_id);
+        $go_id =~ s/^go//;
+        $url = $base_url . $go_id;
     }else{
         $url = join('', $base_url, $source_id);
     }
