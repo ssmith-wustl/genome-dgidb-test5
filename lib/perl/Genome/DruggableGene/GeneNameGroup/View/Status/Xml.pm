@@ -20,7 +20,6 @@ class Genome::DruggableGene::GeneNameGroup::View::Status::Xml {
                     toolkit => 'xml',
                     aspects => [
                         'name',
-                        'nomenclature',
                         'source_db_name',
                         'source_db_version',
                         'source_db_url',

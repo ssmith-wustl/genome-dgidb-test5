@@ -16,6 +16,11 @@ class Genome::DruggableGene::GeneNameGroup {
         id => {is => 'Text'},
     ],
     has => [
+        display_name => {
+            is => 'Text',
+            calculate_from => ['name'],
+            calculate => q| $name |,
+        },
         name => { is => 'Text' },
         bridges => {
             is => 'Genome::DruggableGene::GeneNameGroupBridge',
