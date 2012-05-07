@@ -145,7 +145,7 @@ sub execute {
     $input{output_pdf} = $output_dir."/".$pdf;
     $input{cnvhmm_input} = 1;
     $input{lowres} = $self->lowres;
-    $input{plot_title} = $tumor_bam_name.":".$normal_bam_name;
+    $input{plot_title} = "Tumor: $tumor_bam_name, Normal: $normal_bam_name";
     $input{genome_build} = $self->genome_build;
     $input{sex} = $self->sex;
     $input{y_max} = $self->plot_ymax;

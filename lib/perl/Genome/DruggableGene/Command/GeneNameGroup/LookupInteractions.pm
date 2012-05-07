@@ -42,6 +42,9 @@ class Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions {
         result => {
             is => 'HASH',
         },
+        output => {
+            is => 'text',
+        },
     ],
 };
 
@@ -80,7 +83,51 @@ sub execute {
 
     my $result = $self->find_groups_and_interactions(@gene_identifiers);
     $self->result($result);
+
+    $self->output($self->generate_tsv($result));
+
     return $result;
+}
+
+sub generate_tsv {
+    my $self = shift;
+    my $result = shift;
+
+    my @headers = qw/
+    drug
+    drug_nomenclature
+    drug_primary_name
+    drug_alternate_names
+    drug_brands
+    drug_types
+    drug_groups
+    drug_categories
+    drug_source_db_name
+    drug_source_db_version
+    gene_identifiers
+    gene
+    gene_nomenclature
+    gene_alternate_names
+    gene_source_db_name
+    gene_source_db_version
+    entrez_gene_name
+    entrez_gene_synonyms
+    interaction_types
+    /;
+
+    my $tsv = join("\t", @headers) . "\n";
+    while (my ($group_name, $group_data) = each %{$result->{definite_groups}}){
+        for my $interaction (@{$group_data->{interactions}}){
+            my $drug_alt_names = join ' ', map{$_->alternate_name}$interaction->drug->drug_alt_names;
+            my @data = qq/
+                $interaction->drug->human_readable_name
+                $interaction->drug->nomenclature
+                $drug_alt_names
+            /;
+            $tsv = join("\t", @data) . "\n";
+        }
+    }
+    return $tsv;
 }
 
 #######   find_groups_and_interactions    #######
