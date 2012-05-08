@@ -230,7 +230,12 @@ sub find_groups_and_interactions{
 sub filter_interactions {
     my $self = shift;
     my $all_interactions = Set::Scalar->new(@_);
-    my $filter = $self->filter . ',id';
+    my $filter = $self->filter;
+    if ($filter){
+        $filter .= ',id';
+    } else {
+        $filter .= 'id';
+    }
     if(@$all_interactions){
         $filter .= '=' if @$all_interactions == 1;
         $filter .= ':' if @$all_interactions > 1;#if we have multiple sources, we need to use : with / delimited list for boolean expr syntax
