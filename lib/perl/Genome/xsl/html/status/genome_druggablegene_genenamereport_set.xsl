@@ -177,6 +177,12 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <xsl:with-param name="definite_go_results" select="definite_go_results" />
         </xsl:call-template>
       </div>
+      <div class="span_24_box_masonry">
+        <xsl:call-template name="gene_go_results_table">
+          <xsl:with-param name="name" select="'Filtered Definite GO Results'" />
+          <xsl:with-param name="definite_go_results" select="filtered_definite_go_results" />
+        </xsl:call-template>
+      </div>
 
       <div class="span_24_box_masonry">
         <xsl:call-template name="gene_go_summary_table">
