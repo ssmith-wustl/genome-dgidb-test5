@@ -7,7 +7,6 @@ use Cwd;
 
 my ($VEP_DIR) = Cwd::abs_path(__FILE__) =~ /(.*)\//;
 my $VEP_SCRIPT_PATH = $VEP_DIR . "/Vep.d/vep";
-my $ENSEMBL_API_PATH = $ENV{GENOME_DB_ENSEMBL_API_PATH};
 
 class Genome::Db::Ensembl::Vep {
     is => 'Command',
@@ -107,6 +106,11 @@ class Genome::Db::Ensembl::Vep {
             default_value => 0,
             is_optional => 1,
         },
+        ensembl_annotation_build_id => {
+            is => 'String',
+            doc => 'ID of ImportedAnnotation build with the desired ensembl version',
+            default_value => $ENV{GENOME_DB_ENSEMBL_DEFAULT_IMPORTED_ANNOTATION_BUILD},
+        },
     ],
 };
 
@@ -136,6 +140,23 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    # check for imported annotation build
+    unless($self->ensembl_annotation_build_id) {
+        $self->error_message("No ensembl annotation build specified");
+        return;
+    }
+    
+    my $annotation_build = Genome::Model::Build::ImportedAnnotation->get($self->ensembl_annotation_build_id);
+
+    unless ($annotation_build) {
+        $self->error_message("Could not find ImportedAnnotation build with id ".$self->ensembl_annotation_build_id);
+        return;
+    }
+
+    unless ($annotation_build->get_api_paths) {
+        $self->error_message("Could not find ensembl api in ImportedAnnotation build with id ".$annotation_build->id);
+    }
 
     my $format = $self->format;
     my $input_file= $self->input_file;
@@ -282,6 +303,15 @@ sub execute {
         $count++;
     }
 
+    $count = 0;
+    foreach my $arg (@all_string_args) {
+        if ($arg->property_name eq 'ensembl_version') {
+            splice @all_string_args, $count, 1;
+            last;
+        }
+        $count++;
+    }
+
     $string_args = join( ' ',
         map {
             my $name = $_->property_name;
@@ -308,11 +338,11 @@ sub execute {
     my $password_param = defined $ENV{GENOME_DB_ENSEMBL_PASS} ? "--password ".$ENV{GENOME_DB_ENSEMBL_PASS} : "";
     my $port_param = defined $ENV{GENOME_DB_ENSEMBL_PORT} ? "--port ".$ENV{GENOME_DB_ENSEMBL_PORT} : "";
 
-    my $cmd = "PERL5LIB=$ENSEMBL_API_PATH/ensembl-variation/modules:$ENSEMBL_API_PATH/ensembl/modules:$ENSEMBL_API_PATH/ensembl-functgenomics/modules:\$PERL5LIB perl $script_path $string_args $bool_args $host_param $user_param $password_param $port_param";
+    my $cmd = "$script_path $string_args $bool_args $host_param $user_param $password_param $port_param";
 
     print STDERR $cmd . "\n";
 
-    Genome::Sys->shellcmd(
+    $annotation_build->prepend_api_path_and_execute(
         cmd=>$cmd,
         input_files => [$input_file],
         output_files => [$self->{output_file}],
@@ -320,5 +350,6 @@ sub execute {
     );
     return 1;
 }
+
 
 1;
