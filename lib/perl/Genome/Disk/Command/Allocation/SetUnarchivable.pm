@@ -16,6 +16,10 @@ class Genome::Disk::Command::Allocation::SetUnarchivable {
             is => 'Text',
             doc => 'Comma delimited list of paths, an attempt will be made to resolve them to allocations',
         },
+        reason => {
+            is => 'Text',
+            doc => 'reason for wanting to set these allocations/paths as unarchivable',
+        },
     ],
 };
 
@@ -27,7 +31,7 @@ sub execute {
     my $self = shift;
     for my $allocation ($self->_resolve_allocations_from_paths, $self->allocations) {
         next if !$allocation->archivable;
-        $allocation->archivable(0);
+        $allocation->archivable(0, $self->reason);
     }
     $self->status_message("Successfully set allocations as unarchivable");
     return 1;
