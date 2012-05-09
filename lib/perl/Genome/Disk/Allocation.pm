@@ -1009,14 +1009,21 @@ sub _set_default_permissions_closure {
 # Class method for determining if the given path has a parent allocation
 sub _verify_no_parent_allocation {
     my ($class, $path) = @_;
+    my $allocation = $class->_get_parent_allocation($path);
+    return !(defined $allocation);
+}
+
+# Returns parent allocation for the given path if one exists
+sub _get_parent_allocation {
+    my ($class, $path) = @_;
     my ($allocation) = $class->get(allocation_path => $path);
-    return 0 if $allocation;
+    return $allocation if $allocation;
 
     my $dir = File::Basename::dirname($path);
     if ($dir ne '.' and $dir ne '/') {
-        return $class->_verify_no_parent_allocation($dir);
+        return $class->_get_parent_allocation($dir);
     }
-    return 1;
+    return;
 }
 
 # Checks for allocations beneath this one, which is also invalid
