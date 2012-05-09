@@ -10,6 +10,7 @@ use File::Copy::Recursive 'dircopy';
 use Carp 'confess';
 
 class Genome::Disk::Allocation {
+    is => 'Genome::Notable',
     id_generator => '-uuid',
     id_by => [
         id => {
