@@ -48,6 +48,8 @@ my $gatk_somatic_indel = Genome::Model::Tools::DetectVariants2::GatkSomaticIndel
         output_directory => $tmpdir, 
         mb_of_ram => 3500,
         version => 5336,
+        aligned_reads_sample => 'TEST_tumor',
+        control_aligned_reads_sample => 'TEST_normal',
 );
 
 ok($gatk_somatic_indel, 'gatk_somatic_indel command created');
@@ -67,5 +69,12 @@ for my $file (@files){
     is(compare($actual_file,$expected_file),0,"Actual file is the same as the expected file: $file");
 }
 
+my $expected_vcf = "$expected_data/indels.vcf.gz";
+my $output_vcf   = "$tmpdir/indels.vcf.gz";
+my $expected = `zcat $expected_vcf | grep -v fileDate`;
+my $output   = `zcat $output_vcf | grep -v fileDate`;
+my $diff = Genome::Sys->diff_text_vs_text($output, $expected);
+ok(!$diff, 'Actual file is the same as the expected file: indels.vcf.gz')
+    or diag("diff results:\n" . $diff);
 done_testing();
 exit;

@@ -191,6 +191,10 @@ sub _get_public_ref {
 }
 
 # Print the header to the output file... currently assumes "standard" columns of GT,GQ,DP,BQ,MQ,AD,FA,VAQ in the FORMAT field and VT in the INFO field.
+# TODO
+# sample header
+# ##tcgaversion=1.0
+# vcfProcessLog 
 sub print_header{
     my $self = shift;
     my $source           = $self->source;
@@ -233,17 +237,39 @@ sub print_tag_meta {
 # Return an array of hashrefs describing the meta information for FORMAT fields
 sub get_format_meta {
     my $self = shift;
+    my $class_name = $self->class;
 
-    my $gt = {MetaType => "FORMAT", ID => "GT", Number => 1, Type => "String", Description => "Genotype"};
-    my $gq = {MetaType => "FORMAT", ID => "GQ", Number => 1, Type => "Integer", Description => "Genotype Quality"};
-    my $dp = {MetaType => "FORMAT", ID => "DP", Number => 1, Type => "Integer", Description => "Total Read Depth"};
-    my $bq = {MetaType => "FORMAT", ID => "BQ", Number => "A", Type => "Integer", Description => "Average Base Quality corresponding to alternate alleles 1/2/3... after software and quality filtering"};
-    my $mq = {MetaType => "FORMAT", ID => "MQ", Number => 1, Type => "Integer", Description => "Average Mapping Quality"};
-    my $ad = {MetaType => "FORMAT", ID => "AD", Number => "A", Type => "Integer", Description => "Allele Depth corresponding to alternate alleles 1/2/3... after software and quality filtering"};
-    my $fa = {MetaType => "FORMAT", ID => "FA", Number => 1, Type => "Float", Description => "Fraction of reads supporting ALT"};
-    my $vaq = {MetaType => "FORMAT", ID => "VAQ", Number => 1, Type => "Integer", Description => "Variant Quality"};
+    if ($class_name =~ /\:Indel\:/) {
+        return $self->common_format_meta;
+    }
+    elsif ($class_name =~ /\:Snv\:/) {
+        return ($self->common_format_meta, $self->extra_format_meta);
+    }
+    else {
+        die $self->error_message("Unknown class name: $class_name");
+    }
+}
 
-    return ($gt, $gq, $dp, $bq, $mq, $ad, $fa, $vaq);
+
+sub common_format_meta {
+    return (
+        {MetaType => "FORMAT", ID => "GT",  Number => 1,   Type => "String",  Description => "Genotype"},
+        {MetaType => "FORMAT", ID => "DP",  Number => 1,   Type => "Integer", Description => "Total Read Depth"},
+        {MetaType => "FORMAT", ID => "AD",  Number => "A", Type => "Integer", Description => "Allele Depth corresponding to alternate alleles 1/2/3... after software and quality filtering"},
+        {MetaType => "FORMAT", ID => "DP4", Number => 4,   Type => "Integer", Description => "# high-quality ref-forward, ref-reverse, alt-forward and alt-reverse bases"},
+        {MetaType => "FORMAT", ID => "BQ",  Number => "A", Type => "Integer", Description => "Average Base Quality corresponding to alternate alleles 1/2/3... after software and quality filtering"},
+        {MetaType => "FORMAT", ID => "SS",  Number => 1,   Type => "Integer", Description => "Somatic status relative to normal counterpart: 0(wildtype), 1(germline), 2(somatic), 3(loh), 4(unknown)"},
+    );
+}
+
+
+sub extra_format_meta {
+    return (
+        {MetaType => "FORMAT", ID => "GQ",  Number => 1, Type => "Integer", Description => "Genotype Quality"},
+        {MetaType => "FORMAT", ID => "MQ",  Number => 1, Type => "Integer", Description => "Average Mapping Quality"},
+        {MetaType => "FORMAT", ID => "FA",  Number => 1, Type => "Float",   Description => "Fraction of reads supporting ALT"},
+        {MetaType => "FORMAT", ID => "VAQ", Number => 1, Type => "Integer", Description => "Variant Quality"},
+    );
 }
 
 # Return an array of hashrefs describing the meta information for INFO fields

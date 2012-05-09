@@ -56,14 +56,13 @@ sub _process_indel {
 
     my ($reference, $variant, $start, $stop);
     
-    $start = $position - 1; #Convert to 0-based coordinate
+    $start = $position; #Convert to 0-based coordinate
     
     if($length > 0) {
         $reference = '*';
         $variant = $indel;
         $stop = $start; #Two positions are included-- but an insertion has no "length" so stop and start are the same
     } elsif($length < 0) {
-        $start += 1; #sniper reports the position before the first deleted base
         $reference = $indel;
         $variant = '*';
         $stop = $start + abs($length);
