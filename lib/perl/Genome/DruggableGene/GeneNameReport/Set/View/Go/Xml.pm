@@ -26,7 +26,8 @@ sub _generate_content {
     my $go_results = $doc->createElement("go_results");
 
     my $data = $self->data;
-    $go_results->addChild($self->get_go_results($data->{definite_groups}));
+    $go_results->addChild($self->get_go_results('definite_go_results', $data->{definite_groups}));
+    $go_results->addChild($self->get_go_results('filtered_definite_go_results', $data->{filtered_definite_groups}));
     $go_results->addChild($self->get_go_summary($data->{definite_groups}));
 
     $doc->setDocumentElement($go_results);
@@ -35,9 +36,10 @@ sub _generate_content {
 
 sub get_go_results {
     my $self = shift;
+    my $node_name = shift;
     my $groups = shift;
     my $doc = $self->_xml_doc;
-    my $go_results_node = $doc->createElement("definite_go_results");
+    my $go_results_node = $doc->createElement($node_name);
 
     my %existing_entries;
 

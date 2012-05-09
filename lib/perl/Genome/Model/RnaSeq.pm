@@ -333,5 +333,76 @@ sub params_for_alignment {
     return @param_set;
 }
 
+sub publication_description {
+  my $self = shift;
+
+  # TODO: use these, to dereive the values in the following two sections
+  my $pp = $self->processing_profile;
+  my $refseq = $self->reference_sequence_build;
+  my $annot = $self->annotation_build;
+  my @i = $self->instrument_data;
+
+  my $lane_count_summary = 'A single lane';
+  my $instrument = 'HiSeq';
+  my $chemistry = 'v3';
+  my $species = 'human';
+  my $lims_samtools_version = 'v. 0.1.18';
+
+  my $picard_version = '1.4.6';
+  my $alignment_ref = 'human reference genome (NCBI build 37)';
+  my $tophat_version = '1.1.4';
+  my $annotation_source = 'the human Ensembl database (version 58) (REF)';
+  my $bam_index_tool = 'samtools (v. 0.1.18)';
+  my $bam_sort_tool = 'Picard (v.1.46)';
+  my $cufflinks_version = '(v1.0.3) (REF)';
+
+  my $desc = <<EOS;
+RNA-seq analysis methods
+
+
+THIS CONTENT IS A CUT-AND-PASTE AND DOES NOT ACTUALLY REFLECT THIS MODEL'S WORKFLOW.
+
+
+FIX ME.
+
+
+$lane_count_summary of $instrument ($chemistry chemistry) was generated for each
+Illumina RNA-seq library.  Reads were initially aligned to the $species
+reference genome using Eland and stored as a BAM file.  These alignments
+were used for basic quality assessment purposes only and no read filtering
+was performed.  Mapping statistics for the BAM file were generated
+using Samtools flagstat (v. $lims_samtools_version) (REF). 
+The BAM file was converted to FastQ using Picard (v.$picard_version) (REF)
+and all reads were re-aligned to the $alignment_ref
+using Tophat (v $tophat_version) (REF).  Tophat was run in default mode with
+the following exceptions.  The --mate-inner-dist and --mate-std-dev
+were estimated prior to run time using the Eland alignments described
+above (elaborate) and specified at run time.  The '–G' option was used
+to specify a GTF file for Tophat to generate an exon-exon junction
+database to assist in the mapping of known junctions.  The transcripts
+for this GTF were obtained from $annotation_source.  The 
+resulting tophat BAM file was indexed by $bam_index_tool
+and sorted by chromosome mapping position using $bam_sort_tool. 
+Transcript expression values were estimated by Cufflinks $cufflinks_version
+using default parameters with the following exceptions.  The Cufflinks 
+parameter '-G' was specified to force cufflinks to estimate expression
+for known transcripts provided by the same GTF file that was supplied
+to TopHat described above.  A second GTF containing only the
+mitochondrial and ribosomal sequences was created and Cufflinks was
+directed to ignore these regions using the '-M' mask option, to improve
+overall robustness of transcript abundance estimates.  The variant
+and corresponding gene expression status in the transcriptome were
+determined for SNV positions identified as somatic in the WGS
+tumor/normal data.  FPKM values were summarized to the gene level by
+adding Cufflinks FPKMs from alternative transcripts of each Ensembl gene. 
+The variant allele frequencies were determined by counting reads
+supporting reference and variant base counts using the Perl module
+"Bio::DB::Sam".
+EOS
+
+  $desc =~ s/\n(?!\n)/ /g;
+  return $desc;
+}
+
 1;
 

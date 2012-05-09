@@ -1,4 +1,4 @@
-package Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions;
+package Genome::DruggableGene::Command::GeneNameGroup::LookupFamilies;
 
 use strict;
 use warnings;
@@ -6,14 +6,14 @@ use Genome;
 use Set::Scalar;
 use List::MoreUtils qw/ uniq /;
 
-class Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions {
+class Genome::DruggableGene::Command::GeneNameGroup::LookupFamilies {
     is => 'Genome::Command::Base',
     has_optional => [
 #        output_file => {
 #            is => 'Text',
 #            is_input => 1,
 #            is_output=> 1,
-#            doc => "Output interactions to specified file. Defaults to STDOUT if no file is supplied.",
+#            doc => "Output Families to specified file. Defaults to STDOUT if no file is supplied.",
 #            default => "STDOUT",
 #        },
 #        headers => {
@@ -21,9 +21,10 @@ class Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions {
 #            default => 1,
 #            doc => 'Do include headers',
 #        },
-        filter => {
+        allowed_families => {
             is => 'Text',
-            doc => 'Filter results based on the parameters.  See below for how to.',
+            is_many => 1,
+            doc => 'Filter out gene groups not in any of these families',
             shell_args_position => 2,
         },
         gene_file => {
@@ -48,9 +49,9 @@ class Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions {
     ],
 };
 
-sub help_brief { 'Lookup drug-gene interactions through groups using gene identifiers' }
+sub help_brief { 'Lookup drug-gene families through groups using gene identifiers' }
 
-sub help_synopsis { "genome druggable-gene gene-name-group lookup-interactions --gene-file ./gene_file.txt --filter 'drug.is_withdrawn=0'" }
+sub help_synopsis { "genome druggable-gene gene-name-group lookup-families --gene-file ./gene_file.txt --filter 'drug.is_withdrawn=0'" }
 
 sub help_detail {
     return <<EOS
@@ -81,56 +82,16 @@ sub execute {
     push @gene_identifiers, $_ for $self->gene_identifiers;
     $self->status_message('No genes found') unless @gene_identifiers;
 
-    my $result = $self->find_groups_and_interactions(@gene_identifiers);
+    my $result = $self->find_groups_and_families(
+        Set::Scalar->new($self->allowed_families),
+        @gene_identifiers
+    );
     $self->result($result);
-
-    $self->output($self->generate_tsv($result));
-
     return $result;
 }
 
-sub generate_tsv {
-    my $self = shift;
-    my $result = shift;
 
-    my @headers = qw/
-    drug
-    drug_nomenclature
-    drug_primary_name
-    drug_alternate_names
-    drug_brands
-    drug_types
-    drug_groups
-    drug_categories
-    drug_source_db_name
-    drug_source_db_version
-    gene_identifiers
-    gene
-    gene_nomenclature
-    gene_alternate_names
-    gene_source_db_name
-    gene_source_db_version
-    entrez_gene_name
-    entrez_gene_synonyms
-    interaction_types
-    /;
-
-    my $tsv = join("\t", @headers) . "\n";
-    while (my ($group_name, $group_data) = each %{$result->{definite_groups}}){
-        for my $interaction (@{$group_data->{interactions}}){
-            my $drug_alt_names = join ' ', map{$_->alternate_name}$interaction->drug->drug_alt_names;
-            my @data = qq/
-                $interaction->drug->human_readable_name
-                $interaction->drug->nomenclature
-                $drug_alt_names
-            /;
-            $tsv = join("\t", @data) . "\n";
-        }
-    }
-    return $tsv;
-}
-
-#######   find_groups_and_interactions    #######
+#######   find_groups_and_families    #######
 #Populate a data structure containing each search term
 # Maybe the names given were: 'stk1','flt3','cdk7','asdf'
 # and we found 1 possible group for flt3 and cdk7, and two possible groups for stk1, and no groups for asdf
@@ -143,10 +104,17 @@ sub generate_tsv {
 #                $group
 #            search_terms
 #                "CDK7"
-#            interactions
-#                $interaction
-#            filtered_interations
-#                $interaction1
+#        FLT3
+#            group
+#                $group
+#            search_terms
+#                "FLT3"
+#    filtered_definite_groups
+#        CDK7
+#            group
+#                $group
+#            search_terms
+#                "CDK7"
 #        FLT3
 #            group
 #                $group
@@ -159,25 +127,17 @@ sub generate_tsv {
 #                    $group
 #                number_of_matches
 #                    2
-#                interactions
-#                    $interaction
-#                    $interaction
-#                filtered_interactions
-#                    $interaction
-#                    $interaction
 #            FLT3
 #                group
 #                    $group
 #                number_of_matches
 #                    1
-#                interactions
-#                    $interaction
-#                    $interaction
 #    search_terms_without_groups
 #        "ASDF"
 #
-sub find_groups_and_interactions{
+sub find_groups_and_families{
     my $self = shift;
+    my $allowed_families = shift;
     my @gene_names = @_;
     @gene_names = map{uc}@gene_names;
     @gene_names = uniq @gene_names;
@@ -209,44 +169,24 @@ sub find_groups_and_interactions{
                 for my $ambiguous_group (@groups){
                     $result->{ambiguous_search_terms}{$name}{$ambiguous_group->name}{group} = $ambiguous_group;
                     $result->{ambiguous_search_terms}{$name}{$ambiguous_group->name}{number_of_matches} = $group_matches{$ambiguous_group->name};
-                    my ($interactions, $filtered_interactions) = $self->filter_interactions(map{$_->interactions}$ambiguous_group->genes);
-                    push @{$result->{ambiguous_search_terms}{$name}{$ambiguous_group->name}{interactions}}, $interactions->members if $interactions;
-                    push @{$result->{ambiguous_search_terms}{$name}{$ambiguous_group->name}{filtered_interactions}}, $filtered_interactions->members if $filtered_interactions;
                 }
             }
         }
 
         if($group){ #found single direct or indirect group
-            $result->{definite_groups}{$group->name}{group} = $group;
-            push @{$result->{definite_groups}{$group->name}{search_terms}}, $name;
-            my ($interactions, $filtered_interactions) = $self->filter_interactions(map{$_->interactions}$group->genes);
-            push @{$result->{definite_groups}{$group->name}{interactions}}, $interactions->members if $interactions;
-            push @{$result->{definite_groups}{$group->name}{filtered_interactions}}, $filtered_interactions->members if $filtered_interactions;
+            my $families = Set::Scalar->new(
+                map{$_->alternate_name}grep{$_->nomenclature eq 'human_readable_name'}map{$_->gene_alt_names}$group->genes
+            );
+            my $intersection = $families * $allowed_families;
+            if(@$intersection){
+                $result->{definite_groups}{$group->name}{group} = $group;
+                push @{$result->{definite_groups}{$group->name}{search_terms}}, $name;
+            } else {
+                $result->{filtered_definite_groups}{$group->name}{group} = $group;
+                push @{$result->{filtered_definite_groups}{$group->name}{search_terms}}, $name;
+            }
         }
     }
     return $result;
-}
-
-sub filter_interactions {
-    my $self = shift;
-    my $all_interactions = Set::Scalar->new(@_);
-    my $filter = $self->filter;
-    if ($filter){
-        $filter .= ',id';
-    } else {
-        $filter .= 'id';
-    }
-    if(@$all_interactions){
-        $filter .= '=' if @$all_interactions == 1;
-        $filter .= ':' if @$all_interactions > 1;#if we have multiple sources, we need to use : with / delimited list for boolean expr syntax
-        $filter .= join '/', map{$_->id}@$all_interactions;
-        my $interactions = Set::Scalar->new(
-            Genome::DruggableGene::DrugGeneInteractionReport->get(
-                UR::BoolExpr->resolve_for_string('Genome::DruggableGene::DrugGeneInteractionReport', $filter)
-            )
-        );
-        my $filtered_interactions = $all_interactions - $interactions;
-        return ($interactions, $filtered_interactions);
-    }
 }
 1;

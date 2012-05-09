@@ -1,10 +1,10 @@
 <div id='druggableGeneSearch' class='span-16 append-4 prepend-4 last' style='margin-top: 20px'>
     <form action='/view/x/druggable-gene' method='POST' enctype='multipart/form-data'>
-        <span style='font-weight: bold'>Use a gene list file: </span>
+        <span style='font-weight: bold' class='tip' title='This file is just one gene name per line'>Use a gene list file: </span>
         <input type='file' id='file' name='file'/>
-        <br />and/or<br />
-        <span style='font-weight: bold'>Paste a gene list or </span>
-        <a class='mini btn' id='insert-example-genes'>Insert Example Genes</a>
+        <br /><span class='tip' title='If you give a file and paste a list, they will be joined and both used'>and/or</span><br />
+        <span style='font-weight: bold' class='tip' title='One gene name is expected per line in this list'>Paste a gene list or </span>
+        <a class='mini btn' id='insert-example-genes' title='Erase the current list and use genes that will generate all types of output'>Use Example Genes</a>
         <br />
         <textarea id='genes' name='genes' />
         <br />
@@ -29,13 +29,12 @@
         <br />
     </form>
 </div>
+<link rel="stylesheet" href="/res/css/tipTip.css" type="text/css" />
+<script src="/res/js/pkg/jquery.tipTip.minified.js"></script>
 <script>
     $('#insert-example-genes').click(function(){
         $('#genes')[0].value = "FLT1\nFLT2\nFLT3\nSTK1\nMM1\nLOC100508755\nFAKE1";
         return false;
-    });
-    $('#filters-toggle').click(function(){
-        $('#filters').slideToggle();
-        return false;
-    });
+    }).tipTip();
+    $('.tip').tipTip();
 </script>

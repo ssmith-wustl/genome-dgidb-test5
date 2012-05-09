@@ -7,9 +7,10 @@ use Cwd;
 use File::Path;
 use File::Spec;
 use File::Basename;
+use File::Copy;
 use Carp;
 use IO::File;
-use LWP::Simple;
+use LWP::Simple qw(getstore RC_OK);
 
 our $VERSION = $Genome::VERSION;
 

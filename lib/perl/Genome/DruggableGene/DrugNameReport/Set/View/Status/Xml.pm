@@ -20,7 +20,6 @@ class Genome::DruggableGene::DrugNameReport::Set::View::Status::Xml {
                     aspects => [
                         'id',
                         'name',
-                        'nomenclature',
                         'source_db_name',
                         'source_db_version',
                         'source_db_url',
