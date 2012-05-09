@@ -334,36 +334,73 @@ sub params_for_alignment {
 }
 
 sub publication_description {
-  my $self = shift;
+    my $self = shift;
 
-  # TODO: use these, to dereive the values in the following two sections
-  my $pp = $self->processing_profile;
-  my $refseq = $self->reference_sequence_build;
-  my $annot = $self->annotation_build;
-  my @i = $self->instrument_data;
+    # TODO: use these, to dereive the values in the following two sections
+    my $pp = $self->processing_profile;
+    my $refseq = $self->reference_sequence_build;
+    my $annot = $self->annotation_build;
+    my @i = $self->instrument_data;
 
-  my $lane_count_summary = 'A single lane';
-  my $instrument = 'HiSeq';
-  my $chemistry = 'v3';
-  my $species = 'human';
-  my $lims_samtools_version = 'v. 0.1.18';
+    # ensure we really only use one lane of data per library like we say we do
+    my %libraries;
+    for my $i (@i) {
+        my $instdata_list = $libraries{$i->library_id} ||= [];
+        if ($i->index_sequence) {
+            die "the publication description is hard-coded to expect one lane of data per library";
+        }
+        push @$instdata_list, $i;
+    }
+    for my $library (keys %libraries) {
+        my $i = $libraries{$library};
+        if (@$i > 1) {
+            die "the publication description is hard-coded to expect one lane of data per library";
+        }
+    }
+    my $lane_count_summary = 'A single lane';
 
-  my $picard_version = '1.4.6';
-  my $alignment_ref = 'human reference genome (NCBI build 37)';
-  my $tophat_version = '1.1.4';
-  my $annotation_source = 'the human Ensembl database (version 58) (REF)';
-  my $bam_index_tool = 'samtools (v. 0.1.18)';
-  my $bam_sort_tool = 'Picard (v.1.46)';
-  my $cufflinks_version = '(v1.0.3) (REF)';
+    # TODO: we must look this up from LIMS
+    my $instrument = 'CHECKME HiSeq';
+    my $chemistry = 'CHECKME v3';
+    my $lims_samtools_version = 'CHECKME 0.1.18';
+    my $picard_version = 'CHECKME 1.4.6';
 
-  my $desc = <<EOS;
+    # ensure that we are really on the build 37 reference
+    my ($species, $alignment_ref);
+    if ($refseq->id == 106942997) {
+        $species = 'human';
+        $alignment_ref = 'human reference genome (NCBI build 37)';
+    }
+    else {
+        die "the publication description is hard-coded for human build 37 but got " . $refseq->id;
+    }
+
+    # ensure everything else we have hard-coded in the description still applies...
+    my %expect = (
+        read_aligner_name => 'tophat',
+        expression_name => 'cufflinks',
+    );
+    for my $name (sort keys %expect) {
+        my $expected_value = $expect{$name};
+        my $actual_value = $self->$name;
+        unless ($expected_value eq $actual_value) {
+            die "publication description is hard-coded to expect that $name is '$expected_value', but got '$actual_value'";
+        }
+    }
+
+    my $tophat_version = $self->read_aligner_version;
+    my $cufflinks_version = $self->expression_version;
+
+    # TODO: update these to come from the model inputs and processing profile
+    my $annotation_source = 'CHECKME the human Ensembl database (version 58) (REF)';
+    my $bam_index_tool = 'CHECKME samtools (v. 0.1.18)';
+    my $bam_sort_tool = 'CHECKME Picard (v.1.46)';
+
+    my $file = __FILE__;
+    my $line = __LINE__;
+
+    my $desc = <<EOS;
 RNA-seq analysis methods
-
-
-THIS CONTENT IS A CUT-AND-PASTE AND DOES NOT ACTUALLY REFLECT THIS MODEL'S WORKFLOW.
-
-
-FIX ME.
 
 
 $lane_count_summary of $instrument ($chemistry chemistry) was generated for each
@@ -377,14 +414,14 @@ and all reads were re-aligned to the $alignment_ref
 using Tophat (v $tophat_version) (REF).  Tophat was run in default mode with
 the following exceptions.  The --mate-inner-dist and --mate-std-dev
 were estimated prior to run time using the Eland alignments described
-above (elaborate) and specified at run time.  The '–G' option was used
+above (elaborate) and specified at run time.  The '-G' option was used
 to specify a GTF file for Tophat to generate an exon-exon junction
 database to assist in the mapping of known junctions.  The transcripts
 for this GTF were obtained from $annotation_source.  The 
 resulting tophat BAM file was indexed by $bam_index_tool
 and sorted by chromosome mapping position using $bam_sort_tool. 
-Transcript expression values were estimated by Cufflinks $cufflinks_version
-using default parameters with the following exceptions.  The Cufflinks 
+Transcript expression values were estimated by Cufflinks (v$cufflinks_version)
+(REF) using default parameters with the following exceptions.  The Cufflinks 
 parameter '-G' was specified to force cufflinks to estimate expression
 for known transcripts provided by the same GTF file that was supplied
 to TopHat described above.  A second GTF containing only the
@@ -398,6 +435,10 @@ adding Cufflinks FPKMs from alternative transcripts of each Ensembl gene.
 The variant allele frequencies were determined by counting reads
 supporting reference and variant base counts using the Perl module
 "Bio::DB::Sam".
+
+
+Improve this description at line $line of file $file.
+
 EOS
 
   $desc =~ s/\n(?!\n)/ /g;
