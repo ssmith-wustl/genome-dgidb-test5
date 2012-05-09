@@ -38,6 +38,9 @@ sub _filter_variants {
     my $vcf = $self->input_directory . "/snvs.vcf.gz"; # TODO this should probably just operate on snvs.vcf.gz and only filter denovo sites (info field?)
     my $output_file = $self->_temp_staging_directory. "/snvs.vcf.gz";
 
+    my @alignment_results = $self->alignment_results;
+    $self->error_message("Alignment Results found: " . scalar(@alignment_results));
+
     my $sites_file = Genome::Sys->create_temp_file_path();
     my $cat_cmd = "cat";
     my $vcf_fh;
@@ -148,8 +151,24 @@ sub output_passing_vcf {
         }
         my ($vcf_chr, $vcf_pos, $id, $ref, $alt, $qual, $filter, $info, @fields) = split("\t", $line);
         if(exists($pass_hash{$vcf_chr}{$vcf_pos})){
-            my $DNFT = "DNFT=" . $pass_hash{$vcf_chr}{$vcf_pos};
-            $info .= ";$DNFT";
+            if($info =~ m/DNFT/) {
+                my @info_tags = split ";", $info;
+                for my $tag (@info_tags) {
+                    if($tag =~m/DNFT/) {
+                        my $status = $pass_hash{$vcf_chr}{$vcf_pos};
+                        if($status eq 'PASS') {
+                            #do nothing, the currently extant tag has more information than we can add
+                        }
+                        else {
+                            $tag = "DNFT=$status";
+                        }
+                    }
+                }
+            }
+            else {
+                my $DNFT = "DNFT=" . $pass_hash{$vcf_chr}{$vcf_pos};
+                $info .= ";$DNFT";
+            }
         }
         $line = join "\t", ($vcf_chr, $vcf_pos, $id, $ref, $alt, $qual, $filter, $info,@fields);
         $output_file->print($line);

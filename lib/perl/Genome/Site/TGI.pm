@@ -8,7 +8,7 @@ BEGIN {
         $ENV{GENOME_SYS_SERVICES_SOLR} ||= 'http://solr-dev:8080/solr';
     }
     else {
-        $ENV{GENOME_SYS_SERVICES_MEMCACHE} ||= 'imp.gsc.wustl.edu:11211';
+        $ENV{GENOME_SYS_SERVICES_MEMCACHE} ||= 'imp-apipe.gsc.wustl.edu:11211';
         $ENV{GENOME_SYS_SERVICES_SOLR} ||= 'http://solr:8080/solr';
     }
 }
