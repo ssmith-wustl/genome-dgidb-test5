@@ -14,6 +14,12 @@ class Genome::Disk::Command::Allocation::Preserve {
             doc => 'allocations to be preserved',
         },
     ],
+    has_optional => {
+        reason => {
+            is => 'Text',
+            doc => 'reason for wanting to preserve these allocations',
+        },
+    ],
     doc => 'preserves the given allocations',
 };
 
@@ -32,7 +38,7 @@ sub execute {
 
     for my $allocation ($self->allocations) {
         $self->debug_message("Preserving allocation " . $allocation->id);
-        my $rv = $allocation->preserved(1);
+        my $rv = $allocation->preserved(1, $self->reason);
         unless ($rv) {
             Carp::confess "Could not preserve allocation " . $allocation->id;
         }

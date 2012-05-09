@@ -14,6 +14,12 @@ class Genome::Disk::Command::Allocation::Unpreserve {
             doc => 'allocations to be unpreserved',
         },
     ],
+    has_optional => [
+        reason => {
+            is => 'Text',
+            doc => 'reason for wanting to set these allocations as unpreserved',
+        },
+    ],
     doc => 'unpreserves the given allocations',
 };
 
@@ -32,7 +38,7 @@ sub execute {
 
     for my $allocation ($self->allocations) {
         $self->debug_message("Unpreserving allocation " . $allocation->id);
-        $allocation->preserved(0);
+        $allocation->preserved(0, $self->reason);
         unless (!$allocation->preserved) {
             Carp::confess "Could not unpreserve allocation " . $allocation->id;
         }

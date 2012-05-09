@@ -10,6 +10,7 @@ use File::Copy::Recursive 'dircopy';
 use Carp 'confess';
 
 class Genome::Disk::Allocation {
+    is => 'Genome::Notable',
     id_generator => '-uuid',
     id_by => [
         id => {
@@ -195,11 +196,13 @@ sub tar_path {
 }
 
 sub preserved {
-    my ($self, $value) = @_;
+    my ($self, $value, $reason) = @_;
     if (@_ > 1) {
-        unless (Genome::Sys->current_user_is_admin) {
-            confess "Only admins can change the preservation status of an allocation!";
-        }
+        $reason ||= 'no reason given';
+        $self->add_note(
+            header_text => $value ? 'set to preserved' : 'set to unpreserved',
+            body_text => $reason,
+        );
         if ($value) {
             $self->_create_observer($self->_mark_read_only_closure($self->absolute_path));
         }
@@ -209,6 +212,19 @@ sub preserved {
         return $self->__preserved($value);
     }
     return $self->__preserved();
+}
+
+sub archivable {
+    my ($self, $value, $reason) = @_;
+    if (@_ > 1) {
+        $reason ||= 'no reason given';
+        $self->add_note(
+            header_text => $value ? 'set to archivable' : 'set to unarchivable',
+            body_text => $reason,
+        );
+        return $self->__archivable($value);
+    }
+    return $self->__archivable;
 }
 
 sub _create {
@@ -1009,14 +1025,62 @@ sub _set_default_permissions_closure {
 # Class method for determining if the given path has a parent allocation
 sub _verify_no_parent_allocation {
     my ($class, $path) = @_;
+    my $allocation = $class->_get_parent_allocation($path);
+    return !(defined $allocation);
+}
+
+# Returns parent allocation for the given path if one exists
+sub _get_parent_allocation {
+    my ($class, $path) = @_;
     my ($allocation) = $class->get(allocation_path => $path);
-    return 0 if $allocation;
+    return $allocation if $allocation;
 
     my $dir = File::Basename::dirname($path);
     if ($dir ne '.' and $dir ne '/') {
-        return $class->_verify_no_parent_allocation($dir);
+        return $class->_get_parent_allocation($dir);
     }
-    return 1;
+    return;
+}
+
+sub _allocation_path_from_full_path {
+    my ($class, $path) = @_;
+    my $allocation_path = $path;
+    my $mount_path = $class->_get_mount_path_from_full_path($path);
+    return unless $mount_path;
+
+    my $group_subdir = $class->_get_group_subdir_from_full_path_and_mount_path($path, $mount_path);
+    return unless $group_subdir;
+
+    $allocation_path =~ s/^$mount_path//;
+    $allocation_path =~ s/^\/$group_subdir//;
+    $allocation_path =~ s/^\///;
+    return $allocation_path;
+}
+
+sub _get_mount_path_from_full_path {
+    my ($class, $path) = @_;
+    my @parts = grep { defined $_ and $_ ne '' } split(/\//, $path);
+    for (my $i = 0; $i < @parts; $i++) {
+        my $volume_subpath = '/' . join('/', @parts[0..$i]);
+        my ($volume) = Genome::Disk::Volume->get(mount_path => $volume_subpath);
+        return $volume_subpath if $volume;
+    }
+    return;
+}
+
+sub _get_group_subdir_from_full_path_and_mount_path {
+    my ($class, $path, $mount_path) = @_;
+    my $subpath = $path;
+    $subpath =~ s/$mount_path//;
+    $subpath =~ s/\///;
+    my @parts = split(/\//, $subpath);
+
+    for (my $i = 0; $i < @parts; $i++) {
+        my $group_subpath = join('/', @parts[0..$i]);
+        my ($group) = Genome::Disk::Group->get(subdirectory => $group_subpath);
+        return $group_subpath if $group;
+    }
+    return;
 }
 
 # Checks for allocations beneath this one, which is also invalid
