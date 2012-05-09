@@ -347,7 +347,7 @@ sub status_with_build {
         $status = 'Build Needed';
     } else {
         $build = $self->current_build;
-        $status = $build->status;
+        $status = ($build ? $build->status : undef);
     }
     return ($status, $build);
 }
