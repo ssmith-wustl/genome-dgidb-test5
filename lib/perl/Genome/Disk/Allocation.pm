@@ -196,11 +196,13 @@ sub tar_path {
 }
 
 sub preserved {
-    my ($self, $value) = @_;
+    my ($self, $value, $reason) = @_;
     if (@_ > 1) {
-        unless (Genome::Sys->current_user_is_admin) {
-            confess "Only admins can change the preservation status of an allocation!";
-        }
+        $reason ||= 'no reason given';
+        $self->add_note(
+            header_text => $value ? 'set to preserved' : 'set to unpreserved',
+            body_text => $reason,
+        );
         if ($value) {
             $self->_create_observer($self->_mark_read_only_closure($self->absolute_path));
         }
@@ -210,6 +212,19 @@ sub preserved {
         return $self->__preserved($value);
     }
     return $self->__preserved();
+}
+
+sub archivable {
+    my ($self, $value, $reason) = @_;
+    if (@_ > 1) {
+        $reason ||= 'no reason given';
+        $self->add_note(
+            header_text => $value ? 'set to archivable' : 'set to unarchivable',
+            body_text => $reason,
+        );
+        return $self->__archivable($value);
+    }
+    return $self->__archivable;
 }
 
 sub _create {
