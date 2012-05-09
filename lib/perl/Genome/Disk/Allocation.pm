@@ -1026,6 +1026,47 @@ sub _get_parent_allocation {
     return;
 }
 
+sub _allocation_path_from_full_path {
+    my ($class, $path) = @_;
+    my $allocation_path = $path;
+    my $mount_path = $class->_get_mount_path_from_full_path($path);
+    return unless $mount_path;
+
+    my $group_subdir = $class->_get_group_subdir_from_full_path_and_mount_path($path, $mount_path);
+    return unless $group_subdir;
+
+    $allocation_path =~ s/^$mount_path//;
+    $allocation_path =~ s/^\/$group_subdir//;
+    $allocation_path =~ s/^\///;
+    return $allocation_path;
+}
+
+sub _get_mount_path_from_full_path {
+    my ($class, $path) = @_;
+    my @parts = grep { defined $_ and $_ ne '' } split(/\//, $path);
+    for (my $i = 0; $i < @parts; $i++) {
+        my $volume_subpath = '/' . join('/', @parts[0..$i]);
+        my ($volume) = Genome::Disk::Volume->get(mount_path => $volume_subpath);
+        return $volume_subpath if $volume;
+    }
+    return;
+}
+
+sub _get_group_subdir_from_full_path_and_mount_path {
+    my ($class, $path, $mount_path) = @_;
+    my $subpath = $path;
+    $subpath =~ s/$mount_path//;
+    $subpath =~ s/\///;
+    my @parts = split(/\//, $subpath);
+
+    for (my $i = 0; $i < @parts; $i++) {
+        my $group_subpath = join('/', @parts[0..$i]);
+        my ($group) = Genome::Disk::Group->get(subdirectory => $group_subpath);
+        return $group_subpath if $group;
+    }
+    return;
+}
+
 # Checks for allocations beneath this one, which is also invalid
 sub _verify_no_child_allocations {
     my ($class, $path) = @_;
