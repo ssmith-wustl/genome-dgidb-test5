@@ -14,7 +14,7 @@ class Genome::Disk::Command::Allocation::Preserve {
             doc => 'allocations to be preserved',
         },
     ],
-    has_optional => {
+    has_optional => [
         reason => {
             is => 'Text',
             doc => 'reason for wanting to preserve these allocations',
