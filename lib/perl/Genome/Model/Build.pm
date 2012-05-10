@@ -521,6 +521,24 @@ sub reallocate {
     return 1;
 }
 
+sub all_used_allocations {
+    my $self = shift;
+    my @allocations = $self->disk_allocation;
+    my @inputs = $self->inputs;
+    for my $input (@inputs) {
+        push @allocations, Genome::Disk::Allocation->get(
+            owner_id => $input->value_id,
+            owner_class_name => $input->value_class_name,
+        );
+    }
+    my @users = Genome::SoftwareResult::User->get(
+        user_id => $self->id,
+        user_class_name => $self->subclass_name,
+    );
+    push @allocations, map { $_->software_result->disk_allocations } @users;
+    return @allocations;
+}
+
 sub log_directory {
     return  $_[0]->data_directory . '/logs/';
 }
