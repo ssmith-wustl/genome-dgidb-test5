@@ -117,15 +117,16 @@ sub import_tsv {
     my $targets_outfile = $self->genes_outfile;
     my $interactions_outfile = $self->interactions_outfile;
     $self->preload_objects;
-    my @interactions = $self->import_interactions($interactions_outfile);
+    my $citation = $self->_create_citation('DrugBank', $self->version);
+    my @interactions = $self->import_interactions($interactions_outfile, $citation);
     return 1;
 }
 
 sub _import_drug {
     my $self = shift;
-    my $version = $self->version;
     my $interaction = shift;
-    my $drug_name = $self->_create_drug_name_report($interaction->{drug_id}, 'DrugBank drug identifier', 'DrugBank', $version, '');
+    my $citation = shift;
+    my $drug_name = $self->_create_drug_name_report($interaction->{drug_id}, $citation, 'DrugBank drug identifier', '');
 
     my $primary_name = $self->_create_drug_alternate_name_report($drug_name, $interaction->{drug_name}, 'Primary DrugBank drug name', '');
 
@@ -172,11 +173,11 @@ sub _import_drug {
 
 sub _import_gene {
     my $self = shift;
-    my $version = $self->version;
     my $interaction = shift;
+    my $citation = shift;
     my $gene_prefix = 'DGBNK_G';
     my $gene_partner_id_with_prefix = $gene_prefix . $interaction->{partner_id};
-    my $gene_name = $self->_create_gene_name_report($gene_partner_id_with_prefix, 'drugbank_partner_id', 'DrugBank', $version, '');
+    my $gene_name = $self->_create_gene_name_report($gene_partner_id_with_prefix, $citation, 'drugbank_partner_id', '');
     my $gene_symbol_gene_name_association = $self->_create_gene_alternate_name_report($gene_name, $interaction->{gene_symbol}, 'drugbank_gene_symbol', '');
     my $uniprot_gene_name_association=$self->_create_gene_alternate_name_report($gene_name, $interaction->{uniprot_id}, 'uniprot_id', '');
     return $gene_name;
@@ -184,8 +185,8 @@ sub _import_gene {
 
 sub import_interactions {
     my $self = shift;
-    my $version = $self->version;
     my $interaction_outfile = shift;
+    my $citation = shift;
     my @interactions;
     my @headers = qw/ interaction_count drug_id drug_name drug_synonyms drug_cas_number drug_brands drug_type drug_groups drug_categories partner_id known_action target_actions gene_symbol uniprot_id /;
     my $parser = Genome::Utility::IO::SeparatedValueReader->create(
@@ -197,9 +198,9 @@ sub import_interactions {
 
     $parser->next; #eat the headers
     while(my $interaction = $parser->next){
-        my $drug_name = $self->_import_drug($interaction);
-        my $gene_name = $self->_import_gene($interaction);
-        my $drug_gene_interaction = $self->_create_interaction_report($drug_name, $gene_name, 'DrugBank', $version, '');
+        my $drug_name = $self->_import_drug($interaction, $citation);
+        my $gene_name = $self->_import_gene($interaction, $citation);
+        my $drug_gene_interaction = $self->_create_interaction_report($citation, $drug_name, $gene_name, '');
         push @interactions, $drug_gene_interaction;
         my $is_known_action = $self->_create_interaction_report_attribute($drug_gene_interaction, 'is_known_action', $interaction->{'known_action'});
         my @interaction_types = split(', ', $interaction->{target_actions});
