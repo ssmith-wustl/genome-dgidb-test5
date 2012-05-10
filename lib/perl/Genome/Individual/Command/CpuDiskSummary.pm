@@ -172,26 +172,33 @@ sub execute {
                     $f{normal_build} .= " " . $normal_build->__display_name__;
                     $f{"Normal RefAlign (slot*hr)"} += (eval { $normal_build->cpu_slot_hours("event_type not like" => '%align-reads%') } || 0);
                     my $normal_alloc1 = $normal_build->disk_allocation;
-                    $gb_regular = ($normal_alloc1->kilobytes_requested / (1024**2));
-                    $f{"Normal RefAlign GB regular"} += $gb_regular; 
-                    $normal_bam_dir = $normal_build->accumulated_alignments_directory;
-
-                    my $normal_bam_size;
-                    my $dir = $normal_bam_dir;
-                    while (-l $dir) {
-                        $dir = readlink($dir);
-                    }
-                    $dir =~ s|^.*build_merged_alignments|build_merged_alignments|;
-                    if ($seen_dirs{$dir}) {
-                        $normal_bam_size = 0;
-                        #warn "skipping dir $dir\n";
+                    if ($normal_alloc1) {
+                        $gb_regular = ($normal_alloc1->kilobytes_requested / (1024**2));
+                        $f{"Normal RefAlign GB regular"} += $gb_regular; 
                     }
                     else {
-                        $seen_dirs{$dir} = 1;
-                        #warn "not skipping $dir, seen " . join(",",keys %seen_dirs);
-                        my $normal_alloc = Genome::Disk::Allocation->get(allocation_path => $dir);
-                        $normal_bam_size = ($normal_alloc ? ($normal_alloc->kilobytes_requested / (1024**2)) : 0); 
-                        $f{"Normal RefAlign GB bam"} += $normal_bam_size; 
+                        warn "no allocation for build " . $normal_build->__display_name__;
+                    }
+
+                    $normal_bam_dir = $normal_build->accumulated_alignments_directory;
+                    my $normal_bam_size = 0;
+                    if ($normal_bam_dir) {
+                        my $dir = $normal_bam_dir;
+                        while (-l $dir) {
+                            $dir = readlink($dir);
+                        }
+                        $dir =~ s|^.*build_merged_alignments|build_merged_alignments|;
+                        if ($seen_dirs{$dir}) {
+                            $normal_bam_size = 0;
+                            #warn "skipping dir $dir\n";
+                        }
+                        else {
+                            $seen_dirs{$dir} = 1;
+                            #warn "not skipping $dir, seen " . join(",",keys %seen_dirs);
+                            my $normal_alloc = Genome::Disk::Allocation->get(allocation_path => $dir);
+                            $normal_bam_size = ($normal_alloc ? ($normal_alloc->kilobytes_requested / (1024**2)) : 0); 
+                            $f{"Normal RefAlign GB bam"} += $normal_bam_size; 
+                        }
                     }
                     $f{"Normal RefAlign (GB)"} += ($gb_regular + $normal_bam_size);
                 }
