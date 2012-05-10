@@ -74,11 +74,13 @@ sub import_interactions {
         is_regex => 1,
     );
 
+    my $citation = $self->_create_citation('TTD', $version);
+
     $parser->next; #eat the headers
     while(my $interaction = $parser->next){
-        my $drug_name = $self->_import_drug($interaction);
-        my $gene_name = $self->_import_gene($interaction);
-        my $drug_gene_interaction = $self->_create_interaction_report($drug_name, $gene_name, 'TTD', $version, '');
+        my $drug_name = $self->_import_drug($interaction, $citation);
+        my $gene_name = $self->_import_gene($interaction, $citation);
+        my $drug_gene_interaction = $self->_create_interaction_report($citation, $drug_name, $gene_name, '');
         push @interactions, $drug_gene_interaction;
         my @interaction_types = split('; ', $interaction->{interaction_types});
         for my $interaction_type (@interaction_types){
@@ -92,8 +94,8 @@ sub import_interactions {
 sub _import_drug {
     my $self = shift;
     my $interaction = shift;
-    my $version = $self->version;
-    my $drug_name = $self->_create_drug_name_report($interaction->{drug_id}, 'TTD_drug_id', 'TTD', $version, '');
+    my $citation = shift;
+    my $drug_name = $self->_create_drug_name_report($interaction->{drug_id}, $citation, 'TTD_drug_id', '');
 
     my $primary_drug_name = $self->_create_drug_alternate_name_report($drug_name, $interaction->{drug_name}, 'TTD_primary_drug_name', '');
 
@@ -121,11 +123,11 @@ sub _import_drug {
 sub _import_gene {
     my $self = shift;
     my $interaction = shift;
-    my $version = $self->version;
-    my $gene_name = $self->_create_gene_name_report($interaction->{target_id}, 'TTD_partner_id', 'TTD', $version, '');
-    
+    my $citation = shift;
+    my $gene_name = $self->_create_gene_name_report($interaction->{target_id}, $citation, 'TTD_partner_id', '');
+
     my $gene_name_association = $self->_create_gene_alternate_name_report($gene_name, $interaction->{target_name}, 'TTD_gene_symbol', '');
-    
+
     my @target_synonyms = split(";", $interaction->{target_synonyms});
     for my $target_synonym (@target_synonyms){
         next if $target_synonym eq 'na';
@@ -158,7 +160,7 @@ sub input_to_tsv {
     $self->version($version) if $version;
     my $drugs = $self->_parse_crossmatch_file($crossmatch_path);
     $self->_parse_synonyms_file($synonyms_path, $drugs);
-    
+
     #Write data to the file
     for my $target_id (keys %{$targets}){
             #Target Uniprot Id
@@ -200,7 +202,7 @@ sub input_to_tsv {
             }else{
                 $drug_pubchem_sid = 'na';
             }
-            
+
             #Drug Synonyms
             my $drug_synonyms = $drugs->{$drug_id}{'synonyms'};
             $drug_synonyms = "na" unless $drug_synonyms;
@@ -254,7 +256,7 @@ sub download_file {
       self->error_message('Failed to wget the specified URL');
       return;
     }
-    
+
     return $path;
 }
 
@@ -274,7 +276,7 @@ sub _parse_targets_file {
             $version =~ s/Version //i;
             next;
         }elsif($line =~ m/^TTD\w+/){
-            my ($id, $key, $value, @extra_fields) = split("\t", $line); 
+            my ($id, $key, $value, @extra_fields) = split("\t", $line);
             $key = 'drugs' if $key eq 'Drug(s)';
             if(!$targets->{$id}){
                 $targets->{$id} = {};
@@ -316,7 +318,7 @@ sub _parse_crossmatch_file {
             if(!$drugs->{$id}){
                 $drugs->{$id} = {};
             }
-            $drugs->{$id}{$key} = $value; 
+            $drugs->{$id}{$key} = $value;
         }
     }
 
