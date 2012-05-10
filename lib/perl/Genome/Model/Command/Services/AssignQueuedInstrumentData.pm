@@ -267,7 +267,7 @@ sub execute {
 
                     if(scalar(@assigned > 0)) {
                         for my $m (@assigned) {
-                            $pse->add_param('genome_model_id', $m->id);
+                            $pse->add_param('genome_model_id', $m->id) unless (grep { $_ eq $m->id } $pse->added_param('genome_model_id'));
                         }
                         #find or create default qc models if applicable
                         $self->create_default_qc_models(@assigned);
