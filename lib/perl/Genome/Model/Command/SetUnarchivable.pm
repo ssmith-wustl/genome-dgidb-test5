@@ -28,7 +28,7 @@ sub help_detail {
         'alignment results, variation detection results, and other inputs';
 }
 sub help_brief { return 'marks last complete build of each model as unarchivable' };
-sub help_synopsis { return help_brief() };
+sub help_synopsis { return help_brief() . "\n" };
 
 sub execute {
     my $self = shift;
