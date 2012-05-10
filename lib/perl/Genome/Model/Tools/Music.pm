@@ -2,7 +2,7 @@ package Genome::Model::Tools::Music;
 use strict;
 use warnings;
 use Genome;
-our $VERSION = '0.3.1';
+our $VERSION = '0.030001';
 #our $VERSION = 'latest';
 
 class Genome::Model::Tools::Music {
