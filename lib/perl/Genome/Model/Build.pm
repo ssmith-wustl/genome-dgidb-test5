@@ -521,11 +521,10 @@ sub reallocate {
     return 1;
 }
 
-sub all_used_allocations {
+sub all_allocations {
     my $self = shift;
     my @allocations = $self->disk_allocation;
-    my @inputs = $self->inputs;
-    for my $input (@inputs) {
+    for my $input ($self->inputs) {
         push @allocations, Genome::Disk::Allocation->get(
             owner_id => $input->value_id,
             owner_class_name => $input->value_class_name,
@@ -2061,51 +2060,6 @@ sub delta_model_input_differences_from_model {
         }
     }
     return @model_inputs_to_include;
-}
-
-sub input_allocation{
-    my $self = shift;
-    my @allocations;
-    my @input_values = map { $_->value } $self->inputs;
-    for my $input ($self->inputs) {
-        my $value = $input->value;
-        next unless ($value);
-        foreach my $allocation ( Genome::Disk::Allocation->get(owner_id => $value->id, owner_class_name => $value->class) ) {
-            push @allocations, $allocation;
-        }
-    }
-    return @allocations;
-}
-
-sub software_result_allocations{
-    my $self = shift;
-    my @allocations;
-    my @sru = Genome::SoftwareResult::User->get( user_id => $self->id, user_class_name => $self->subclass_name );
-    foreach my $sru (@sru) {
-        my $sr = $sru->software_result;
-        next unless ($sr);
-        my $allocation = Genome::Disk::Allocation->get(owner_id => $sr->id, owner_class_name => $sr->class);
-        if ($allocation){
-            push @allocations, $allocation;
-        }
-    }
-    return @allocations;
-}
-
-sub all_allocations {
-    my $self = shift;
-    my @allocations;
-    #get self allocation
-    push @allocations, $self->disk_allocation;
-    #get input allocations
-    push @allocations, $self->input_allocation;
-    #get sr allocations
-    push @allocations, $self->software_result_allocations;
-    #get all allocations from from_builds
-    for my $from_build ($self->from_builds){
-        push @allocations, $from_build->all_allocations;
-    }
-    return @allocations;
 }
 
 sub is_used_as_model_or_build_input {
