@@ -22,7 +22,7 @@ sub _create_citation {
     my $self = shift;
     my $source_db_name = shift;
     my $source_db_version = shift;
-    return Genome::DruggabelGene::Citation->create(
+    return Genome::DruggableGene::Citation->create(
         source_db_name => $source_db_name,
         source_db_version => $source_db_version,
     );
