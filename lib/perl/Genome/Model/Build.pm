@@ -443,7 +443,7 @@ sub _cpu_slot_usage_breakdown {
             if ($params[0] =~ /event_type/) {
                 $params[0] =~ s/event_type/name/;
             }
-            #$bx = Workflow::Operation::Instance->define_boolexpr(@params);
+            $bx = Workflow::Operation::Instance->define_boolexpr(@params);
         }
 
 
