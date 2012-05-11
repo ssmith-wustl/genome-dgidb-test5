@@ -18,14 +18,23 @@ class Genome::Model::Tools::Dgidb::Import::Base {
     doc => 'Base class for importing datasets into DGI:DB',
 };
 
-sub _create_drug_name_report {
+sub _create_citation {
     my $self = shift;
-    my ($name, $nomenclature, $source_db_name, $source_db_version, $description) = @_;
-    my %params = ( 
-        name => uc $name,
-        nomenclature => $nomenclature,
+    my $source_db_name = shift;
+    my $source_db_version = shift;
+    return Genome::DruggableGene::Citation->create(
         source_db_name => $source_db_name,
         source_db_version => $source_db_version,
+    );
+}
+
+sub _create_drug_name_report {
+    my $self = shift;
+    my ($name, $citation, $nomenclature, $description) = @_;
+    my %params = (
+        name => uc $name,
+        nomenclature => $nomenclature,
+        citation => $citation,
         description => $description,
     );
 
@@ -46,7 +55,7 @@ sub _create_drug_alternate_name_report {
 
     my $drug_alternate_name_report = Genome::DruggableGene::DrugAlternateNameReport->get(%params);
     return $drug_alternate_name_report if $drug_alternate_name_report;
-    return Genome::DruggableGene::DrugAlternateNameReport->create(%params);    
+    return Genome::DruggableGene::DrugAlternateNameReport->create(%params);
 }
 
 sub _create_drug_category_report {
@@ -65,12 +74,11 @@ sub _create_drug_category_report {
 
 sub _create_gene_name_report {
     my $self = shift;
-    my ($name, $nomenclature, $source_db_name, $source_db_version, $description) = @_;
+    my ($name, $citation, $nomenclature, $description) = @_;
     my %params = (
         name => uc $name,
         nomenclature => $nomenclature,
-        source_db_name => $source_db_name,
-        source_db_version => $source_db_version,
+        citation => $citation,
         description => $description,
     );
 
@@ -111,12 +119,11 @@ sub _create_gene_category_report {
 
 sub _create_interaction_report {
     my $self = shift;
-    my ($drug_name_report, $gene_name_report, $source_db_name, $source_db_version, $description) = @_;
+    my ($citation, $drug_name_report, $gene_name_report, $description) = @_;
     my %params = (
         gene_id => $gene_name_report->id,
         drug_id => $drug_name_report->id,
-        source_db_name => $source_db_name,
-        source_db_version => $source_db_version,
+        citation => $citation,
         description =>  $description,
     );
 

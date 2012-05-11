@@ -81,11 +81,6 @@ my $allocation = Genome::Disk::Allocation->create(
 ok($allocation, 'created test allocation');
 ok($allocation->preserved == 0, 'allocation is not preserved');
 
-# Override some methods so test works even if user isn't an admin
-no warnings 'redefine';
-*Genome::Sys::current_user_has_role = sub { return 1 };
-use warnings;
-
 # Simulate command line execution
 my @args = ('genome', 'disk', 'allocation', 'preserve', $allocation->id);
 my $rv = Genome::Disk::Command::Allocation::Preserve->_execute_with_shell_params_and_return_exit_code(@args);

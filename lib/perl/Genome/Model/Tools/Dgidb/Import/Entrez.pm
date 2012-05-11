@@ -41,11 +41,11 @@ sub _doc_copyright_years {
 
 sub _doc_license {
     my $self = shift;
-    my (@y) = $self->_doc_copyright_years;  
+    my (@y) = $self->_doc_copyright_years;
     return <<EOS
 Copyright (C) $y[0] Washington University in St. Louis.
 
-It is released under the Lesser GNU Public License (LGPL) version 3.  See the 
+It is released under the Lesser GNU Public License (LGPL) version 3.  See the
 associated LICENSE file in this distribution.
 EOS
 }
@@ -115,11 +115,12 @@ sub import_genes {
         separator => "\t",
         is_regex=> 1,
     );
+    my $citation = $self->_create_citation('Entrez', $version);
 
     $parser->next; #eat the headers
     while(my $gene = $parser->next){
         my $gene_name = join("", $gene_name_prefix, $gene->{entrez_id});
-        my $gene_name_report = $self->_create_gene_name_report($gene_name, 'entrez_id', 'Entrez', $version, '');
+        my $gene_name_report = $self->_create_gene_name_report($gene_name, $citation, 'entrez_id', '');
         push @gene_name_reports, $gene_name_report;
         my $gene_symbol_association = $self->_create_gene_alternate_name_report($gene_name_report, $gene->{entrez_gene_symbol}, 'entrez_gene_symbol', '');
         my @entrez_gene_synonyms = split(',', $gene->{entrez_gene_synonyms});
@@ -167,7 +168,7 @@ sub input_to_tsv {
     my $targets_header = join("\t", 'entrez_id', 'entrez_gene_symbol', 'entrez_gene_synonyms');
     print TARGETS "$targets_header\n";
 
-    my %entrez_ids = %{$entrez_data->{'entrez_ids'}}; 
+    my %entrez_ids = %{$entrez_data->{'entrez_ids'}};
     for my $entrez_id (keys %entrez_ids){
         my %entrez_id_names = %{$entrez_ids{$entrez_id}};
         my $synonyms = $entrez_id_names{synonyms_array};
@@ -215,7 +216,7 @@ sub loadEntrezData {
             $synonyms = "na";
         }
         my @synonyms_array = split("\\|", $synonyms);
-        my %synonyms_hash;   
+        my %synonyms_hash;
         foreach my $syn (@synonyms_array){
             $synonyms_hash{$syn} = 1;
         }

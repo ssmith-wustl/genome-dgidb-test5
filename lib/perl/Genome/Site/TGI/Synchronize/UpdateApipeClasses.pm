@@ -32,6 +32,8 @@ sub objects_to_sync {
         'Genome::Site::TGI::InstrumentData::454' => 'Genome::InstrumentData::454',
         'Genome::Site::TGI::InstrumentData::Sanger' => 'Genome::InstrumentData::Sanger',
         'Genome::Site::TGI::InstrumentData::Solexa' => 'Genome::InstrumentData::Solexa',
+        'Genome::Site::TGI::InstrumentData::ExternalGenotyping' => 'Genome::InstrumentData::Imported',
+        'Genome::Site::TGI::InstrumentData::IlluminaGenotyping' => 'Genome::InstrumentData::Imported',
         'Genome::Site::TGI::Individual' => 'Genome::Individual',
         'Genome::Site::TGI::PopulationGroup' => 'Genome::PopulationGroup',
         'Genome::Site::TGI::Taxon' => 'Genome::Taxon',
@@ -54,6 +56,8 @@ sub sync_order {
         Genome::Site::TGI::Library
         Genome::Site::TGI::InstrumentData::Solexa
         Genome::Site::TGI::InstrumentData::454
+        Genome::Site::TGI::InstrumentData::ExternalGenotyping
+        Genome::Site::TGI::InstrumentData::IlluminaGenotyping
     /;
 
     # FIXME Currently not syncing sanger data due to a bug, needs to be fixed
@@ -320,6 +324,92 @@ SQL
     print STDERR 'Loaded '.scalar(keys %instrument_data_with_successful_pidfas)." successful PIDFAs\n";
     print STDERR 'Loaded '.scalar(grep { defined } values %instrument_data_with_successful_pidfas)." genotype files\n";
     return 1;
+}
+
+sub _create_instrumentdata_illuminagenotyping { _create_genotype_microarray(@_) }
+sub _create_instrumentdata_externalgenotyping { _create_genotype_microarray(@_) }
+sub _create_genotype_microarray {
+    my ($self, $original_object, $new_object_class) = @_;
+
+    # Successful PIDFA required! The value is the genotype file. It must exist, too!
+    my $genotype_file = $instrument_data_with_successful_pidfas{$original_object->id};
+    return 0 unless $genotype_file and -s $genotype_file;
+    
+    my $library_name = $original_object->sample_name.'-microarraylib';
+    my ($library) = Genome::Library->get(name => $library_name, sample_id => $original_object->sample_id);
+    if ( not $library ) {
+        $library = Genome::Library->create(name => $library_name, sample_id => $original_object->sample_id);
+        if ( not $library ) {
+            Carp::confess('Failed to create genotype microarray library for sample: '.$original_object->sample_id);
+        }
+    }
+
+    my $object = eval {
+        $new_object_class->create(
+            id => $original_object->id,
+            library => $library,
+            sequencing_platform => $original_object->platform_name,
+            import_format => 'genotype file',
+            import_source_name => $original_object->import_source_name,
+        );
+    };
+    confess "Could not create new object of type $new_object_class based on object of type " .
+        $original_object->class . " with id " . $original_object->id . ":\n$@" if not $object;
+
+    my $new_genotype_file = $self->_copy_genotpe_file($object, $genotype_file);
+    Carp::confess('Failed to copy genotype file!') if not $new_genotype_file;
+
+    my $indirect_properties = {
+        genotype_file => $new_genotype_file,
+    };
+    my $add_attrs = $self->_add_attributes_to_instrument_data($object, $indirect_properties);
+    Carp::confess('Failed to add attributes to instrument data: '.$object->__display_name__) if not $add_attrs;
+
+    return 1;
+}
+
+sub _copy_genotpe_file {
+    my ($self, $instrument_data, $genotype_file) = @_;
+
+    my $kilobytes_requested = -s $genotype_file;
+    return if not $kilobytes_requested; # should not happen
+
+    my ($disk_allocation) = $instrument_data->allocations;
+    if ( not $disk_allocation ) {
+        $disk_allocation = Genome::Disk::Allocation->allocate (
+            disk_group_name => 'info_alignments',
+            allocation_path => 'instrument_data/imported/'.$instrument_data->id,
+            kilobytes_requested => $kilobytes_requested,
+            owner_class_name => $instrument_data->class,
+            owner_id => $instrument_data->id,
+        );
+        if ( not $disk_allocation ) {
+            $self->error_message("Failed to create disk allocation for instrument data: ".$instrument_data->id);
+            return
+        }
+    }
+    else { # this should not exist
+        my $realloc = eval{ 
+            $disk_allocation->reallocate(
+                kilobytes_requested => $kilobytes_requested, 
+                allow_reallocate_with_move => 1, 
+            );
+        };
+        if ( not $realloc ) {
+            $self->error_message('Failed to reallocate instrument data ('.$disk_allocation->owner_id.')');
+            return;
+        }
+    }
+
+    my $new_genotype_file = $disk_allocation->absolute_path.'/'.$instrument_data->sample->id.'.genotype';
+    unlink $new_genotype_file if -e $new_genotype_file;
+    my $copy = File::Copy::copy($genotype_file, $new_genotype_file);
+    if ( not $copy ) {
+        $self->error_message("Failed to copy genotype file from $genotype_file to $new_genotype_file => $!");
+        return;
+    }
+
+    return $new_genotype_file;
 }
 
 sub _create_instrumentdata_solexa {

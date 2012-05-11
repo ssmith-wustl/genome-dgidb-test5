@@ -10,11 +10,11 @@ class Genome::Disk::Command::Allocation::SetUnarchivable {
         allocations => {
             is => 'Genome::Disk::Allocation',
             is_many => 1,
-            doc => 'Allocations that are to be set as unarchivable',
+            doc => 'allocations that are to be set as unarchivable, resolved via Command::V2',
         },
         paths => {
             is => 'Text',
-            doc => 'Comma delimited list of paths, an attempt will be made to resolve them to allocations',
+            doc => 'comma delimited list of paths, an attempt will be made to resolve them to allocations',
         },
         reason => {
             is => 'Text',
@@ -23,9 +23,13 @@ class Genome::Disk::Command::Allocation::SetUnarchivable {
     ],
 };
 
-sub help_detail { return 'given allocations and paths are set as unarchivable' };
-sub help_brief { return help_detail() };
-sub help_synopsis { return help_detail() };
+sub help_detail { 
+    return 'Given allocations and paths are set as unarchviable. Any paths that are given are resolved ' .
+        'to allocations if possible, otherwise a warning is emitted. Allocations are that marked this way ' .
+        'will not be migrated to archive tape';
+}
+sub help_brief { return 'given allocations and paths are set as unarchivable' };
+sub help_synopsis { return help_brief() . "\n" };
 
 sub execute {
     my $self = shift;

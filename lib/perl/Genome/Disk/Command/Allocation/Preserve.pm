@@ -14,7 +14,7 @@ class Genome::Disk::Command::Allocation::Preserve {
             doc => 'allocations to be preserved',
         },
     ],
-    has_optional => {
+    has_optional => [
         reason => {
             is => 'Text',
             doc => 'reason for wanting to preserve these allocations',
@@ -27,10 +27,6 @@ sub help_detail {
     return 'preserves the given allocations, preventing them from being modified or deleted';
 }
 sub help_brief { return help_detail() }
-
-sub _is_hidden_in_docs {
-    return !Genome::Sys->current_user_is_admin;
-}
 
 sub execute {
     my $self = shift;

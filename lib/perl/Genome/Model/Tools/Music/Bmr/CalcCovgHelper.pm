@@ -12,17 +12,12 @@ class Genome::Model::Tools::Music::Bmr::CalcCovgHelper {
     roi_file => { is => 'Text', doc => "Tab delimited list of ROIs [chr start stop gene_name] (See Description)" },
     reference_sequence => { is => 'Text', doc => "Path to reference sequence in FASTA format" },
     normal_tumor_bam_pair => { is => 'Text', doc => "Tab delimited line with sample name, path to normal bam file, and path to tumor bam file (See Description)" },
-    output_dir => { is => 'Text', doc => "Output directory file path"},
+    output_file => { is => 'Text', doc => "Output file path"},
     normal_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Normal BAM base as covered", is_optional => 1,  default => 6},
     tumor_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Tumor BAM base as covered", is_optional => 1, default => 8},
     min_mapq => { is => 'Integer', doc => "The minimum mapping quality of reads to consider towards read depth counts", is_optional => 1, default => 20},
   ],
   has_calculated_optional => [
-    output_file => {
-        is_output => 1,
-        calculate_from => ['normal_tumor_bam_pair', 'output_dir'],
-        calculate => q {my @bams = split /\t/, $normal_tumor_bam_pair; return $output_dir."/".$bams[0].".covg"},
-    },
     normal_bam => {
         calculate_from => ['normal_tumor_bam_pair'],
         calculate => q {my @bams = split /\t/, $normal_tumor_bam_pair; return $bams[1];},
@@ -42,7 +37,7 @@ General usage:
  ... music bmr calc-covg-helper \\
     --normal-tumor-bam-pair "sample-name path/to/normal_bam path/to/tumor_bam" \\
     --reference-sequence input_dir/all_sequences.fa \\
-    --output-dir output_dir \\
+    --output-file output_file \\
     --roi-file input_dir/all_coding_exons.tsv
 
 HELP
@@ -97,11 +92,11 @@ sub _additional_help_sections {
 
 =back
 
-=item --output-dir
+=item --output-file
 
 =over 8
 
-=item Specify an output directory where the per-ROI covered base counts file will be written
+=item Specify an output file where the per-ROI covered base counts will be written
 
 =back
 
@@ -178,7 +173,6 @@ sub execute {
   elsif( system( "$calcRoiCovg_cmd" ) != 0 )
   {
     print STDERR "Failed to execute: $calcRoiCovg_cmd\n";
-    next;
   }
   else
   {
