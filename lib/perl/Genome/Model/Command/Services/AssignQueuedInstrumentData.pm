@@ -401,14 +401,28 @@ sub execute {
         for my $failed_aqid_pse_param ( @failed_aqid_pse_params ) {
             $failed_aqid_pse_param->delete;
         }
-        # Rm tgi lims status attribute(s)
-        $pse->{_instrument_data}->remove_attribute(attribute_label => 'tgi_lims_status');
-        # Set tgi lims status attribute to processed
-        $pse->{_instrument_data}->add_attribute(
-            attribute_label => 'tgi_lims_status',
-            attribute_value => 'processed',
-        );
+        $self->_update_instrument_data_tgi_lims_status_to($pse->{_instrument_data}, 'processed');
     }
+
+    return 1;
+}
+
+sub _update_instrument_data_tgi_lims_status_to {
+    my ($self, $instrument_data, $status) = @_;
+
+    # These should not happen - developer error
+    Carp::confess('No instrument data given to update instrument data tgi lims status!') if not $instrument_data;
+    Carp::confess('No status given to update instrument data tgi lims status!') if not $status;
+    Carp::confess("No invalid status ($status) given to update instrument data tgi lims status!") if not grep { $status eq $_ } (qw/ processed failed_aqid /);
+
+    # Rm tgi lims status attribute(s)
+    $instrument_data->remove_attribute(attribute_label => 'tgi_lims_status');
+
+    # Set tgi lims status attribute to processed
+    $instrument_data->add_attribute(
+        attribute_label => 'tgi_lims_status',
+        attribute_value => $status,
+    );
 
     return 1;
 }
