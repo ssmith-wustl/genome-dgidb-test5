@@ -8,14 +8,14 @@ use Workflow::Simple;
 class Genome::Model::MutationalSignificance::Command::PlayMusic {
     is => ['Command::V2'],
     has_input => [
+        bam_list => {
+            is => 'Text',
+            doc => 'Tab delimited list of BAM files [sample_name normal_bam tumor_bam]',
+        },
         processors => {
             is => 'Integer',
             default_value => 6,
             doc => "Number of processors to use in SMG (requires 'foreach' and 'doMC' R packages)",
-        },
-        bam_list => {
-            is => 'Text',
-            doc => 'Tab delimited list of BAM files [sample_name normal_bam tumor_bam]',
         },
         maf_file => {
             is => 'Text',
@@ -44,6 +44,15 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         },
     ],
     has_optional_input => [
+        music_build => {
+            is => 'Genome::Model::Build',
+            doc => 'Build that is using the results of this workflow.'
+        },
+        somatic_variation_builds => {
+            is => 'Genome::Model::Build::SomaticVariation',
+            is_many => 1,
+            doc => 'Builds to analyze.  Each build must match up with one line in bam_list.  Use these for performance enhancement when available',
+        },
         log_directory => {
             is => 'Text',
             doc => "Directory to write log files from MuSiC components",
@@ -94,14 +103,17 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
             doc => 'Number of permutations used to determine P-values',
         },
         normal_min_depth => {
+            default_value => 6,
             is => 'Integer',
             doc => 'The minimum read depth to consider a Normal BAM base as covered',
         },
         tumor_min_depth => {
+            default_value => 8,
             is => 'Integer',
             doc => 'The minimum read depth to consider a Tumor BAM base as covered',
         },
         min_mapq => {
+            default_value => 20,
             is => 'Integer',
             doc => 'The minimum mapping quality of reads to consider towards read depth counts',
         },
@@ -222,7 +234,7 @@ sub help_synopsis {
     return <<EOS
 This tool takes as parameters all the information required to run the individual tools.  The tools will be run in parallel in an lsf workflow, with values such as bmr passed between tools.  An example usage is:
 
-... genome model mutational-significance \\
+... genome model mutational-significance play-music\\
         --bam-list input/bams_to_analyze.txt \\
         --numeric-clinical-data-file input/numeric_clinical_data.csv \\
         --maf-file input/myMAF.tsv \\
@@ -241,6 +253,41 @@ sub help_detail {
     return <<EOS
 This command can be used to run all of the MuSiC analysis tools on a set of data.  Please see the individual tools for further description of the parameters.
 EOS
+}
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+
+    #check somatic_variation_builds and bam_list, if available
+    if ($self->somatic_variation_builds) {
+        open(BAM_LIST, $self->bam_list);
+        my @bam_list;
+        while(<BAM_LIST>) {
+            push @bam_list, $_;
+        }
+        close BAM_LIST;
+        chomp @bam_list;
+        bam_list: foreach my $line (@bam_list) {
+            my @fields = split (/\t/, $line);
+            my $found = 0;
+            foreach my $build ($self->somatic_variation_builds) {
+                if ($build->normal_bam eq $fields[1] and $build->tumor_bam eq $fields[2]) {
+                    $found = 1;
+                    next bam_list;
+                }
+            }
+            if (!$found) {
+                $self->error_message("Somatic variation build for bam_list line \"$line\" was not found in the somatic_variation_builds inputs");
+                return;
+            }
+        }
+        unless ($self->music_build) {
+            $self->error_message("No user build passed in to play-music workflow.  If you pass in somatic variation builds to use as software results, you must also pass in the build that will use the software results");
+            return;
+        }
+    }
+    return $self;
 }
 
 sub execute {
@@ -277,6 +324,8 @@ sub execute {
     foreach my $module (qw/path_scan smg mutation_relation clinical_correlation cosmic_omim pfam/) {
         $properties{$module."_output_file"} = $self->output_dir."/$module";
     }
+
+    $workflow->save_to_xml(OutputFile => $self->output_dir . '/play_music_build.xml');
 
     my @errors = $workflow->validate;
     unless ($workflow->is_valid) {
@@ -352,21 +401,50 @@ sub _create_workflow {
     my $input_connector = $workflow->get_input_connector;
     my $output_connector = $workflow->get_output_connector;
 
-    my $command_module = 'Genome::Model::Tools::Music::Bmr::CalcCovgHelper';
-    my $calc_covg_operation = $workflow->add_operation(
-        name => $self->_get_operation_name_for_module($command_module),
-        operation_type => Workflow::OperationType::Command->create(
-            command_class_name => $command_module,
-        ),
-        parallel_by => 'normal_tumor_bam_pair',
-    );
+    my $command_module;
+    my $calc_covg_operation;
+    my $link;
+    if ($self->somatic_variation_builds){
+        $command_module = 'Genome::Model::MutationalSignificance::Command::CalcCovg';
+        $calc_covg_operation = $workflow->add_operation(
+            name => $self->_get_operation_name_for_module($command_module),
+            operation_type => Workflow::OperationType::Command->create(
+                command_class_name => $command_module,
+            ),
+            parallel_by => 'somatic_variation_build',
+        );
 
-    my $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'normal_tumor_pairs',
-        right_operation => $calc_covg_operation,
-        right_property => 'normal_tumor_bam_pair',
-    );
+        $link = $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => 'somatic_variation_builds',
+            right_operation => $calc_covg_operation,
+            right_property => 'somatic_variation_build',
+        );
+
+        $link = $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => 'music_build',
+            right_operation => $calc_covg_operation,
+            right_property => 'music_build',
+        );
+    }
+    else {
+        $command_module = 'Genome::Model::Tools::Music::Bmr::CalcCovgHelper';
+        $calc_covg_operation = $workflow->add_operation(
+            name => $self->_get_operation_name_for_module($command_module),
+            operation_type => Workflow::OperationType::Command->create(
+                command_class_name => $command_module,
+            ),
+            parallel_by => 'normal_tumor_bam_pair',
+        );
+
+        $link = $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => 'normal_tumor_pairs',
+            right_operation => $calc_covg_operation,
+            right_property => 'normal_tumor_bam_pair',
+        );
+    }
 
     $link = $workflow->add_link(
         left_operation => $input_connector,
@@ -388,6 +466,33 @@ sub _create_workflow {
         right_operation => $calc_covg_operation,
         right_property => 'roi_file',
     );
+
+    if ($self->normal_min_depth) {
+        $link = $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => 'normal_min_depth',
+            right_operation => $calc_covg_operation,
+            right_property => 'normal_min_depth',
+        );
+    }
+
+    if ($self->tumor_min_depth) {
+        $link = $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => 'tumor_min_depth',
+            right_operation => $calc_covg_operation,
+            right_property => 'tumor_min_depth',
+        );
+    }
+
+    if ($self->min_mapq) {
+        $link = $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => 'min_mapq',
+            right_operation => $calc_covg_operation,
+            right_property => 'min_mapq',
+        );
+    }
 
     $command_module = 'Genome::Model::MutationalSignificance::Command::MergeCalcCovg';
     my $merge_calc_covg_operation = $workflow->add_operation(
