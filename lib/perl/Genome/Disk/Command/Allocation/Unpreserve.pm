@@ -28,10 +28,6 @@ sub help_detail {
 }
 sub help_brief { return help_detail() }
 
-sub _is_hidden_in_docs {
-    return !Genome::Sys->current_user_is_admin;
-}
-
 sub execute {
     my $self = shift;
     $self->status_message("Starting de-preservation command!");
