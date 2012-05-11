@@ -394,8 +394,16 @@ sub execute {
 
     $self->status_message("Completing PSEs...");
     for my $pse (@completable_pses) {
+        # Set PSE status to completed
         $pse->pse_status("completed");
+        # Rm pse param(s) for failed aqid
+        my @failed_aqid_pse_params = GSC::PSEParam->create(pse_id => $pse->id, param_name => 'failed_aqid');
+        for my $failed_aqid_pse_param ( @failed_aqid_pse_params ) {
+            $failed_aqid_pse_param->delete;
+        }
+        # Rm tgi lims status attribute(s)
         $pse->{_instrument_data}->remove_attribute(attribute_label => 'tgi_lims_status');
+        # Set tgi lims status attribute to processed
         $pse->{_instrument_data}->add_attribute(
             attribute_label => 'tgi_lims_status',
             attribute_value => 'processed',
