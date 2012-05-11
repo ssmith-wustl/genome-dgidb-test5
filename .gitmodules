@@ -181,3 +181,6 @@
 [submodule "vendor/bowtie"]
 	path = vendor/bowtie
 	url = git@github.com:genome-vendor/bowtie.git
+[submodule "vendor/r-cran-ggplot2"]
+	path = vendor/r-cran-ggplot2
+	url = git@github.com:genome-vendor/r-cran-ggplot2.git
