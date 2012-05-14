@@ -27,7 +27,6 @@ class Genome::Model::Tools::Music::Pfam {
        reference_build => {
            is => 'Text',
            doc => 'Options are \'Build36\' or \'Build37\'. This parameter ensures appropriate annotation of domains.',
-           is_output => 1,
            default => 'Build36',
        },
     ],
