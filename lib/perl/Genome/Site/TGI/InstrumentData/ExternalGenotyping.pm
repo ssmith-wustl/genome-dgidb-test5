@@ -11,11 +11,9 @@ class Genome::Site::TGI::InstrumentData::ExternalGenotyping { # 2875456768
         select g.seq_id id, g.status status, g.organism_sample_id sample_id,
          s.full_name sample_name,
 	     p.name platform_name
-	     --spse.pse_id creation_pse_id
 	    from external_genotyping\@dw g
         join genotyping_platform\@dw p on p.genotyping_platform_id = g.genotyping_platform_id
         join organism_sample\@dw s on s.organism_sample_id = g.organism_sample_id
-        --join sequence_pse\@oltp spse on spse.seq_id = g.seq_id
     ) external_genotyping
 SQL
     ,
