@@ -25,6 +25,10 @@ class Genome::DruggableGene::Citation {
             is => 'Text',
             is_optional => 1,
         },
+        site_url => {
+            is => 'URL',
+            is_optional => 1,
+        }
     ],
     doc => 'Citation for druggable gene object',
 };
