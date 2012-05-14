@@ -397,7 +397,7 @@ sub execute {
         # Set PSE status to completed
         $pse->pse_status("completed");
         # Rm pse param(s) for failed aqid
-        my @failed_aqid_pse_params = GSC::PSEParam->create(pse_id => $pse->id, param_name => 'failed_aqid');
+        my @failed_aqid_pse_params = GSC::PSEParam->get(pse_id => $pse->id, param_name => 'failed_aqid');
         for my $failed_aqid_pse_param ( @failed_aqid_pse_params ) {
             $failed_aqid_pse_param->delete;
         }
