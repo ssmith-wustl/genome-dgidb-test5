@@ -84,14 +84,6 @@ sub _execute_build{
             imported_annotation_build => $build,
         );
 
-        my $interpro_cmd = Genome::Model::Tools::Annotate::ImportInterpro::Run->create(
-            reference_transcripts => join('/', $model->name, $version),
-            interpro_version => $self->interpro_version, #TODO: update processing profiles
-            log_file => join('/', $data_directory, 'interpro_log'),
-            scratch_dir => $data_directory,
-        );
-        $interpro_cmd->execute;
-
         my $tiering_cmd;
         my $annotation_directory = $build->_annotation_data_directory;
         my $bitmasks_directory = $annotation_directory."/tiering_bitmasks";
@@ -141,7 +133,7 @@ sub _execute_build{
         }
 
         my $ucsc_directory = $annotation_directory."/ucsc_conservation";
-        Genome::Sys->create_symlink($ucsc_directory, $build->reference_sequence->get_or_create_ucsc_conservation_directory); 
+        Genome::Sys->create_symlink($build->reference_sequence->get_or_create_ucsc_conservation_directory, $ucsc_directory); 
 
         #generate the rna seq files
         $self->generate_rna_seq_files($build);
