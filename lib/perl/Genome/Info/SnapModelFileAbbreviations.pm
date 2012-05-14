@@ -5,6 +5,8 @@ use warnings;
 
 my %model_files = (
     'A.canium.hmm' => 'sn_acan',
+    'A_ceylanicum_1.3.ec.cg.pg.mkv2.hmm' => 'sn_ac13mkv2',
+    'A_ceylanicum_1.3.ec.cg.pg.cgmkv2.hmm' => 'sn_ac13cgmkv2',
     'B.malayi.hmm' => 'sn_bmal',
     'bmal.intronset.hmm' => 'sn_bmal30',
     'C.elegans.hmm' => 'sn_cele',
