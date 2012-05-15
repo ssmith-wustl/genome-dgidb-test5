@@ -41,8 +41,11 @@ sub execute {
     my @lims_samples;
     my @woi = $work_order->get_item;
     for my $item (@woi) {
-        my $os = $item->get_dna->get_organism_sample;
-        next unless $os;
+        my $os = $item->get_dna->find_organism_sample;
+        unless($os) {
+            $self->error_message('Failed to get sample for DNA: ' . $item->get_dna->dna_name);
+            next;
+        }
 
         push @lims_samples, $os;
     }
