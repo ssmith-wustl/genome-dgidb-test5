@@ -63,7 +63,7 @@ sub execute {
     $self->display_missing_sample_list('model samples', @unmatched_model_samples);
     $self->display_missing_sample_list('work order items', @unmatched_wo_samples);
 
-    return !(scalar(@unmatched_model_samples) + scalar(@unmatched_wo_samples));
+    return 1; #!(scalar(@unmatched_model_samples) + scalar(@unmatched_wo_samples));
 }
 
 sub display_missing_sample_list {
