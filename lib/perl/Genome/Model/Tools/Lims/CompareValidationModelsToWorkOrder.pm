@@ -58,7 +58,10 @@ sub execute {
         }
     }
 
-    my @unmatched_model_samples = Genome::Sample->get([ grep { not $sample_matcher{$_} } (keys %sample_matcher)]);
+    my @unmatched_model_sample_ids = grep { not $sample_matcher{$_} } (keys %sample_matcher); #break this out to avoid NULL in-clause warning
+    my @unmatched_model_samples;
+    @unmatched_model_samples = Genome::Sample->get(\@unmatched_model_sample_ids)
+        if @unmatched_model_sample_ids;
 
     $self->display_missing_sample_list('model samples', @unmatched_model_samples);
     $self->display_missing_sample_list('work order items', @unmatched_wo_samples);
