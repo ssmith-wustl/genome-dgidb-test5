@@ -57,6 +57,7 @@ sub execute {
     my @all_models = Genome::Model->get(subject_id => [@patient_ids, @sample_ids]);
     my @all_builds = Genome::Model::Build->get(model_id => [ map { $_->id } @all_models ], -hints => ['disk_allocation','newest_workflow_instance']);
     my @all_events = Genome::Model::Event->get(build_id => [ map { $_->id } @all_builds ]);
+    #my @all_sr = Genome::SoftwareResult->get("users.user_id" => [ map { $_->id } @all_builds ]);
     
     $DB::single = 1;
     my @all_wf_names = map { $_->workflow_name } @all_builds;
@@ -169,33 +170,27 @@ sub execute {
                 warn "no allocation for build " . $build->__display_name__;
             }
 
-            if ($build->can('accumulated_alignments_directory')) {
-                my $bam_size = 0;
-                my $bam_dir;
-                $bam_dir = $build->accumulated_alignments_directory;
-                if ($bam_dir) {
-                    my $dir = $bam_dir;
-                    while (-l $dir) {
-                        $dir = readlink($dir);
-                    }
-                    $dir =~ s|^.*build_merged_alignments|build_merged_alignments|;
-                    if ($seen_dirs{$dir}) {
-                        $bam_size = 0;
-                        #warn "skipping dir $dir\n";
-                    }
-                    else {
-                        $seen_dirs{$dir} = 1;
-                        #warn "not skipping $dir, seen " . join(",",keys %seen_dirs);
-                        my $alloc = Genome::Disk::Allocation->get(allocation_path => $dir);
-                        $bam_size = ($alloc ? ($alloc->kilobytes_requested / (1024**2)) : 0); 
-                    }
+            $f{"$type GB regular"} += $gb_regular; 
+            $f{"$type (GB)"} += $gb_regular;
+            
+            my @sr = Genome::SoftwareResult->get("users.user_id" => $build->id);
+            for my $sr (@sr) {
+                my $sr_class = $sr->class;
+                my $alloc = $sr->disk_allocation;
+                unless ($alloc) {
+                    warn "missing disk allocation for software result $sr " . $sr->id;
+                    next;
                 }
-                $f{"$type GB bam"} += $bam_size; 
-                $f{"$type GB regular"} += $gb_regular; 
-                $f{"$type (GB)"} += ($gb_regular + $bam_size);
-            }
-            else {
-                $f{"$type (GB)"} += $gb_regular;
+                my $path = $alloc->absolute_path;
+                if ($seen_dirs{$path}) {
+                    next;
+                }
+                else {
+                    $seen_dirs{$path} = 1;
+                }
+                my $size = $alloc->kilobytes_requested / (1024**2);
+                $f{"$type GB $sr_class"} += $size;
+                $f{"$type (GB)"} += $size;
             }
             
             my $gbases = eval { $build->metric(name => 'instrument data total kb')->value/1_000_000 } || 0;
