@@ -200,7 +200,7 @@ sub execute {
 
         if($instrument_data->ignored() ) {
             $self->status_message('Skipping ignored data ' . $instrument_data->id . ' on PSE '.$pse->id);
-            $pse->add_param('no_model_generation_attempted',1);
+            $self->_update_instrument_data_tgi_lims_status_to($pse->{_instrument_data}, 'ignored');
             push @completable_pses, $pse;
             next PSE;
         }
@@ -211,7 +211,7 @@ sub execute {
             if ( $instrument_data_type =~ /454/i and $subject->name =~ /^n\-cn?trl$/i ) {
                 # Do not process 454 negative control (n-ctrl, n-cntrl)
                 $self->status_message('Skipping n-ctrl PSE '.$pse->id);
-                $pse->add_param('no_model_generation_attempted',1);
+                $self->_update_instrument_data_tgi_lims_status_to($instrument_data, 'ignored');
                 push @completable_pses, $pse;
                 next PSE;
             }
@@ -379,7 +379,7 @@ sub execute {
                 "Leaving queue instrument data PSE inprogress, due to errors. \n"
                     . join("\n",@process_errors)
             );
-            GSC::PSEParam->create(pse_id => $pse->id, param_name => 'failed_aqid', param_value => 1) unless $pse->added_param('failed_aqid');
+            $self->_update_instrument_data_tgi_lims_status_to($pse->{_instrument_data}, 'failed');
         }
         else {
             # Set the pse as completed since this is the end of the line
@@ -413,7 +413,7 @@ sub _update_instrument_data_tgi_lims_status_to {
     # These should not happen - developer error
     Carp::confess('No instrument data given to update instrument data tgi lims status!') if not $instrument_data;
     Carp::confess('No status given to update instrument data tgi lims status!') if not $status;
-    Carp::confess("No invalid status ($status) given to update instrument data tgi lims status!") if not grep { $status eq $_ } (qw/ processed failed_aqid /);
+    Carp::confess("No invalid status ($status) given to update instrument data tgi lims status!") if not grep { $status eq $_ } (qw/ processed failed ignored /);
 
     # Rm tgi lims status attribute(s)
     $instrument_data->remove_attribute(attribute_label => 'tgi_lims_status');
@@ -586,62 +586,87 @@ sub load_pses {
     my $self = shift;
 
     # Get 'new' instrument data
-    $self->status_message('Getting "new" instrument data...');
-    my %instrument_data = map { $_->id => $_ } Genome::InstrumentData->get(
+    $self->status_message('Getting NEW instrument data...');
+    my %new_instrument_data = map { $_->id => $_ } Genome::InstrumentData->get(
        'attributes.attribute_label' => 'tgi_lims_status',
-       'attributes.attribute_value' => 'new',
+       'attributes.attribute_value' => [qw/ new /],
        -hint => 'sample',
     );
-    $self->status_message('Found '.scalar(keys %instrument_data).' instrument data');
-    return if not %instrument_data;
+    $self->status_message('Found '.scalar(keys %new_instrument_data).' NEW instrument data');
 
-    # Get the QIDFGM for each instrument data
+    # Get 'failed' instrument data
+    $self->status_message('Getting FAILED instrument data...');
+    my %failed_instrument_data = map { $_->id => $_ } Genome::InstrumentData->get(
+       'attributes.attribute_label' => 'tgi_lims_status',
+       'attributes.attribute_value' => [qw/ failed /],
+       -hint => 'sample',
+    );
+    $self->status_message('Found '.scalar(keys %failed_instrument_data).' FAILED instrument data');
+    return if not %new_instrument_data and not %failed_instrument_data; # ok
+
+    # Get the inprogress QIDFGMs mapped to instrument data
     $self->status_message('Getting inprogress QIDFGM PSEs...');
-    my @pses = GSC::PSE->get(
+    my @qidfgms = GSC::PSE->get(
         ps_id => 3733,
         pse_status => 'inprogress',
     );
-    $self->status_message('Found '.scalar(@pses).' QIDFGM PSEs');
-    return unless @pses;
+    if ( not @qidfgms ) {
+        Carp::confess( $self->error_message('No inprogess QIDFGMS found, but have new/failed instrument data to process!') );
+    }
+    $self->status_message('Found '.scalar(@qidfgms).' QIDFGM PSEs');
+    
+    # Map QIDFGMs to instrument data
+    for my $qidfgm ( @qidfgms ) {
+        my ($instrument_data_id) = $qidfgm->added_param('instrument_data_id');
+        if ( not $instrument_data_id ) {
+            $self->warning_message('No instrument data id for QIDFGM! '.$qidfgm->id);
+            next;
+        }
+        #print Data::Dumper::Dumper($qidfgm->id, $instrument_data_id, \%new_instrument_data, \%failed_instrument_data);
+        if ( exists $new_instrument_data{$instrument_data_id} ) {
+            $new_instrument_data{$instrument_data_id}->{_qidfgm} = $qidfgm;
+        }
+        elsif ( exists $failed_instrument_data{$instrument_data_id} ) {
+            $failed_instrument_data{$instrument_data_id}->{_qidfgm} = $qidfgm;
+        }
+        else {
+            $self->warning_message("Expected to find 'new' or 'failed' instrument data ($instrument_data_id) for inprogress QIDFGM PSE ".$qidfgm->id." but did not. It could have the incorrect status or be double processed.");
+        }
+    }
 
-    my $pse_sorter;
+    # Sort the instrument data, newest first if requested
+    my @instrument_data;
     if ($self->newest_first) {
-        $pse_sorter = sub { $b->id <=> $a->id };
+        @instrument_data = sort { $b->id cmp $a->id } values %new_instrument_data;
+        push @instrument_data, sort { $b->id cmp $a->id } values %failed_instrument_data;
     }
     else {
-        $pse_sorter = sub { $a->id <=> $b->id };
+        @instrument_data = sort { $a->id cmp $b->id } values %new_instrument_data;
+        push @instrument_data, sort { $a->id cmp $b->id } values %failed_instrument_data;
     }
 
-    my @fresh_pses = sort $pse_sorter grep{not $_->added_param('failed_aqid')}@pses;
-    my @previously_failed_pses = sort $pse_sorter grep{$_->added_param('failed_aqid')}@pses;
-
-    my @sorted_pses;
-    push @sorted_pses, @fresh_pses, @previously_failed_pses;
-
-    # Don't try to check more PSEs than we might be able to hold information for in memory.
-    if(scalar(@sorted_pses) > $self->max_pses_to_check) {
-        @sorted_pses = splice(@sorted_pses, 0, $self->max_pses_to_check);
+    # Don't try to check more than we might be able to hold information for in memory.
+    if( @instrument_data > $self->max_pses_to_check ) {
+        @instrument_data = splice(@instrument_data, 0, $self->max_pses_to_check);
         $self->status_message('Limiting checking to ' . $self->max_pses_to_check);
     }
 
-    $self->preload_data(\%instrument_data); #The checking uses this data, so need to load it first
+    # Preload or whatever
+    $self->preload_data(\%new_instrument_data); #The checking uses this data, so need to load it first
 
+    # Check the instrument data
     my @checked_pses;
-    for my $pse ( @sorted_pses ) {
-        my ($instrument_data_id) = $pse->added_param('instrument_data_id');
-        if ( not $instrument_data_id ) {
-            $self->warning_message('No instrument_data_id for QIDGFM PSE: '.$pse->id);
+    for my $instrument_data ( @instrument_data ) {
+        my $qidfgm = delete $instrument_data->{_qidfgm};
+        if ( not $qidfgm ) {
+            $self->warning_message('No QIDFGM for new/failed instrument data! '.$instrument_data->id);
             next;
         }
-        $pse->{_instrument_data} = delete $instrument_data{$instrument_data_id};
-        if ( not $pse->{_instrument_data} ) {
-            $self->warning_message("Expected to find 'new' instrument data ($instrument_data_id) for inprogress QIDFGM PSE ".$pse->id." but did not. It could have the incorrect status or be double processed.");
-            next;
-        }
-        if($self->check_pse($pse)){
-            push @checked_pses, $pse;
+        $qidfgm->{_instrument_data} = $instrument_data;
+        if($self->check_pse($qidfgm)){
+            push @checked_pses, $qidfgm;
         } else {
-            GSC::PSEParam->create(pse_id => $pse->id, param_name => 'failed_aqid', param_value => 1) unless $pse->added_param('failed_aqid');
+            $self->_update_instrument_data_tgi_lims_status_to($qidfgm->{_instrument_data}, 'failed');
         }
     }
     $self->status_message('Of those, '.scalar(@checked_pses). ' PSEs passed check pse.');

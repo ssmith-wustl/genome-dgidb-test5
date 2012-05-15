@@ -23,8 +23,8 @@ no warnings;
 my $instrument_data_get = Genome::InstrumentData->can('get');
 *Genome::InstrumentData::get = sub {
     my ($class, %params) = @_;
-    if ( $params{'attributes.attribute_label'} ) { # getting new inst data, only return what we just created
-        return grep { $_->attributes(attribute_label => 'tgi_lims_status')->attribute_value eq 'new' } @instrument_data;
+    if ( $params{'attributes.attribute_label'} ) { # getting new/failed inst data, only return what we just created
+        return grep { $_->attributes(attribute_label => 'tgi_lims_status')->attribute_value eq $params{'attributes.attribute_value'}->[0] } @instrument_data;
     } 
     else {
         return $instrument_data_get->(@_);

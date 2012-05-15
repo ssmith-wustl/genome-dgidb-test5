@@ -23,8 +23,8 @@ no warnings;
 my $instrument_data_get = Genome::InstrumentData->can('get');
 *Genome::InstrumentData::get = sub {
     my ($class, %params) = @_;
-    if ( $params{'attributes.attribute_label'} ) { # getting new inst data, only return what we just created
-        return grep { $_->attributes(attribute_label => 'tgi_lims_status')->attribute_value eq 'new' } @instrument_data;
+    if ( $params{'attributes.attribute_label'} ) { # getting new/failed inst data, only return what we just created
+        return grep { $_->attributes(attribute_label => 'tgi_lims_status')->attribute_value eq $params{'attributes.attribute_value'}->[0] } @instrument_data;
     } 
     else {
         return $instrument_data_get->(@_);
@@ -73,7 +73,7 @@ ok(_qidfgm($unknown_source), 'create qidfgm for unknown');
 is(@instrument_data, $qidfgm_cnt, "create $qidfgm_cnt inst data");
 is_deeply(
     [ map { $_->attribute_value } map { $_->attributes(attribute_label => 'tgi_lims_status') } @instrument_data ],
-    [ map { 'new' } @instrument_data ],
+    [ map { 'failed' } @instrument_data ],
     'set tgi lims status to new',
 );
 is(@pses, $qidfgm_cnt, "create $qidfgm_cnt pses");
@@ -146,7 +146,7 @@ sub _qidfgm {
     push @instrument_data, $instrument_data;
     $instrument_data->add_attribute(
         attribute_label => 'tgi_lims_status',
-        attribute_value => 'new',
+        attribute_value => 'failed',
     );
 
     my $index_illumina = Test::MockObject->new();
