@@ -56,10 +56,14 @@ sub execute {
     }
 
     $self->_sample_ids([map($_->id, @lims_samples)]);
-    Genome::Sample::Command::List->execute(
-        show => $self->show,
-        filter => 'id:' . join('/', $self->_sample_ids),
-    );
+    if($self->show) {
+        Genome::Sample::Command::List->execute(
+            show => $self->show,
+            filter => 'id:' . join('/', $self->_sample_ids),
+        );
+    }
+
+    return 1;
 }
 
 1;
