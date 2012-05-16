@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Devel::Size qw/size total_size/;
 
-our $VERSION = '0.03';
+our $VERSION = '0.003';
 
 # Input Parameters
 my $DEFAULT_ALIGNMENT_FILE_FORMAT = 'bam';
