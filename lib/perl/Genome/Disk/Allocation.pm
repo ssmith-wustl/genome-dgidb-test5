@@ -661,6 +661,7 @@ sub _archive {
         input_directory => $current_allocation_path,
     );
     unless ($tar_rv) {
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess "Could not create tarball for allocation contents!";
     }
 
