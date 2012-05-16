@@ -664,6 +664,13 @@ sub _archive {
         confess "Could not create tarball for allocation contents!";
     }
 
+    # Check size of tar_path and abort if "too small" <1GB=1024^3
+    unless (-s $tar_path < 1073741824) {
+        unlink $tar_path;
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess "Aborting storage of archive that is too small (<1GB)";
+    }
+
     my $cmd = "mkdir -p $archive_allocation_path && rsync -rlHpgt $tar_path $archive_allocation_path/";
     eval { 
         # Copy tarball to archive volume
