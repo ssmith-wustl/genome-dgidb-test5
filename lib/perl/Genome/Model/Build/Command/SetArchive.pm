@@ -1,10 +1,10 @@
-package Genome::Model::Build::Command::SetArchivable;
+package Genome::Model::Build::Command::SetArchive;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::Model::Build::Command::SetArchivable {
+class Genome::Model::Build::Command::SetArchive {
     is => 'Command::V2',
     has => [
         builds => {
