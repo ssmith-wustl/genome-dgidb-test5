@@ -1,16 +1,16 @@
-package Genome::Disk::Command::Allocation::SetUnarchivable;
+package Genome::Disk::Command::Allocation::SetDoNotArchive;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::Disk::Command::Allocation::SetUnarchivable {
+class Genome::Disk::Command::Allocation::SetDoNotArchive {
     is => 'Command::V2',
     has_optional => [
         allocations => {
             is => 'Genome::Disk::Allocation',
             is_many => 1,
-            doc => 'allocations that are to be set as unarchivable, resolved via Command::V2',
+            doc => 'allocations that are not to be archived, resolved via Command::V2',
         },
         paths => {
             is => 'Text',
@@ -18,17 +18,16 @@ class Genome::Disk::Command::Allocation::SetUnarchivable {
         },
         reason => {
             is => 'Text',
-            doc => 'reason for wanting to set these allocations/paths as unarchivable',
+            doc => 'reason for wanting these allocations/paths to not be archived',
         },
     ],
 };
 
 sub help_detail { 
-    return 'Given allocations and paths are set as unarchviable. Any paths that are given are resolved ' .
-        'to allocations if possible, otherwise a warning is emitted. Allocations are that marked this way ' .
-        'will not be migrated to archive tape';
+    return 'Given allocations and paths are set so they cannot be archived. Any paths that are given are resolved ' .
+        'to allocations if possible, otherwise a warning is emitted.';
 }
-sub help_brief { return 'given allocations and paths are set as unarchivable' };
+sub help_brief { return 'given allocations and paths are marked so they cannot be archived' };
 sub help_synopsis { return help_brief() . "\n" };
 
 sub execute {
@@ -37,10 +36,11 @@ sub execute {
         next if !$allocation->archivable;
         $allocation->archivable(0, $self->reason);
     }
-    $self->status_message("Successfully set allocations as unarchivable");
+    $self->status_message("Allocations now can't be archived");
     return 1;
 }
 
+# TODO Move this logic into a special get method on Genome::Disk::Allocation?
 sub _resolve_allocations_from_paths {
     my $self = shift;
     return unless $self->paths;
