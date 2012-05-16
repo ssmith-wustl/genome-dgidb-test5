@@ -25,7 +25,7 @@ class Genome::Model::Command::SetDoNotArchive {
 sub help_detail {
     return 'The last complete build for each model is marked such that their allocations can\'t be ' .
         'archived. This process marks all allocations those builds use, including instrument data, ' .
-        'alignment results, variation detection results, and other inputs';
+        'alignment results, variation detection results, etc';
 }
 sub help_brief { return 'marks last complete build of each model can unable to be archived' };
 sub help_synopsis { return help_brief() . "\n" };
