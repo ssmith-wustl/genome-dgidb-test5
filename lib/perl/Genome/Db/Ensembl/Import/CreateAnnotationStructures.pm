@@ -190,6 +190,32 @@ sub execute
 
                     $egi_id++;
                 }
+                my $external_gene_id = Genome::ExternalGeneId->create(
+                    egi_id => $egi_id,
+                    gene_id => $gene->id,
+                    id_type => "ensembl_default_external_name",
+                    id_value => $ensembl_gene->external_name,
+                    data_directory => $self->data_directory,
+                    species => $species,
+                    source => $source,
+                    version => $version,
+                    reference_build_id => $self->reference_build->id,
+                ); 
+
+                $egi_id++;
+                $external_gene_id = Genome::ExternalGeneId->create(
+                    egi_id => $egi_id,
+                    gene_id => $gene->id,
+                    id_type => "ensembl_default_external_name_db",
+                    id_value => $ensembl_gene->external_db,
+                    data_directory => $self->data_directory,
+                    species => $species,
+                    source => $source,
+                    version => $version,
+                    reference_build_id => $self->reference_build->id,
+                ); 
+
+                $egi_id++;
             }
 
             #Transcript cols: transcript_id gene_id transcript_start transcript_stop transcript_name source transcript_status strand chrom_name
