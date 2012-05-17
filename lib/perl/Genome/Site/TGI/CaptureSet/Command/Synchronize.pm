@@ -61,6 +61,21 @@ EOS
 sub execute {
     my $self = shift;
 
+    my $lock_resource = '/gsc/var/lock/genome_site_tgi_captureset_command_synchronize/loader';
+    my $lock = Genome::Sys->lock_resource(resource_lock=>$lock_resource, max_try=>1);
+    unless ($lock) {
+        $self->error_message("could not lock, another instance must be running.");
+        return;
+    }
+
+    UR::Context->current->add_observer(
+        aspect => 'commit',
+        callback => sub{
+            Genome::Sys->unlock_resource(resource_lock=>$lock);
+        }
+    );
+
+
     $self->backfill_feature_lists_for_capture_sets()    if $self->_forward;
     $self->backfill_capture_sets_for_feature_lists()    if $self->_reverse;
     $self->report_unusable_feature_lists()              if $self->report;
