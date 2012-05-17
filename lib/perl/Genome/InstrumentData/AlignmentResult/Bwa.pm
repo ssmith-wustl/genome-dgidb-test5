@@ -394,11 +394,11 @@ sub _verify_bwa_samxe_did_happen {
         my ($batch_size) = $line =~ /(\d+) sequences/;
         $self->warning_message("The batch size: $batch_size is not 262144 as expected. Check bwa source code")
             unless $batch_size == 262144;
-        #hard code fail percentile threshold 10 for now. The percentile calculation is not accurate 
+        #hard code fail percentile threshold 20 for now. The percentile calculation is not accurate 
         #because the last batch count is mostly smaller than 262114, but this estimate is close enough 
         #since threshold is arbitrary too.
         my $fail_percentile = sprintf("%2.2f", $fail_ct * $batch_size * 100 / $rp_ct);
-        if ($fail_percentile > 10) {
+        if ($fail_percentile > 20) {
             $self->error_message("samxe failed to infer insert size on $fail_percentile% read pairs");
             return;
         }
