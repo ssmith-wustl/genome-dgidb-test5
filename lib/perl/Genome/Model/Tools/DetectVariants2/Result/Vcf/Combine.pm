@@ -94,7 +94,7 @@ sub _run_vcf_converter {
         $params{joinx_bin_path} = "/usr/bin/joinx1.6";
         $params{ratio_filter} = "1.0,IntersectionFailure,Variant callers do not agree on this position";
     } else {
-        $params{joinx_bin_path} = "/usr/bin/joinx1.5";
+        $params{joinx_bin_path} = "/usr/bin/joinx1.3";
     }
 
     my $merge_cmd = Genome::Model::Tools::Joinx::VcfMerge->create(%params);
