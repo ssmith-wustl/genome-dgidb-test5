@@ -15,6 +15,10 @@ class Genome::DataSource::Main {
     ],
 };
 
+sub _ds_tag {
+    'Genome::DataSource::Main';
+}
+
 sub _sync_database {
     my $self = shift;
     my %params = @_;
@@ -50,7 +54,9 @@ sub _sync_database {
             }
 
             if (defined $meta->data_source and $meta->data_source->id eq 'Genome::DataSource::GMSchema') {
-                $meta->data_source(__PACKAGE__);
+                $meta->data_source($self->_ds_tag);
+
+                print $meta->data_source(), "\n";
 
                 # Columns are stored directly on the meta object as an optimization, need to be updated
                 # in addition to table/column objects.
