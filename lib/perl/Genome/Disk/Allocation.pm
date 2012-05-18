@@ -791,6 +791,8 @@ sub _unarchive {
             confess "Could not untar tarball " . $self->tar_path . " at " . $self->absolute_path;
         }
 
+        $self->archivable(0, 'allocation was unarchived');
+
         # Commit changes, which will release locks
         unless (UR::Context->commit) {
             confess "Could not commit!";
