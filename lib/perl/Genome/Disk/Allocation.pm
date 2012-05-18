@@ -755,6 +755,8 @@ sub _unarchive {
     }
 
     my $archive_path = $self->absolute_path;
+
+    # TODO Could make this allow any viable volume instead of just choosing the active volume paired with the archive volume
     my $active_path = join('/', $self->volume->active_mount_path, $self->group_subdirectory, $self->allocation_path);
     eval { 
         unless ($self->is_archived) {
