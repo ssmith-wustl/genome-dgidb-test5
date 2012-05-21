@@ -70,7 +70,7 @@ sub execute {
         die $self->error_message("This module requires joinx version $MINIMUM_JOINX_VERSION or higher to function correctly.");
     }
 
-    if(defined($self->use_bgzip) && not defined($self->output_file)){
+    if($self->use_bgzip && not defined($self->output_file)){
        die $self->error_message("If use_bgzip is set, output_file must also be set, otherwise binary nonsense will spew forth."); 
     }
     my $output = "-";
