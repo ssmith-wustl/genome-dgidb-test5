@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 
-my $DEFAULT = '2.1';
+my $DEFAULT = '2.6';
 
 class Genome::Model::Tools::Bsmap {
     is => 'Command',
@@ -37,6 +37,8 @@ EOS
 # TODO install this to /gsc/pkg/bio/bsmap/bsmap-2.1/
 my %BSMAP_VERSIONS = (
     '2.1' => '/gsc/bin/bsmap',
+    '2.43' => '/gscuser/cmiller/usr/src/bsmap-2.43/bsmap',
+    '2.6' => '/gscuser/cmiller/usr/src/bsmap-2.6/bsmap',
     'bsmap'   => 'bsmap',
 );
 
