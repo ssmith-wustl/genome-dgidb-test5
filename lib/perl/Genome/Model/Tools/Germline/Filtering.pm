@@ -60,7 +60,7 @@ sub execute {
 
     $DB::single = 1;
 
-    my $build = $self->maf_genome_build;
+    my $maf_build = $self->maf_genome_build;
     my @genes_to_exclude = split ",",$self->genes_to_exclude;
     my $maf = $self->maf_file;
     unless (-s $maf) {
@@ -84,8 +84,8 @@ sub execute {
     # load transcript lengths based on input genome build
     my %tr_95perc_of_length;
     my $tr_length_file;
-    if ($build =~ /build36/i) { $tr_length_file = '/gscmnt/gc6111/info/medseq/transcript_lengths/54_36p_v4.transcript_lengths'; }
-    elsif ($build =~ /build37/i) { $tr_length_file = '/gscmnt/gc6111/info/medseq/transcript_lengths/58_37c_v2.transcript_lengths'; }
+    if ($maf_build =~ /build36/i) { $tr_length_file = '/gscmnt/gc6111/info/medseq/transcript_lengths/54_36p_v4.transcript_lengths'; }
+    elsif ($maf_build =~ /build37/i) { $tr_length_file = '/gscmnt/gc6111/info/medseq/transcript_lengths/58_37c_v2.transcript_lengths'; }
     else { $self->error_message("Please enter either 'build36' or 'build37' to describe the genome build of the MAF."); return; }
     my $tr_length_fh = new IO::File $tr_length_file,"r";
     while (my $line = $tr_length_fh->getline) {
@@ -172,9 +172,39 @@ sub execute {
     for my $fh (@fhs) { $fh->close; }
 
     # if necessary, liftover files to build 37
-    if ($build =~ /build36/i) {
-        # use liftover script after turning into tool.
+    my $build37_trunc_file;
+
+    if ($maf_build =~ /build36/i) {
+
+        #create file location for lifted file
+        $build37_trunc_file = Genome::Sys->create_temp_file_path();
+
+        # check to make sure necessary columns are there, coordinate-wise
+        unless (exists $maf_columns{'Chromosome'} and exists $maf_columns{'Start_position'} and exists $maf_columns{'End_position'}) {
+            $self->error_message("MAF does not seem to contain appropriate headers regarding variant coordinates. Aborting.");
+            return;
+        }
+
+        # determine columns to lift from MAF coordinates and possibly annotation coordinates (converting to 1-based)
+        my $sets = join("_",$maf_columns{'Chromosome'}+1,$maf_columns{'Start_position'}+1,$maf_columns{'End_position'}+1);
+        if (exists $maf_columns{'chromosome_name'} and exists $maf_columns{'start'} and exists $maf_columns{'stop'}) {
+            my $annotation_set = join("_",$maf_columns{'chromosome_name'}+1,$maf_columns{'start'}+1,$maf_columns{'stop'}+1);
+            $sets = join(",",$sets,$annotation_set);
+        }
+
+        # use lift-over-multiple-columns tool
+        my $lift_cmd = Genome::Model::Tools::LiftOverMultipleColumns->create(
+            source_file => $trunc_file,
+           destination_file => $build37_trunc_file,
+          columns_to_lift => $sets,
+         header_id_string => "Chromosome| "#FIXME 
+
+
+
     }
+    else { $build37_trunc_file = $trunc_file; }
+
+
 
     #using dbsnp 135, append frequency of variant in the population. Dan has a script to merge maf and dbsnp freq (with zeros when variant not present)
 
