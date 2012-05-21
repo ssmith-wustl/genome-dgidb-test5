@@ -28,11 +28,11 @@ class Genome::Model::Command::Admin::FailedModelTickets {
             default_value => 1,
             doc => 'Include builds with status Unstartable',
         },
-        ignore_pending_rerun => {
+        include_pending => {
             is => 'Boolean',
             default_value => 0,
-            doc => 'Ignore builds which are followed by a later build that is scheduled or running.'
-        }
+            doc => 'Include builds whose model status is requested, scheduled, or running.',
+        },
     ],
 };
 
@@ -106,7 +106,8 @@ sub execute {
         #failing ones that will be cleaned by admin "cleanup-succeeded".
         next if $model->status eq 'Succeeded';
 
-        if ($self->ignore_pending_rerun) {
+        unless ($self->include_pending) {
+            next if $model->status eq 'Requested';
             next if $model->status eq 'Scheduled';
             next if $model->status eq 'Running';
         }
