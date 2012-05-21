@@ -20,6 +20,11 @@ class Genome::Model::Tools::Sam::BamToSam {
 	    is_optional => 1,
 	    doc => 'Output SAM File - default name is derived from input SAM file. example.bam will generate example.sam',
 	},
+    include_headers => {
+        is => 'Boolean',
+        default_value => 1,
+        doc => 'whether to include the headers from the BAM file in the SAM output',
+    },
     ],
 };
 
@@ -30,13 +35,13 @@ sub execute {
         $self->sam_file($input_dirname.$input_basename .'.sam');
     }
     my ($output_basename,$output_dirname,$output_suffix) = File::Basename::fileparse($self->sam_file,qw/sam/);
-    my $input_stream = 'samtools view -h '.$self->bam_file.'|';
+    my $input_stream = 'samtools view ' . ($self->include_headers? '-h ' : '') . $self->bam_file.'|';
     my $input_fh = IO::File->new($input_stream);
     unless($input_fh) {
         $self->error_message("Could not open input BAM file with the following command\n\t".$input_stream);
         die $self->error_message;
     }
-    
+
     my $output_stream = ">> ".$self->sam_file;
     my $output_fh = new IO::File;
     $output_fh->open($output_stream);
