@@ -419,11 +419,11 @@ sub newest_workflow_instance {
 sub cpu_slot_hours {
     my $self = shift;
     my $breakdown = $self->_cpu_slot_usage_breakdown(@_);
-
     my $total = 0;
     for my $step (sort keys %$breakdown) {
         my $sum     = $breakdown->{$step}{sum};
         my $count   = $breakdown->{$step}{count};
+        print join("\t","BREAKDOWN:",$self->id,$self->model->name,$step,$sum,$count);
         $total += $sum;
     }
 
