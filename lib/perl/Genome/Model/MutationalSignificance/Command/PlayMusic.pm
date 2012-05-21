@@ -5,183 +5,93 @@ use warnings;
 use Genome;
 use Workflow::Simple;
 
+my @has;
+
+
+
+BEGIN {
+    my %module_input_exceptions = (
+        "Genome::Model::Tools::Music::Proximity" => {
+        },
+        "Genome::Model::Tools::Music::PathScan" => {
+            gene_covg_dir => ["Genome::Model::Tools::Music::Bmr::CalcCovg", 'gene_covg_dir'],
+            bmr => ["Genome::Model::Tools::Music::Bmr::CalcBmr", 'bmr_output'],
+            output_file => ['input connector', 'path_scan_output_file'],
+        },
+        "Genome::Model::Tools::Music::Smg" => {
+            gene_mr_file => ["Genome::Model::Tools::Music::Bmr::CalcBmr", 'gene_mr_file'],
+            output_file => ['input connector', 'smg_output_file'],
+        },
+        "Genome::Model::Tools::Music::MutationRelation" => {
+            output_file => ['input connector', 'mutation_relation_output_file'],
+            gene_list => ["Genome::Model::Tools::Music::Smg", 'output_file'],
+        },
+        "Genome::Model::Tools::Music::Bmr::CalcBmr" => {
+            output_dir => ["Genome::Model::Tools::Music::Bmr::CalcCovg", 'output_dir'], 
+        },
+        "Genome::Model::Tools::Music::ClinicalCorrelation" => {
+            output_file => ['input connector', 'clinical_correlation_output_file'],
+        },
+        "Genome::Model::Tools::Music::CosmicOmim" => {
+            output_file => ['input connector', 'cosmic_omim_output_file'],
+        },
+        "Genome::Model::Tools::Music::Pfam" => {
+            output_file => ['input connector', 'pfam_output_file'],
+        },
+        "Genome::Model::Tools::Music::Bmr::CalcCovgHelper" => {
+            normal_tumor_bam_pair => [],
+            output_file => [],
+        },
+        "Genome::Model::Tools::Music::Bmr::CalcCovg" => {
+            output_dir => ["Genome::Model::MutationalSignificance::Command::MergeCalcCovg", 'output_dir'],
+            cmd_list_file => [],
+            cmd_prefix => [],
+            normal_min_depth => [],
+            tumor_min_depth => [],
+            min_mapq => [],
+        },
+    );
+
+    my %seen; 
+    my @modules = keys %module_input_exceptions;
+    foreach my $module (@modules) {
+        my $module_meta = UR::Object::Type->get($module);
+        my @p = $module_meta->properties;
+        for my $p (@p) {
+            if ($p->can("is_input") and $p->is_input){
+                my $name = $p->property_name;
+                unless ($seen{$p->property_name} or $module_input_exceptions{$module}{$name}) {
+                    my %data = %{ UR::Util::deep_copy($p) };
+                    for my $key (keys %data) {
+                        delete $data{$key} if $key =~ /^_/;
+                    }
+                    delete $data{id};
+                    delete $data{db_committed};
+                    delete $data{class_name};
+                    push @has, $name, \%data;
+                    $seen{$name} = 1;
+                }
+            }
+        }
+    }
+}
+
 class Genome::Model::MutationalSignificance::Command::PlayMusic {
     is => ['Command::V2'],
-    has_input => [
-        processors => {
-            is => 'Integer',
-            default_value => 6,
-            doc => "Number of processors to use in SMG (requires 'foreach' and 'doMC' R packages)",
-        },
-        bam_list => {
-            is => 'Text',
-            doc => 'Tab delimited list of BAM files [sample_name normal_bam tumor_bam]',
-        },
-        maf_file => {
-            is => 'Text',
-            doc => 'List of mutations using TCGA MAF specifications v2.2',
-        },
-        roi_file => {
-            is => 'Text',
-            doc => 'Tab delimited list of ROIs [chr start stop gene_name]',
-        },
-        output_dir => {
-            is => 'Text',
-            doc => 'Directory where output files and subdirectories will be written',
-        },
-        reference_build => {
-            is => 'Path',
-            doc => 'Put either "Build36" or "Build37"',
-            default => 'Build36',
-        },
-        reference_sequence => {
-            is => 'Text',
-            doc => 'Path to reference sequence in FASTA format'
-        },
-        pathway_file => {
-            is => 'Text',
-            doc => 'Tab-delimited file of pathway information',
-        },
-    ],
+    has => \@has,
     has_optional_input => [
+        music_build => {
+            is => 'Genome::Model::Build',
+            doc => 'Build that is using the results of this workflow.'
+        },
+        somatic_variation_builds => {
+            is => 'Genome::Model::Build::SomaticVariation',
+            is_many => 1,
+            doc => 'Builds to analyze.  Each build must match up with one line in bam_list.  Use these for performance enhancement when available',
+        },
         log_directory => {
             is => 'Text',
             doc => "Directory to write log files from MuSiC components",
-        },
-        numeric_clinical_data_file => {
-            is => 'Text',
-            doc => 'Table of samples (y) vs. numeric clinical data category (x)',
-        },
-        categorical_clinical_data_file => {
-            is => 'Text',
-            doc => 'Table of samples (y) vs. categorical clinical data category (x)',
-        },
-        numerical_data_test_method => {
-            is => 'Text',
-            doc => "Either 'cor' for Pearson Correlation or 'wilcox' for the Wilcoxon Rank-Sum Test for numerical        clinical data.",
-        },
-        glm_model_file => {
-            is => 'Text',
-            doc => 'File outlining the type of model, response variable, covariants, etc. for the GLM analysis. (See     DESCRIPTION).',
-        },
-        glm_clinical_data_file => {
-            is => 'Text',
-            doc => 'Clinical traits, mutational profiles, other mixed clinical data (See DESCRIPTION).',
-        },
-        use_maf_in_glm => {
-            is => 'Boolean',
-            doc => 'Set this flag to use the variant matrix created from the MAF file as variant input to GLM analysis.',
-        },
-        omimaa_dir => {
-            is => 'Path',
-            doc => 'omim amino acid mutation database folder',
-        },
-        cosmic_dir => {
-            is => 'Path',
-            doc => 'cosmic amino acid mutation database folder',
-        },
-        verbose => {
-            is => 'Boolean',
-            doc => 'turn on to display larger working output',
-            default => 1,
-        },
-        mutation_relation_matrix_file => {
-            is => 'Text',
-            doc => 'Define this argument to store a mutation matrix',
-        },
-        permutations => {
-            is => 'Number',
-            doc => 'Number of permutations used to determine P-values',
-        },
-        normal_min_depth => {
-            is => 'Integer',
-            doc => 'The minimum read depth to consider a Normal BAM base as covered',
-        },
-        tumor_min_depth => {
-            is => 'Integer',
-            doc => 'The minimum read depth to consider a Tumor BAM base as covered',
-        },
-        min_mapq => {
-            is => 'Integer',
-            doc => 'The minimum mapping quality of reads to consider towards read depth counts',
-        },
-        show_skipped => {
-            is => 'Boolean',
-            doc => 'Report each skipped mutation, not just how many',
-        },
-        show_known_hits => {
-            is => 'Boolean',
-            doc => "When a finding is novel, show known AA in that gene",
-        },
-        genes_to_ignore => {
-            is => 'Text',
-            doc => 'Comma-delimited list of genes to ignore for background mutation rates',
-        },
-        max_proximity => {
-            is => 'Text',
-            doc => 'Maximum AA distance between 2 mutations',
-        },
-        bmr_modifier_file => {
-            is => 'Text',
-            doc => 'Tab delimited list of values per gene that modify BMR before testing [gene_name bmr_modifier]',
-        },
-        max_fdr => {
-            is => 'Number',
-            doc => 'The maximum allowed false discovery rate for a gene to be considered an SMG',
-        },
-        genetic_data_type => {
-            is => 'Text',
-            doc => 'Data in matrix file must be either "gene" or "variant" type data',
-        },
-        wu_annotation_headers => {
-            is => 'Boolean',
-            doc => 'Use this to default to wustl annotation format headers',
-        },
-        bmr_groups => {
-            is => 'Integer',
-            doc => 'Number of clusters of samples with comparable BMRs',
-        },
-        separate_truncations => {
-            is => 'Boolean',
-            doc => 'Group truncational mutations as a separate category',
-        },
-        merge_concurrent_muts => {
-            is => 'Boolean',
-            doc => 'Multiple mutations of a gene in the same sample are treated as 1',
-        },
-        skip_non_coding => {
-            is => 'Boolean',
-            doc => 'Skip non-coding mutations from the provided MAF file',
-        },
-        skip_silent => {
-            is => 'Boolean',
-            doc => 'Skip silent mutations from the provided MAF file',
-        },
-        min_mut_genes_per_path => {
-            is => 'Number',
-            doc => 'Pathways with fewer mutated genes than this will be ignored',
-        },
-        processors => {
-            is => 'Integer',
-            doc => "Number of processors to use in SMG (requires 'foreach' and 'doMC' R packages)",
-        },
-        aa_range => {
-            is => 'Text',
-            doc => "Set how close a 'near' match is when searching for amino acid near hits",
-        },
-        nuc_range => {
-            is => 'Text',
-            doc => "Set how close a 'near' match is when searching for nucleotide position near hits",
-        },
-        clinical_correlation_matrix_file => {
-            is => 'Text',
-            is_optional => 1,
-            doc => "Optionally store the sample-vs-gene matrix used internally during calculations.",
-        },
-        input_clinical_correlation_matrix_file => {
-            is => 'Text',
-            is_optional => 1,
-            doc => "Instead of calculating this from the MAF, input the sample-vs-gene matrix used internally during calculations.",
         },
     ],
 
@@ -222,7 +132,7 @@ sub help_synopsis {
     return <<EOS
 This tool takes as parameters all the information required to run the individual tools.  The tools will be run in parallel in an lsf workflow, with values such as bmr passed between tools.  An example usage is:
 
-... genome model mutational-significance \\
+... genome model mutational-significance play-music\\
         --bam-list input/bams_to_analyze.txt \\
         --numeric-clinical-data-file input/numeric_clinical_data.csv \\
         --maf-file input/myMAF.tsv \\
@@ -241,6 +151,41 @@ sub help_detail {
     return <<EOS
 This command can be used to run all of the MuSiC analysis tools on a set of data.  Please see the individual tools for further description of the parameters.
 EOS
+}
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+
+    #check somatic_variation_builds and bam_list, if available
+    if ($self->somatic_variation_builds) {
+        open(BAM_LIST, $self->bam_list);
+        my @bam_list;
+        while(<BAM_LIST>) {
+            push @bam_list, $_;
+        }
+        close BAM_LIST;
+        chomp @bam_list;
+        bam_list: foreach my $line (@bam_list) {
+            my @fields = split (/\t/, $line);
+            my $found = 0;
+            foreach my $build ($self->somatic_variation_builds) {
+                if ($build->normal_bam eq $fields[1] and $build->tumor_bam eq $fields[2]) {
+                    $found = 1;
+                    next bam_list;
+                }
+            }
+            if (!$found) {
+                $self->error_message("Somatic variation build for bam_list line \"$line\" was not found in the somatic_variation_builds inputs");
+                return;
+            }
+        }
+        unless ($self->music_build) {
+            $self->error_message("No user build passed in to play-music workflow.  If you pass in somatic variation builds to use as software results, you must also pass in the build that will use the software results");
+            return;
+        }
+    }
+    return $self;
 }
 
 sub execute {
@@ -277,6 +222,8 @@ sub execute {
     foreach my $module (qw/path_scan smg mutation_relation clinical_correlation cosmic_omim pfam/) {
         $properties{$module."_output_file"} = $self->output_dir."/$module";
     }
+
+    $workflow->save_to_xml(OutputFile => $self->output_dir . '/play_music_build.xml');
 
     my @errors = $workflow->validate;
     unless ($workflow->is_valid) {
@@ -352,21 +299,50 @@ sub _create_workflow {
     my $input_connector = $workflow->get_input_connector;
     my $output_connector = $workflow->get_output_connector;
 
-    my $command_module = 'Genome::Model::Tools::Music::Bmr::CalcCovgHelper';
-    my $calc_covg_operation = $workflow->add_operation(
-        name => $self->_get_operation_name_for_module($command_module),
-        operation_type => Workflow::OperationType::Command->create(
-            command_class_name => $command_module,
-        ),
-        parallel_by => 'normal_tumor_bam_pair',
-    );
+    my $command_module;
+    my $calc_covg_operation;
+    my $link;
+    if ($self->somatic_variation_builds){
+        $command_module = 'Genome::Model::MutationalSignificance::Command::CalcCovg';
+        $calc_covg_operation = $workflow->add_operation(
+            name => $self->_get_operation_name_for_module($command_module),
+            operation_type => Workflow::OperationType::Command->create(
+                command_class_name => $command_module,
+            ),
+            parallel_by => 'somatic_variation_build',
+        );
 
-    my $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'normal_tumor_pairs',
-        right_operation => $calc_covg_operation,
-        right_property => 'normal_tumor_bam_pair',
-    );
+        $link = $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => 'somatic_variation_builds',
+            right_operation => $calc_covg_operation,
+            right_property => 'somatic_variation_build',
+        );
+
+        $link = $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => 'music_build',
+            right_operation => $calc_covg_operation,
+            right_property => 'music_build',
+        );
+    }
+    else {
+        $command_module = 'Genome::Model::Tools::Music::Bmr::CalcCovgHelper';
+        $calc_covg_operation = $workflow->add_operation(
+            name => $self->_get_operation_name_for_module($command_module),
+            operation_type => Workflow::OperationType::Command->create(
+                command_class_name => $command_module,
+            ),
+            parallel_by => 'normal_tumor_bam_pair',
+        );
+
+        $link = $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => 'normal_tumor_pairs',
+            right_operation => $calc_covg_operation,
+            right_property => 'normal_tumor_bam_pair',
+        );
+    }
 
     $link = $workflow->add_link(
         left_operation => $input_connector,
@@ -388,6 +364,33 @@ sub _create_workflow {
         right_operation => $calc_covg_operation,
         right_property => 'roi_file',
     );
+
+    if ($self->normal_min_depth) {
+        $link = $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => 'normal_min_depth',
+            right_operation => $calc_covg_operation,
+            right_property => 'normal_min_depth',
+        );
+    }
+
+    if ($self->tumor_min_depth) {
+        $link = $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => 'tumor_min_depth',
+            right_operation => $calc_covg_operation,
+            right_property => 'tumor_min_depth',
+        );
+    }
+
+    if ($self->min_mapq) {
+        $link = $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => 'min_mapq',
+            right_operation => $calc_covg_operation,
+            right_property => 'min_mapq',
+        );
+    }
 
     $command_module = 'Genome::Model::MutationalSignificance::Command::MergeCalcCovg';
     my $merge_calc_covg_operation = $workflow->add_operation(

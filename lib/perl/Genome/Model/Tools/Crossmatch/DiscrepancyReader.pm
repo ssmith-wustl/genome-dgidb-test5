@@ -22,8 +22,10 @@ sub create {
         last if $line =~ /\w\d/;
     }
 
-    $line =~ /Discrep(ancy)?\s+(\w+)/;
-    my $type = $2;
+    my $type;
+    if ($line =~ /Discrep(ancy)?\s+(\w+)/) {
+        $type = $2;
+    }
 
     unless ( $type )
     {

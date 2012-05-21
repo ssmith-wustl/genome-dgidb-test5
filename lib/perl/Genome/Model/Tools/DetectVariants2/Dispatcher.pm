@@ -376,6 +376,10 @@ sub calculate_operation_output_directory {
     my ($base_directory, $name, $version, $param_list) = @_;
     my $subdirectory = join('-', $name, $version, Genome::Sys->md5sum_data($param_list));
 
+    if($ENV{UR_DBI_NO_COMMIT}) {
+        #when testing the dispatcher, don't indavertantly stick symlinks in real results that shortcut
+        $base_directory = Genome::Sys->create_temp_directory();
+    }
     return $base_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
 }
 

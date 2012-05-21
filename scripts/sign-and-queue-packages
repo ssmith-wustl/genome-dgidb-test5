@@ -25,16 +25,11 @@ for my $changes_file (@pkgs) {
     my $prefix = $changes_file;
     $prefix =~ s/_[^_]+.changes//;
     
-    my @all_files = (glob("$prefix*"),glob("*.deb"));
+    my @all_files = glob("$prefix*");
     my $cnt = scalar(@all_files);
-    unless ($cnt == 6) {
-        warn "did not find exactly 4 files in the directory with prefix $prefix!  skipping...\n";
+    unless ($cnt == 4) {
+        warn "Did not find exactly 4 files in the directory with prefix $prefix!  This script only works on source packages with one binary package of the same name.";
         next;
-    }
-
-    my @debs = `awk '{ print $3 }' < $changes_file | sort -u`; # get multi-package source
-    if (@debs) {
-        @all_files = List::MoreUtils::uniq(@all_files, @debs);
     }
 
     my @cmds = (

@@ -19,20 +19,28 @@ class Genome::DruggableGene::GeneNameGroup::View::Status::Xml {
                     perspective => 'default',
                     toolkit => 'xml',
                     aspects => [
-                      'name',
-                      'nomenclature',
-                      'source_db_name',
-                      'source_db_version',
-                      'original_data_source_url',
-                      {
-                          name => 'gene_alt_names',
-                              perspective => 'default',
-                              toolkit => 'xml',
-                              aspects => [
-                                  'alternate_name',
-                                  'nomenclature',
-                              ],
-                      },
+                        'name',
+                        'source_db_name',
+                        'source_db_version',
+                        'source_db_url',
+                        'original_data_source_url',
+                        {
+                            name => 'gene_alt_names',
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            aspects => [
+                                'alternate_name',
+                                'nomenclature',
+                            ],
+                        },
+                        {
+                            name => 'citation',
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            aspects => [
+                                'citation',
+                            ],
+                        },
                     ],
                 },
             ],
@@ -44,7 +52,7 @@ sub _generate_content {
     my $self = shift;
     my $group = $self->subject;
     my @ids = map{$_->id}$group->genes;
-    Genome::DruggableGene::GeneAlternateNameReport->get(gene_id => \@ids);
+    Genome::DruggableGene::GeneAlternateNameReport->get(gene_id => [@ids]);
     return $self->SUPER::_generate_content(@_);
 }
 

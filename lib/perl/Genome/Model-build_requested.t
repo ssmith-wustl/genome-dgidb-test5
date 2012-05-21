@@ -46,7 +46,7 @@ is($model->build_requested, 1, 'build requested successfully set');
 my @notes = $model->notes;
 ok(@notes == 1, 'found exactly one build requested note');
 is($notes[0]->header_text, 'build_requested', 'note is the build requested note');
-is($notes[0]->body_text, 'no reason given', 'note body is default, as expected when no reason is given');
+like($notes[0]->body_text, qr(^no reason given), 'note body is default, as expected when no reason is given');
 
 # Set build requested back to false
 $model->build_requested(0);

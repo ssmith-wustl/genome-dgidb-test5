@@ -25,7 +25,7 @@ class Genome::ProcessingProfile {
                            doc => 'Human readable name' },
         type_name     => { is => 'VARCHAR2', len => 255, is_optional => 1, 
                            doc => 'The type of processing profile' },
-        supersedes    => { via => 'params', to => 'value_obj', is_mutable => 1, where => [ name => 'supersedes' ], is_optional => 1, 
+        supersedes    => { via => 'params', to => 'value_id', is_mutable => 1, where => [ name => 'supersedes' ], is_optional => 1, 
                            doc => 'The processing profile replaces the one named here.' },
         subclass_name => {
             is => 'VARCHAR2',
@@ -501,11 +501,11 @@ sub __extend_namespace__ {
         for my $p (@p) {
             if ($p->can("is_param") and $p->is_param) {
                 my %data = %{ UR::Util::deep_copy($p) };
-                for my $key (keys %data) {
-                    delete $data{$key} if $key =~ /^_/;
-                }
                 if (exists $data{_profile_default_value}) {
                     $data{default_value} = delete $data{_profile_default_value};
+                }
+                for my $key (keys %data) {
+                    delete $data{$key} if $key =~ /^_/;
                 }
                 delete $data{id};
                 delete $data{db_committed};

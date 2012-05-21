@@ -20,8 +20,17 @@ my $qidfgm_cnt = 0;
 my $sample_cnt = 0;
 my (@samples, @instrument_data, @index_illumina, @pses, @pse_params);
 no warnings;
-sub GSC::PSE::get { return @pses; }
-sub GSC::PSEParam::get { return @pse_params; }
+my $instrument_data_get = Genome::InstrumentData->can('get');
+*Genome::InstrumentData::get = sub {
+    my ($class, %params) = @_;
+    if ( $params{'attributes.attribute_label'} ) { # getting new/failed inst data, only return what we just created
+        return grep { $_->attributes(attribute_label => 'tgi_lims_status')->attribute_value eq $params{'attributes.attribute_value'}->[0] } @instrument_data;
+    } 
+    else {
+        return $instrument_data_get->(@_);
+    } 
+};
+sub GSC::PSE::get { return grep { $_->pse_status eq 'inprogress' } @pses; }
 sub GSC::IndexIllumina::get { my ($class, $id) = @_; for my $index_illumina ( @index_illumina ) { return $index_illumina if $index_illumina->id == $id; } }
 use warnings;
 
@@ -64,14 +73,12 @@ ok(_qidfgm($unknown_source), 'create qidfgm for unknown');
 is(@instrument_data, $qidfgm_cnt, "create $qidfgm_cnt inst data");
 is_deeply(
     [ map { $_->attribute_value } map { $_->attributes(attribute_label => 'tgi_lims_status') } @instrument_data ],
-    [ map { 'new' } @instrument_data ],
+    [ map { 'failed' } @instrument_data ],
     'set tgi lims status to new',
 );
 is(@pses, $qidfgm_cnt, "create $qidfgm_cnt pses");
 
-my $cmd = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
-    test => 1,
-);
+my $cmd = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(test => 1);
 ok($cmd, 'create aqid');
 ok($cmd->execute, 'execute');
 my @new_models = values %{$cmd->_newly_created_models};
@@ -106,10 +113,10 @@ is_deeply(
 );
 my @model_groups = Genome::ModelGroup->get(uuid => [ map { $_->id } @projects ]);
 is(@model_groups, 2, 'created model groups');
-is_deeply(
-    [ map { $_->attribute_value } map { $_->attributes(attribute_label => 'tgi_lims_status') } @instrument_data ],
-    [ map { 'processed' } @instrument_data ],
-    'set tgi lims status to processed',
+is(
+    scalar(grep { $_->attributes(attribute_label => 'tgi_lims_status')->attribute_value eq 'processed' } @instrument_data),
+    2,
+    'set tgi lims status to processed for all instrument data',
 );
 
 done_testing();
@@ -139,7 +146,7 @@ sub _qidfgm {
     push @instrument_data, $instrument_data;
     $instrument_data->add_attribute(
         attribute_label => 'tgi_lims_status',
-        attribute_value => 'new',
+        attribute_value => 'failed',
     );
 
     my $index_illumina = Test::MockObject->new();

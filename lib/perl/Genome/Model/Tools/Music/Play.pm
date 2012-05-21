@@ -180,7 +180,6 @@ class Genome::Model::Tools::Music::Play {
         reference_build => {
             is => 'Path',
             doc => 'Put either "Build36" or "Build37"',
-            is_output => 1,
             default => 'Build36',
         },
         show_known_hits => {

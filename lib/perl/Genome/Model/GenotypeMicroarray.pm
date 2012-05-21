@@ -83,8 +83,11 @@ sub _additional_parts_for_default_name {
 sub dependent_cron_ref_align {
     my $self = shift;
 
+    my @subjects = ($self->subject);
+    push @subjects, Genome::Sample->get(default_genotype_data_id => [map { $_->id } $self->instrument_data]);
+
     my @ref_align_models = Genome::Model::ReferenceAlignment->get(
-        subject_id => $self->subject_id,
+        subject_id => [map { $_->id } @subjects],
         reference_sequence_build => $self->reference_sequence_build,
         auto_assign_inst_data => 1, # our current way of saying auto-build, later to be a project relationship
     );

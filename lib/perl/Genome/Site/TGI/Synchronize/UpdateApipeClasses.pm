@@ -32,6 +32,8 @@ sub objects_to_sync {
         'Genome::Site::TGI::InstrumentData::454' => 'Genome::InstrumentData::454',
         'Genome::Site::TGI::InstrumentData::Sanger' => 'Genome::InstrumentData::Sanger',
         'Genome::Site::TGI::InstrumentData::Solexa' => 'Genome::InstrumentData::Solexa',
+        'Genome::Site::TGI::InstrumentData::ExternalGenotyping' => 'Genome::InstrumentData::Imported',
+        'Genome::Site::TGI::InstrumentData::IlluminaGenotyping' => 'Genome::InstrumentData::Imported',
         'Genome::Site::TGI::Individual' => 'Genome::Individual',
         'Genome::Site::TGI::PopulationGroup' => 'Genome::PopulationGroup',
         'Genome::Site::TGI::Taxon' => 'Genome::Taxon',
@@ -54,6 +56,8 @@ sub sync_order {
         Genome::Site::TGI::Library
         Genome::Site::TGI::InstrumentData::Solexa
         Genome::Site::TGI::InstrumentData::454
+        Genome::Site::TGI::InstrumentData::ExternalGenotyping
+        Genome::Site::TGI::InstrumentData::IlluminaGenotyping
     /;
 
     # FIXME Currently not syncing sanger data due to a bug, needs to be fixed
@@ -281,11 +285,11 @@ sub _get_direct_and_indirect_properties_for_object {
     return (\%direct_properties, \%indirect_properties);
 }
 
-my %successful_pidfas;
+my %instrument_data_with_successful_pidfas;
 sub _load_successful_pidfas {
     my $self = shift;
-    # This query/hash loading takes < 10 secs
-    $self->status_message('Load instrument data successful pidfas...');
+    # This query/hash loading takes 10-15 secs
+    print STDERR "Load instrument data successful pidfas...\n";
 
     my $dbh = Genome::DataSource::GMSchema->get_default_handle;
     if ( not $dbh ) {
@@ -293,10 +297,12 @@ sub _load_successful_pidfas {
         return;
     }
     my $sql = <<SQL;
-        select distinct(p.param_value)
+        select p1.param_value, p2.param_value
         from process_step_executions\@oltp pse
-        left join pse_param\@oltp p on p.pse_id = pse.pse_id and p.param_name = 'instrument_data_id'
+        inner join pse_param\@oltp p1 on p1.pse_id = pse.pse_id and p1.param_name = 'instrument_data_id'
+        left join pse_param\@oltp p2 on p2.pse_id = pse.pse_id and p2.param_name = 'genotype_file'
         where pse.ps_ps_id = 3870 and pse.pr_pse_result = 'successful'
+        order by p1.param_value desc
 SQL
 
     my $sth = $dbh->prepare($sql);
@@ -309,20 +315,108 @@ SQL
         $self->error_message('Failed to execute successful pidfa sql');
         return;
     }
-    while ( my ($instrument_data_id) = $sth->fetchrow_array ) {
-        $successful_pidfas{$instrument_data_id}++;
+    while ( my ($instrument_data_id, $genotype_file) = $sth->fetchrow_array ) {
+        # Going in reverse id order...use the most recent genotype file for duplicate pidfas
+        $instrument_data_with_successful_pidfas{$instrument_data_id} = $genotype_file if not defined $instrument_data_with_successful_pidfas{$instrument_data_id};
     }
     $sth->finish;
 
-    $self->status_message('Loaded '..scalar(keys %successful_pidfas).'successful PIDFAs');
+    print STDERR 'Loaded '.scalar(keys %instrument_data_with_successful_pidfas)." successful PIDFAs\n";
+    print STDERR 'Loaded '.scalar(grep { defined } values %instrument_data_with_successful_pidfas)." genotype files\n";
     return 1;
+}
+
+sub _create_instrumentdata_illuminagenotyping { _create_genotype_microarray(@_) }
+sub _create_instrumentdata_externalgenotyping { _create_genotype_microarray(@_) }
+sub _create_genotype_microarray {
+    my ($self, $original_object, $new_object_class) = @_;
+
+    # Successful PIDFA required! The value is the genotype file. It must exist, too!
+    my $genotype_file = $instrument_data_with_successful_pidfas{$original_object->id};
+    return 0 unless $genotype_file and -s $genotype_file;
+    
+    my $library_name = $original_object->sample_name.'-microarraylib';
+    my ($library) = Genome::Library->get(name => $library_name, sample_id => $original_object->sample_id);
+    if ( not $library ) {
+        $library = Genome::Library->create(name => $library_name, sample_id => $original_object->sample_id);
+        if ( not $library ) {
+            Carp::confess('Failed to create genotype microarray library for sample: '.$original_object->sample_id);
+        }
+    }
+
+    my $object = eval {
+        $new_object_class->create(
+            id => $original_object->id,
+            library => $library,
+            sequencing_platform => $original_object->platform_name,
+            import_format => 'genotype file',
+            import_source_name => $original_object->import_source_name,
+        );
+    };
+    confess "Could not create new object of type $new_object_class based on object of type " .
+        $original_object->class . " with id " . $original_object->id . ":\n$@" if not $object;
+
+    my $new_genotype_file = $self->_copy_genotpe_file($object, $genotype_file);
+    Carp::confess('Failed to copy genotype file!') if not $new_genotype_file;
+
+    my $indirect_properties = {
+        genotype_file => $new_genotype_file,
+    };
+    my $add_attrs = $self->_add_attributes_to_instrument_data($object, $indirect_properties);
+    Carp::confess('Failed to add attributes to instrument data: '.$object->__display_name__) if not $add_attrs;
+
+    return 1;
+}
+
+sub _copy_genotpe_file {
+    my ($self, $instrument_data, $genotype_file) = @_;
+
+    my $kilobytes_requested = -s $genotype_file;
+    return if not $kilobytes_requested; # should not happen
+
+    my ($disk_allocation) = $instrument_data->allocations;
+    if ( not $disk_allocation ) {
+        $disk_allocation = Genome::Disk::Allocation->allocate (
+            disk_group_name => 'info_alignments',
+            allocation_path => 'instrument_data/imported/'.$instrument_data->id,
+            kilobytes_requested => $kilobytes_requested,
+            owner_class_name => $instrument_data->class,
+            owner_id => $instrument_data->id,
+        );
+        if ( not $disk_allocation ) {
+            $self->error_message("Failed to create disk allocation for instrument data: ".$instrument_data->id);
+            return
+        }
+    }
+    else { # this should not exist
+        my $realloc = eval{ 
+            $disk_allocation->reallocate(
+                kilobytes_requested => $kilobytes_requested, 
+                allow_reallocate_with_move => 1, 
+            );
+        };
+        if ( not $realloc ) {
+            $self->error_message('Failed to reallocate instrument data ('.$disk_allocation->owner_id.')');
+            return;
+        }
+    }
+
+    my $new_genotype_file = $disk_allocation->absolute_path.'/'.$instrument_data->sample->id.'.genotype';
+    unlink $new_genotype_file if -e $new_genotype_file;
+    my $copy = File::Copy::copy($genotype_file, $new_genotype_file);
+    if ( not $copy ) {
+        $self->error_message("Failed to copy genotype file from $genotype_file to $new_genotype_file => $!");
+        return;
+    }
+
+    return $new_genotype_file;
 }
 
 sub _create_instrumentdata_solexa {
     my ($self, $original_object, $new_object_class) = @_;
 
     # Successful PIDFA required!
-    return 0 unless $successful_pidfas{$original_object->id};
+    return 0 unless exists $instrument_data_with_successful_pidfas{$original_object->id};
     # Bam path required!
     return 0 unless $original_object->bam_path;
     
@@ -352,7 +446,7 @@ sub _create_instrumentdata_sanger {
     my ($self, $original_object, $new_object_class) = @_;
 
     # Successful PIDFA required!
-    return 0 unless $successful_pidfas{$original_object->id};
+    return 0 unless exists $instrument_data_with_successful_pidfas{$original_object->id};
     # Some sanger instrument don't have a library. If that's the case here, just don't create the object
     return 0 unless defined $original_object->library_id or defined $original_object->library_name
         or defined $original_object->library_summary_id;
@@ -397,7 +491,7 @@ sub _create_instrumentdata_454 {
     my ($self, $original_object, $new_object_class) = @_;
 
     # Successful PIDFA required!
-    return 0 unless $successful_pidfas{$original_object->id};
+    return 0 unless exists $instrument_data_with_successful_pidfas{$original_object->id};
 
     my ($direct_properties, $indirect_properties) = $self->_get_direct_and_indirect_properties_for_object(
         $original_object,

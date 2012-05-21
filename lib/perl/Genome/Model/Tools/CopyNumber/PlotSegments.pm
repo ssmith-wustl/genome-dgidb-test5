@@ -648,7 +648,7 @@ sub execute {
 
 
     #draw the plots for each set of segments
-    foreach my $infile (@infiles){
+    for my $infile (@infiles) {
         
         #sanity check - the infile exists and is not empty
         unless (-s $infile){
@@ -656,96 +656,96 @@ sub execute {
             next;
         }
 
-	print R_COMMANDS "plotSegments(";
+        print R_COMMANDS "plotSegments(";
 
-	#first the core stuff
-	if(defined($chr)){
-	    print R_COMMANDS 'chr="' . $chr . '"';
-	} else {
-	    print R_COMMANDS "chr=\"ALL\"";
-	}
-	print R_COMMANDS ", filename=\"" . $infile . "\"";
-	print R_COMMANDS ", entrypoints=\"" . $entrypoints_file . "\"";
+        #first the core stuff
+        if(defined($chr)){
+            print R_COMMANDS 'chr="' . $chr . '"';
+        } else {
+            print R_COMMANDS "chr=\"ALL\"";
+        }
+        print R_COMMANDS ", filename=\"" . $infile . "\"";
+        print R_COMMANDS ", entrypoints=\"" . $entrypoints_file . "\"";
 
-	#then the optional parameters
-	if(defined($ymax)){
-	    print R_COMMANDS ", ymax=" . $ymax;
-	}
-
-    if(defined($ymin)){
-	    print R_COMMANDS ", ymin=" . $ymin;
+        #then the optional parameters
+        if(defined($ymax)){
+            print R_COMMANDS ", ymax=" . $ymax;
         }
 
-	if(defined($xmax)){
-	    print R_COMMANDS ", xmax=" . $xmax;
-	}
-
-    if(defined($xmin)){
-	    print R_COMMANDS ", xmin=" . $xmin;
+        if(defined($ymin)){
+            print R_COMMANDS ", ymin=" . $ymin;
         }
 
-	if (defined($highlights)){
-	    print R_COMMANDS ", highlights=\"" . $highlights . "\"";
-	}
+        if(defined($xmax)){
+            print R_COMMANDS ", xmax=" . $xmax;
+        }
 
-	if (defined($annotations_top)){
-	    print R_COMMANDS ", annotationsTop=\"" . $annotations_top . "\"";
-	}
+        if(defined($xmin)){
+            print R_COMMANDS ", xmin=" . $xmin;
+        }
 
-	if (defined($annotations_bottom)){
-	    print R_COMMANDS ", annotationsBottom=\"" . $annotations_bottom . "\"";
-	}
+        if (defined($highlights)){
+            print R_COMMANDS ", highlights=\"" . $highlights . "\"";
+        }
 
-	if ($lowres){
-	    print R_COMMANDS ", lowRes=TRUE";
-	}
+        if (defined($annotations_top)){
+            print R_COMMANDS ", annotationsTop=\"" . $annotations_top . "\"";
+        }
 
-	if (defined($lowres_min)){
-	    print R_COMMANDS ", lowResMin=" . $lowres_min;
-	}
+        if (defined($annotations_bottom)){
+            print R_COMMANDS ", annotationsBottom=\"" . $annotations_bottom . "\"";
+        }
 
-	if (defined($lowres_max)){
-	    print R_COMMANDS ", lowResMax=" . $lowres_max;
-	}
+        if ($lowres){
+            print R_COMMANDS ", lowRes=TRUE";
+        }
 
-	if (defined($label_size)){
-	    print R_COMMANDS ", label_size=" . $label_size;
-	}
+        if (defined($lowres_min)){
+            print R_COMMANDS ", lowResMin=" . $lowres_min;
+        }
 
-	if ($hide_normal){
-	    print R_COMMANDS ", showNorm=FALSE";
-	} else {
-	    print R_COMMANDS ", showNorm=TRUE";
-	}
+        if (defined($lowres_max)){
+            print R_COMMANDS ", lowResMax=" . $lowres_max;
+        }
 
-	print R_COMMANDS ", gainThresh=" . $gain_threshold;
-	print R_COMMANDS ", lossThresh=" . $loss_threshold;
+        if (defined($label_size)){
+            print R_COMMANDS ", label_size=" . $label_size;
+        }
 
-	print R_COMMANDS ", gainColor=\"" . $gain_color . "\"";
-	print R_COMMANDS ", lossColor=\"" . $loss_color . "\"";
+        if ($hide_normal){
+            print R_COMMANDS ", showNorm=FALSE";
+        } else {
+            print R_COMMANDS ", showNorm=TRUE";
+        }
+
+        print R_COMMANDS ", gainThresh=" . $gain_threshold;
+        print R_COMMANDS ", lossThresh=" . $loss_threshold;
+
+        print R_COMMANDS ", gainColor=\"" . $gain_color . "\"";
+        print R_COMMANDS ", lossColor=\"" . $loss_color . "\"";
 
         if(defined($baseline)){
             print R_COMMANDS ", baseline=\"" . $baseline . "\"";
         }
 
-	if (defined($plot_title)){
-	    print R_COMMANDS ", plotTitle=\"" . $titles[$counter] . "\"";
-	}
-
-	if (defined($ylabel)){
-            print R_COMMANDS ", ylabel=\"" . $ylabel . "\"";
-        } else {
-            if($log2_plot){
-	 	print R_COMMANDS ", ylabel=\"Log2 Copy Number\"";
-            } elsif($log10_plot){
-	 	print R_COMMANDS ", ylabel=\"Log10 Copy Number\"";
-            } else {
-	 	print R_COMMANDS ", ylabel=\"Copy Number\"";
-            }
+        if (defined($plot_title)){
+            print R_COMMANDS ", plotTitle=\"" . $titles[$counter] . "\"";
         }
 
-	print R_COMMANDS ")\n";
-        $counter++;
+        my $ylab = $ylabel;
+        if (!defined($ylab)){
+            if($log2_plot){
+                $ylab = "Log2 Copy Number";
+            } elsif($log10_plot){
+                $ylab = "Log10 Copy Number";
+            } else {
+                $ylab = "Copy Number"
+            }
+        }
+        print R_COMMANDS ", ylabel=\"$ylab\"";
+
+        print R_COMMANDS ")\n";
+            $counter++;
     }
 
     #close the file out

@@ -23,7 +23,6 @@ class Genome::Model::Tools::Music::CosmicOmim {
        reference_build => {
            is => 'Path',
            doc => 'Put either "Build36" or "Build37" (This specifies which build coordinates in the Cosmic database are appropriate to match to the coordinates supplied in the MAF)',
-           is_output => 1,
            default => 'Build36',
        }
     ],

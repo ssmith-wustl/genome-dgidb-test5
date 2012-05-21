@@ -56,6 +56,14 @@ class Genome::Model::View::Solr::Xml {
                 return $solr_type;
             },
         },
+        last_succeeded_build_id => {
+            is => 'Text',
+            calculate_from => ['subject'],
+            calculate => sub {
+                my $build = $_[0]->last_succeeded_build();
+                my $b = $build->id if $build;
+            }
+        },
         display_icon_url => {
             is  => 'Text',
             default => 'genome_model_32',

@@ -67,7 +67,7 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
 
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
-        input_properties => ['clinical_data_file', 'merged_maf_path', 'create_maf_output_dir', 'bam_list', 'processors', 'pathway_file', 'reference_sequence','reference_build','somatic_variation_builds','annotation_build', 'output_dir', 'log_directory', 'roi_flank_size', 'excluded_reference_sequence_patterns', 'included_feature_type_patterns'],
+        input_properties => ['music_build','clinical_data_file', 'merged_maf_path', 'create_maf_output_dir', 'bam_list', 'processors', 'pathway_file', 'reference_sequence','reference_build','somatic_variation_builds','annotation_build', 'output_dir', 'log_directory', 'roi_flank_size', 'excluded_reference_sequence_patterns', 'included_feature_type_patterns'],
         output_properties => ['smg_result','pathscan_result','mr_result','pfam_result','proximity_result',
                               'cosmic_result','cct_result'],
     );
@@ -365,6 +365,7 @@ sub _map_workflow_inputs {
     my @builds = $build->somatic_variation_builds;
     my $base_dir = $build->data_directory;
 
+    push @inputs, music_build => $build;
     push @inputs, log_directory => $build->log_directory;
     push @inputs, merged_maf_path => $base_dir."/final.maf";
     push @inputs, create_maf_output_dir => $base_dir;

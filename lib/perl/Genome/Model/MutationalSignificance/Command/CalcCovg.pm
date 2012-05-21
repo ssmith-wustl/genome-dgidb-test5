@@ -4,13 +4,18 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper;
 
 class Genome::Model::MutationalSignificance::Command::CalcCovg {
     is => ['Command::V2'],
     has_input => [
+        music_build => {
+            is => 'Genome::Model::Build',
+            doc => 'Build that is using this software result',
+        },
         somatic_variation_build => {
             is => 'Genome::Model::Build::SomaticVariation',
-            doc => 'Build for sample to use for coverage calculation',
+            doc => 'Build with tumor-normal pair to be analyzed',
         },
         output_dir => {
             is => 'Text',
@@ -23,17 +28,14 @@ class Genome::Model::MutationalSignificance::Command::CalcCovg {
         },
         normal_min_depth => {
             is => 'Text',
-            is_optional => 1,
             doc => "The minimum read depth to consider a Normal BAM base as covered",
         },
         tumor_min_depth => {
             is => 'Text',
-            is_optional => 1,
             doc => "The minimum read depth to consider a Tumor BAM base as covered",
         },
         min_mapq => {
             is => 'Text',
-            is_optional => 1,
             doc => "The minimum mapping quality of reads to consider towards read depth counts",
         },
         roi_file => {
@@ -55,11 +57,10 @@ This module calculates per-feature coverage for a sample, given the somatic vari
 General usage:
 
  genome model mutational-significance calc-covg \\
-    --bam-list input_dir/bam_list \\
+    --somatic-variation-build build_id \\
     --output-dir output_dir/ \\
     --reference-sequence input_dir/all_sequences.fa \\
     --roi-file input_dir/all_coding_exons.tsv \\
-    --somatic-variation-build BUILD
 
 HELP
 }
@@ -72,17 +73,61 @@ For more details on the calculation, see gmt music bmr calc-covg --help
 HELP
 }
 
+sub shortcut {
+    my $self = shift;
+
+    my %params = $self->_collect_params;
+    my $result = Genome::Model::Build::SomaticVariation::CalcCovgResult->get_with_lock(%params);
+
+    if ($result) {
+        $self->status_message('Using existing result ' .
+                    $result->__display_name__);
+        return $self->_link_result_to_build($result);
+    }
+    else {
+        return;
+    }
+}
+
 sub execute {
     my $self = shift;
 
     $self->status_message("CalcCovg for build ".$self->somatic_variation_build->id);
 
-    my $normal_bam = $self->somatic_variation_build->normal_bam;
-    my $tumor_bam = $self->somatic_variation_build->tumor_bam;
+    my $result = Genome::Model::Build::SomaticVariation::CalcCovgResult->get_or_create($self->_collect_params);
 
-    my $sample_name = $self->somatic_variation_build->tumor_build->model->subject->extraction_label;
+    unless ($result) {
+        $self->error_message("Failed to generate CalcCovgResult");
+        return;
+    }
 
-    my $output_dir = $self->output_dir."/roi_covgs";
+    my $status = "CalcCovg done";
+    $self->status_message($status);
+    return $self->_link_result_to_build($result);
+}
+
+sub _collect_params {
+    my $self = shift;
+
+    my %params = (
+        roi_file => $self->roi_file,
+        reference_sequence => $self->reference_sequence,
+        somatic_variation_build => $self->somatic_variation_build,
+        test_name => ($ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef),
+    );
+
+    $params{normal_min_depth} = $self->normal_min_depth;
+    $params{tumor_min_depth} = $self->tumor_min_depth;
+    $params{min_mapq} = $self->min_mapq;
+    return %params;
+}
+
+sub _link_result_to_build {
+    my $self = shift;
+    my $result = shift;
+
+    my $output_dir = $self->output_dir;
+    my $sample_name = $self->somatic_variation_build->tumor_build->subject->extraction_label;
 
     unless (-d $output_dir) {
         Genome::Sys->create_directory($output_dir);
@@ -92,26 +137,8 @@ sub execute {
 
     $self->output_file($output_file);
 
-    my $cmd = Genome::Model::Tools::Music::Bmr::CalcCovgHelper->create (
-        roi_file => $self->roi_file,
-        reference_sequence => $self->reference_sequence,
-        normal_bam => $normal_bam,
-        tumor_bam => $tumor_bam,
-        output_file => $output_file,
-    );
-    if ($self->normal_min_depth) {
-        $cmd->normal_min_depth($self->normal_min_depth);
-    }
-    if ($self->tumor_min_depth) {
-        $cmd->tumor_min_depth($self->tumor_min_depth);
-    }
-    if ($self->min_mapq) {
-        $cmd->min_mapq($self->min_mapq);
-    }
-    $cmd->execute;
-
-    my $status = "CalcCovg done";
-    $self->status_message($status);
+    Genome::Sys->create_symlink(join('/', $result->output_dir, $result->output_file), $output_file);
+    $result->add_user(label => 'calc_covg', user => $self->music_build);
     return 1;
 }
 

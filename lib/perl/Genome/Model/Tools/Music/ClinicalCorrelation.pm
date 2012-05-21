@@ -133,9 +133,9 @@ Internally, the input data is fed into an R script which calculates a P-value re
 probability that the correlation seen between the mutations in each gene (or variant) and each
 phenotype trait are random. Lower P-values indicate lower randomness, or likely true correlations.
 
-The results are saved to the output filename given with a suffix appended; ".numeric" will be
-appended for results derived from numeric clinical data, and ".categ" will be appended for results
-derived from categorical clinical data. Also, ".glm" will be appended to the output filename for GLM results.
+The results are saved to the output filename given with a suffix appended; ".numeric.csv" will be
+appended for results derived from numeric clinical data, and ".categorical.csv" will be appended for results
+derived from categorical clinical data. Also, ".glm.csv" will be appended to the output filename for GLM results.
 
 The GLM analysis accepts a mixed numeric and categoric clinical data file, input using the parameter --glm-clinical-data-file. GLM clinical data must adhere to the formats described above for the correlation clinical data files. GLM also requires the user to input a --glm-model-file. This file requires specific headers and defines the analysis to be performed rather exactly. Here are the conventions required for this file:
 
@@ -248,17 +248,17 @@ sub execute {
         my $full_output_filename;
 
         if ($datatype =~ /numeric/i) {
-            $full_output_filename = $output_file . ".numeric";
+            $full_output_filename = $output_file . ".numeric.csv";
             $test_method = $self->numerical_data_test_method;
         }
 
         if ($datatype =~ /categ/i) {
-            $full_output_filename = $output_file . ".categorical";
+            $full_output_filename = $output_file . ".categorical.csv";
             $test_method = "fisher";
         }
 
         if ($datatype =~ /glm/i) {
-            $full_output_filename = $output_file . ".glm";
+            $full_output_filename = $output_file . ".glm.csv";
             $test_method = "glm";
         }
 

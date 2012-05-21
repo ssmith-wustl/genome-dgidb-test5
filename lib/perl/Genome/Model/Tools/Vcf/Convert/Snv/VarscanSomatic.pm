@@ -87,7 +87,7 @@ sub parse_line {
     if($col[14] == 0){
         $tumor_vaq = 99;
     } else {
-        $tumor_vaq = sprintf "%.2f", -10*log10($col[14]);
+        $tumor_vaq = sprintf "%.0f", -10*log10($col[14]);
     }
     my $normal_vaq = ".";
 

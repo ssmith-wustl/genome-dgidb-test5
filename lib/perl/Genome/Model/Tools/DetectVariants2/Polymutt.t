@@ -15,10 +15,12 @@ use Test::More;
 
 if (Genome::Config->arch_os ne 'x86_64') {
     plan skip_all => 'requires 64-bit machine';
-}
-else {
+} elsif(not $ENV{UR_RUN_LONG_TESTS}) {
+    plan skip_all => 'This test usually takes 2-3 minutes but can time out in jenkins.  Use `ur test run --long` to enable.';
+} else {
     plan tests => 18;
 }
+
 
 use_ok('Genome::Model::Tools::DetectVariants2::::Polymutt');
 my $version = "0.02";

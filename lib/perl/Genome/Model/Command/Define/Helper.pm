@@ -122,20 +122,21 @@ sub type_specific_parameters_for_create {
     $model_class =~ s/::Command::Define::/::/;
     my @p = 
         map { 
-            my @values = grep { defined $_ } $self->$_;
+            my $meta = $_;
+            my $name = $meta->property_name;
+            my @values = grep { defined $_ } $self->$name;
             if (@values == 0) {
                 ()
             }
-            elsif (@values == 1) {
-                ($_ => $values[0]);
+            elsif ($meta->is_many or @values > 1) {
+                ($name => \@values);
 
             }
-            elsif (@values > 1) {
-                ($_ => \@values);
+            else {
+                ($name => $values[0]);
             }
         }
-        grep { $model_class->can($_) }
-        map { $_->property_name }
+        grep { $model_class->can($_->property_name) }
         grep { $_->can("is_input") and $_->is_input }
         $self->__meta__->properties();
     

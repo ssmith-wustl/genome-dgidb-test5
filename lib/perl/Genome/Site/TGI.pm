@@ -8,7 +8,7 @@ BEGIN {
         $ENV{GENOME_SYS_SERVICES_SOLR} ||= 'http://solr-dev:8080/solr';
     }
     else {
-        $ENV{GENOME_SYS_SERVICES_MEMCACHE} ||= 'imp.gsc.wustl.edu:11211';
+        $ENV{GENOME_SYS_SERVICES_MEMCACHE} ||= 'imp-apipe.gsc.wustl.edu:11211';
         $ENV{GENOME_SYS_SERVICES_SOLR} ||= 'http://solr:8080/solr';
     }
 }
@@ -40,7 +40,7 @@ $ENV{GENOME_TESTSUITE_INPUTS_PATH} = '/gsc/var/cache/testsuite/data';
 $ENV{GENOME_DB_PAUSE} ||= '/gsc/var/lock/database/pause_updates';
 
 # configure our local ensembl db
-$ENV{GENOME_DB_ENSEMBL_API_PATH} ||= '/gsc/scripts/share/ensembl-64';
+$ENV{GENOME_DB_ENSEMBL_DEFAULT_IMPORTED_ANNOTATION_BUILD} ||= '122704720';
 $ENV{GENOME_DB_ENSEMBL_HOST} ||= 'mysql1';
 $ENV{GENOME_DB_ENSEMBL_USER} ||= 'mse';
 $ENV{GENOME_DB_ENSEMBL_PORT} ||= '3306';

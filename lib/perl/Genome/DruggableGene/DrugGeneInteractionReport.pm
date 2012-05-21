@@ -25,6 +25,13 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
             via => 'drug',
             to => 'name',
         },
+        human_readable_drug_name => {
+            is => 'text',
+            calculate_from => ['drug'],
+            calculate => q|
+                return $drug->human_readable_name;
+            |,
+        },
         gene_id => { is => 'Text', column_name => 'gene_name_report_id'},
         gene => {
             is => 'Genome::DruggableGene::GeneNameReport',
@@ -35,8 +42,14 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
             via => 'gene',
             to => 'name',
         },
-        source_db_name => { is => 'Text'},
-        source_db_version => { is => 'Text'},
+        source_db_name => {
+            via => 'citation',
+            to => 'source_db_name',
+        },
+        source_db_version => {
+            via => 'citation',
+            to => 'source_db_version',
+        },
         description => { is => 'Text', is_optional => 1 },
         interaction_attributes => {
             is => 'Genome::DruggableGene::DrugGeneInteractionReportAttribute',
@@ -44,10 +57,19 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
             is_many => 1,
         },
         citation => {
-            calculate_from => ['source_db_name', 'source_db_version'],
+            is => 'Genome::DruggableGene::Citation',
+            id_by => 'citation_id',
+        },
+        citation_id => {
+            is => 'Text',
+            implied_by => 'citation',
+        },
+        gene_group_name => {
+            is => 'text',
+            calculate_from => ['gene_id'],
             calculate => q|
-                my $citation = Genome::DruggableGene::Citation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
-                return $citation;
+                my $bridge = Genome::DruggableGene::GeneNameGroupBridge->get(gene_id => $gene_id);
+                return $bridge->group->name;
             |,
         },
         is_known_action => {

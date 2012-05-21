@@ -10,6 +10,7 @@ use File::Copy::Recursive 'dircopy';
 use Carp 'confess';
 
 class Genome::Disk::Allocation {
+    is => 'Genome::Notable',
     id_generator => '-uuid',
     id_by => [
         id => {
@@ -71,6 +72,11 @@ class Genome::Disk::Allocation {
             is => 'Boolean',
             default => 0,
             doc => 'If set, the allocation cannot be deallocated',
+        },
+        archivable => {
+            is => 'Boolean',
+            default => 1,
+            doc => 'If set, this allocation can be archived',
         },
         original_kilobytes_requested => {
             is => 'Number',
@@ -190,11 +196,13 @@ sub tar_path {
 }
 
 sub preserved {
-    my ($self, $value) = @_;
+    my ($self, $value, $reason) = @_;
     if (@_ > 1) {
-        unless (Genome::Sys->current_user_is_admin) {
-            confess "Only admins can change the preservation status of an allocation!";
-        }
+        $reason ||= 'no reason given';
+        $self->add_note(
+            header_text => $value ? 'set to preserved' : 'set to unpreserved',
+            body_text => $reason,
+        );
         if ($value) {
             $self->_create_observer($self->_mark_read_only_closure($self->absolute_path));
         }
@@ -204,6 +212,19 @@ sub preserved {
         return $self->__preserved($value);
     }
     return $self->__preserved();
+}
+
+sub archivable {
+    my ($self, $value, $reason) = @_;
+    if (@_ > 1) {
+        $reason ||= 'no reason given';
+        $self->add_note(
+            header_text => $value ? 'set to archivable' : 'set to unarchivable',
+            body_text => $reason,
+        );
+        return $self->__archivable($value);
+    }
+    return $self->__archivable;
 }
 
 sub _create {
@@ -640,7 +661,15 @@ sub _archive {
         input_directory => $current_allocation_path,
     );
     unless ($tar_rv) {
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess "Could not create tarball for allocation contents!";
+    }
+
+    # Check size of tar_path and abort if "too small" <1GB=1024^3
+    unless (-s $tar_path < 1073741824) {
+        unlink $tar_path;
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess "Aborting storage of archive that is too small (<1GB)";
     }
 
     my $cmd = "mkdir -p $archive_allocation_path && rsync -rlHpgt $tar_path $archive_allocation_path/";
@@ -726,6 +755,8 @@ sub _unarchive {
     }
 
     my $archive_path = $self->absolute_path;
+
+    # TODO Could make this allow any viable volume instead of just choosing the active volume paired with the archive volume
     my $active_path = join('/', $self->volume->active_mount_path, $self->group_subdirectory, $self->allocation_path);
     eval { 
         unless ($self->is_archived) {
@@ -761,6 +792,8 @@ sub _unarchive {
         unless ($untar_rv) {
             confess "Could not untar tarball " . $self->tar_path . " at " . $self->absolute_path;
         }
+
+        $self->archivable(0, 'allocation was unarchived');
 
         # Commit changes, which will release locks
         unless (UR::Context->commit) {
@@ -830,7 +863,11 @@ sub _execute_system_command {
         my $cmd = "perl $includes -e \"use above Genome; $class->$method($param_string); UR::Context->commit;\"";
 
         unless (eval { system($cmd) } == 0) {
-            confess "Could not perform allocation action!";
+            my $msg = "Could not perform allocation action!";
+            if ($@) {
+                $msg .= " Error: $@";
+            }
+            confess $msg;
         }
         $allocation = $class->_reload_allocation($params{allocation_id});
     }
@@ -1000,23 +1037,75 @@ sub _set_default_permissions_closure {
 # Class method for determining if the given path has a parent allocation
 sub _verify_no_parent_allocation {
     my ($class, $path) = @_;
+    my $allocation = $class->_get_parent_allocation($path);
+    return !(defined $allocation);
+}
+
+# Returns parent allocation for the given path if one exists
+sub _get_parent_allocation {
+    my ($class, $path) = @_;
     my ($allocation) = $class->get(allocation_path => $path);
-    return 0 if $allocation;
+    return $allocation if $allocation;
 
     my $dir = File::Basename::dirname($path);
     if ($dir ne '.' and $dir ne '/') {
-        return $class->_verify_no_parent_allocation($dir);
+        return $class->_get_parent_allocation($dir);
     }
-    return 1;
+    return;
+}
+
+sub _allocation_path_from_full_path {
+    my ($class, $path) = @_;
+    my $allocation_path = $path;
+    my $mount_path = $class->_get_mount_path_from_full_path($path);
+    return unless $mount_path;
+
+    my $group_subdir = $class->_get_group_subdir_from_full_path_and_mount_path($path, $mount_path);
+    return unless $group_subdir;
+
+    $allocation_path =~ s/^$mount_path//;
+    $allocation_path =~ s/^\/$group_subdir//;
+    $allocation_path =~ s/^\///;
+    return $allocation_path;
+}
+
+sub _get_mount_path_from_full_path {
+    my ($class, $path) = @_;
+    my @parts = grep { defined $_ and $_ ne '' } split(/\//, $path);
+    for (my $i = 0; $i < @parts; $i++) {
+        my $volume_subpath = '/' . join('/', @parts[0..$i]);
+        my ($volume) = Genome::Disk::Volume->get(mount_path => $volume_subpath);
+        return $volume_subpath if $volume;
+    }
+    return;
+}
+
+sub _get_group_subdir_from_full_path_and_mount_path {
+    my ($class, $path, $mount_path) = @_;
+    my $subpath = $path;
+    $subpath =~ s/$mount_path//;
+    $subpath =~ s/\///;
+    my @parts = split(/\//, $subpath);
+
+    for (my $i = 0; $i < @parts; $i++) {
+        my $group_subpath = join('/', @parts[0..$i]);
+        my ($group) = Genome::Disk::Group->get(subdirectory => $group_subpath);
+        return $group_subpath if $group;
+    }
+    return;
 }
 
 # Checks for allocations beneath this one, which is also invalid
 sub _verify_no_child_allocations {
     my ($class, $path) = @_;
     $path =~ s/\/+$//;
-    my ($allocation) = $class->get('allocation_path like' => $path . '/%');
-    return 0 if $allocation;
-    return 1;
+    return !($class->_get_child_allocations($path));
+}
+
+sub _get_child_allocations {
+    my ($class, $path) = @_;
+    $path =~ s/\/+$//;
+    return $class->get('allocation_path like' => $path . '/%');
 }
 
 # Makes sure the supplied kb amount is valid (nonzero and bigger than mininum)

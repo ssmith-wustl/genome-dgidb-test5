@@ -20,9 +20,9 @@ class Genome::DruggableGene::DrugNameReport::Set::View::Status::Xml {
                     aspects => [
                         'id',
                         'name',
-                        'nomenclature',
                         'source_db_name',
                         'source_db_version',
+                        'source_db_url',
                         'original_data_source_url',
                         'human_readable_name',
                         {
@@ -41,6 +41,14 @@ class Genome::DruggableGene::DrugNameReport::Set::View::Status::Xml {
                             aspects => [
                                 'category_name',
                                 'category_value',
+                            ],
+                        },
+                        {
+                            name => 'citation',
+                            perspective => 'default',
+                            toolkit => 'xml',
+                            aspects => [
+                                'citation',
                             ],
                         },
                     ],

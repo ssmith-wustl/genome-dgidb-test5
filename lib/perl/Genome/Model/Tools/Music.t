@@ -47,7 +47,7 @@ my @cases = (
             . " --output-file $actual_output_dir/num_clin/tcga.numer.clin.data.correlation \n"
             . " --genetic-data-type gene",
         expect => [
-            'num_clin/tcga.numer.clin.data.correlation.numeric'
+            'num_clin/tcga.numer.clin.data.correlation.numeric.csv'
         ],
     },
     {
@@ -58,7 +58,7 @@ my @cases = (
             . " --output-file $actual_output_dir/categ_clin/tcga.categ.clin.data.correlation \n"
             . " --genetic-data-type gene",
         expect => [
-            'categ_clin/tcga.categ.clin.data.correlation.categorical'
+            'categ_clin/tcga.categ.clin.data.correlation.categorical.csv'
         ],
     },
     {

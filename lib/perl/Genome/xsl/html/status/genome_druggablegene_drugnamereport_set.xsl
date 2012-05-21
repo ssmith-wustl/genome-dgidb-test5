@@ -60,7 +60,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               <td class="name">Source Name and Link:
               </td>
               <td class="value">
-                  <a>
+                  <a class='mini btn'>
                       <xsl:attribute name="href">
                           <xsl:value-of select="normalize-space(aspect[@name='original_data_source_url']/value)"/>
                       </xsl:attribute>
@@ -70,18 +70,15 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
             </tr>
 
             <tr>
-              <td class="name">Nomenclature:
-              </td>
-              <td class="value">
-                  <xsl:value-of select="normalize-space(aspect[@name='nomenclature']/value)"/>
-              </td>
-            </tr>
-
-            <tr>
               <td class="name">Source Database Name:
               </td>
               <td class="value">
+                  <a class='mini btn'>
+                      <xsl:attribute name="href">
+                          <xsl:value-of select="normalize-space(aspect[@name='source_db_url']/value)"/>
+                      </xsl:attribute>
                   <xsl:value-of select="normalize-space(aspect[@name='source_db_name']/value)"/>
+                  </a>
               </td>
             </tr>
 
@@ -122,6 +119,14 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                     </li>
                   </xsl:for-each>
                 </ul>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">Citation:
+              </td>
+              <td class="value">
+                  <xsl:value-of select="normalize-space(aspect[@name='citation']/object/aspect/value)"/>
               </td>
             </tr>
 

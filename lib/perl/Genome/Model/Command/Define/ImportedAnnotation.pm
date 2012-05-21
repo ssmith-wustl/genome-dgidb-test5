@@ -2,6 +2,7 @@ package Genome::Model::Command::Define::ImportedAnnotation;
 use strict;
 use warnings;
 use Genome;
+use File::Basename;
 
 class Genome::Model::Command::Define::ImportedAnnotation {
     is => 'Genome::Model::Command::Define::Helper',
@@ -21,6 +22,11 @@ class Genome::Model::Command::Define::ImportedAnnotation {
         build_name => {
             is => 'Text',
             doc => 'human meaningful name of the build',
+        },
+        gtf_file => {
+            is => 'Path',
+            is_optional => 1,
+            doc => 'gtf file for rnaSeq annotation.  ONLY use for models that are rna_seq_only',
         },
     ],
     has_transient => [
@@ -95,6 +101,7 @@ sub _get_or_create_model {
                                                     processing_profile => $processing_profile,
                                                     subject => $self->reference_sequence_build->model->subject,
                                                 );
+    $model->species_name($self->species_name);
     return $model;
 }
 
@@ -126,7 +133,22 @@ sub _create_build {
 
     $self->status_message('Starting build.');
     # if($build->start(server_dispatch => 'inline')){ #TODO: make this an option or somethign
-    if($build->start()){
+    my $rv;
+    if ($build->processing_profile->rna_seq_only) {
+        $rv = $build->start(server_dispatch => "inline");
+    }
+    else {
+        $rv = $build->start;
+    }
+    if($rv){
+        if ($build->processing_profile->rna_seq_only) {
+            my $annotation_file_path = $build->_resolve_annotation_file_name('all_sequences','gtf',$build->reference_sequence_id,0,0);
+            my $dirname = dirname($annotation_file_path);
+            unless (-d $dirname) {
+                Genome::Sys->create_directory($dirname);
+            }
+            Genome::Sys->copy_file($self->gtf_file, $annotation_file_path);
+        }
         $self->status_message('Started build (build is complete if it was run inline).');
     } else {
         $self->error_message("Failed to start build " . $build->build_id . " for model " . $model->genome_model_id . ".");

@@ -356,6 +356,22 @@ sub _filter_samxe_output {
 sub _verify_bwa_samxe_did_happen {
     my ($self, $log_file) = @_;
 
+    unless ($log_file and -s $log_file) {
+        $self->error_message("log file $log_file is not valid");
+        return;
+    }
+
+    my $last_line = `tail -1 $log_file`;
+    my $rp_ct;
+
+    if ($last_line =~ /(\d+) sequences have been processed/) {
+        $rp_ct = $1;
+    }
+    else {
+        $self->error_message("The last line of samxe log: $last_line is not expected");
+        return;
+    }
+
     #If getting very few fastq (like in unit test), it's very likely to error out.
     my $fq_rd_ct = $self->_fastq_read_count;
     if ($fq_rd_ct and $fq_rd_ct <= 1000) {
@@ -363,34 +379,34 @@ sub _verify_bwa_samxe_did_happen {
         return 1;
     }
 
-    unless ($log_file and -s $log_file) {
-        $self->error_message("log file $log_file is not valid");
-        return;
-    }
-
-    my $fh = Genome::Sys->open_file_for_reading($log_file) or die "Failed to open $log_file for reading\n";
-    my $rv = 1;
-
-    while (my $line = $fh->getline) {
-        if ($line =~ /\[infer_isize\] fail to infer insert size: too few good pairs/) {
-            $self->error_message("samxe failed to infer insert size");
-            $rv = 0;
-            last;
-        }
-        elsif ($line =~ /\[bwa_paired_sw\] 0 out of 0 Q\d+ singletons are mated/) {
-            $self->error_message('samxe failed because 0 out of 0 singletons are mated');
-            $rv = 0;
-            last;
-        }
-        elsif ($line =~ /\[bwa_paired_sw\] 0 out of 0 Q\d+ discordant pairs are fixed/) {
-            $self->error_message('samxe failed because 0 out of 0 discordant pairs are fixed');
-            $rv = 0;
-            last;
+    if ($self->_is_inferred_paired_end) {
+        my $fq_rp_ct = $fq_rd_ct/2;
+        unless ($rp_ct == $fq_rp_ct) {
+            $self->error_message("read pair count conflict: samxe_log shows $rp_ct, input_file shows $fq_rp_ct");
+            return;
         }
     }
 
-    $fh->close;
-    return $rv;
+    chomp (my $fail_ct = qx(grep -c 'fail to infer insert size: too few good pairs' $log_file));
+    
+    if ($fail_ct) {
+        my $line = qx(grep -m1 'sequences have been processed' $log_file);
+        my ($batch_size) = $line =~ /(\d+) sequences/;
+        $self->warning_message("The batch size: $batch_size is not 262144 as expected. Check bwa source code")
+            unless $batch_size == 262144;
+        #hard code fail percentile threshold for now. The percentile calculation is not accurate 
+        #because the last batch count is mostly smaller than 262114, but this estimate is close enough 
+        #since threshold is arbitrary too.
+        my $threshold = 40;
+        my $fail_percentile = sprintf("%.2f", $fail_ct * $batch_size * 100 / $rp_ct);
+        if ($fail_percentile > $threshold) {
+            $fail_percentile = 100 if $fail_percentile > 100; #a calculation bug
+            $self->error_message("samxe failed to infer insert size on $fail_percentile% read pairs. The current threshold is $threshold%");
+            return;
+        }
+    }
+
+    return 1;
 }
 
 

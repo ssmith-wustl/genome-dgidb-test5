@@ -596,12 +596,13 @@ sub requires_fastqs_to_align {
 
 sub _extract_input_read_group_bam {
     my $self = shift;
-   
     my $file = sprintf("%s/%s.rg_extracted_%s.bam", $self->temp_scratch_directory,  $self->instrument_data_id, $self->instrument_data_segment_id);
     
-    my $cmd = Genome::Model::Tools::Sam::ExtractReadGroup->create(input=>$self->instrument_data->bam_path,
-                                                                  output=>$file,
-                                                                  read_group_id=>$self->instrument_data_segment_id);
+    my $cmd = Genome::Model::Tools::Sam::ExtractReadGroup->create(
+        input  => $self->instrument_data->bam_path,
+        output => $file,
+        read_group_id => $self->instrument_data_segment_id,
+    );
 
     unless ($cmd->execute) {
         $self->error_message($cmd->error_message);
@@ -609,17 +610,13 @@ sub _extract_input_read_group_bam {
     }
      
     $self->_extracted_bam_path($file);         
-    my $paired_checker = Genome::Model::Tools::Sam::InferPairedStatus->create(input=>$file);
-    unless ($paired_checker->execute) {
-       $self->error_message("Couldn't determine paired end status of $file; errors were" . $paired_checker->error_message);
-       return
-    }
-
+    
     my @out = ();
-    if ($paired_checker->is_paired_end) {
+    if ($self->_is_inferred_paired_end) {  #set earlier in construct_groups_file
         push @out, $file . ":1";
         push @out, $file . ":2";
-    } else {
+    } 
+    else {
         push @out, $file . ":0";
     }
 
@@ -635,14 +632,19 @@ sub collect_inputs_and_run_aligner {
     my @inputs;
 
     if ($self->requires_fastqs_to_align) {
+        $self->status_message('Requires fastqs to align');
         @inputs = $self->_extract_input_fastq_filenames;
-    } elsif ($self->instrument_data_segment_id) {
+    } 
+    elsif ($self->instrument_data_segment_id) {
+        $self->status_message('Extract input read group bam');
         @inputs = $self->_extract_input_read_group_bam;
-    } else {
+    } 
+    else {
         if ($self->instrument_data->is_paired_end) {
             push @inputs, $self->instrument_data->bam_path . ":1";
             push @inputs, $self->instrument_data->bam_path . ":2";
-        } else {
+        } 
+        else {
             push @inputs, $self->instrument_data->bam_path . ":0";
         }
     }
@@ -796,23 +798,13 @@ sub collect_inputs_and_run_aligner {
 sub determine_input_read_count_from_bam {
     my $self = shift;
 
-    my $bam_file = $self->_extracted_bam_path || $self->instrument_data->bam_path;
+    my $bam_file    = $self->_extracted_bam_path || $self->instrument_data->bam_path;
     my $output_file = $self->temp_scratch_directory . "/input_bam.flagstat";
 
-    my $cmd = Genome::Model::Tools::Sam::Flagstat->create(
-        bam_file       => $bam_file,
-        output_file    => $output_file,
-        use_version    => $self->samtools_version,
-        include_stderr => 1,
-    );
-
-    unless ($cmd and $cmd->execute) {
-        $self->error_message('Failed to create or execute flagstat command.');
-        return;
-    }
+    die unless $self->_create_bam_flagstat($bam_file, $output_file);
 
     my $stats = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($output_file);
-    unless($stats) {
+    unless ($stats) {
         $self->status_message('Failed to get flagstat data  on input sequences from '.$output_file);
         return;
     }
@@ -835,7 +827,6 @@ sub determine_input_read_count_from_bam {
 
     return $total_reads;
 }
-
 
 
 sub close_out_streamed_bam_file {
@@ -887,12 +878,12 @@ sub create_BAM_in_staging_directory {
 sub postprocess_bam_file {
     my $self = shift;
 
+    my $bam_file    = $self->temp_staging_directory . '/all_sequences.bam';
+    my $output_file = $bam_file . '.flagstat';
+
     #STEPS 8:  CREATE BAM.FLAGSTAT
     $self->status_message("Creating all_sequences.bam.flagstat ...");
-    unless ($self->_create_bam_flagstat) {
-        $self->error_message('Fail to create bam flagstat');
-        die $self->error_message;
-    }
+    die unless $self->_create_bam_flagstat($bam_file, $output_file);
 
     #STEPS 9: VERIFY BAM IS NOT TRUNCATED BY FLAGSTAT
     $self->status_message("Verifying the bam...");
@@ -984,12 +975,12 @@ sub _compute_alignment_metrics {
         input_file         => $bam,
         output_basename    => $out_base,
         reference_sequence => $ref_seq,
-        program_list       => 'CollectAlignmentSummaryMetrics,CollectInsertSizeMetrics',
+        program_list       => $prog_list,
         use_version        => $picard_version,
     );
 
     unless ($cmd and $cmd->execute) {
-        die $self->error_message('Failed to create or execute picard CollectMultipleMetrics command.');
+        die $self->error_message("Failed to create or execute picard $prog_list command.");
     }
 
     my $align_metrics_file = $out_base.'.alignment_summary_metrics';
@@ -1079,10 +1070,7 @@ sub _create_bam_index {
 }
 
 sub _create_bam_flagstat {
-    my $self = shift;
-
-    my $bam_file    = $self->temp_staging_directory . '/all_sequences.bam';
-    my $output_file = $bam_file . '.flagstat';
+    my ($self, $bam_file, $output_file) = @_;
 
     unless (-s $bam_file) {
         $self->error_message('BAM file ' . $bam_file . ' does not exist or is empty');
@@ -1102,7 +1090,7 @@ sub _create_bam_flagstat {
     );
 
     unless ($cmd and $cmd->execute) {
-        $self->error_message('Failed to create or execute flagstat command.');
+        $self->error_message("Failed to create or execute flagstat command on bam: $bam_file");
         return;
     }
     return 1;
@@ -1604,11 +1592,31 @@ sub construct_groups_file {
     my $description_for_header;
     if ($instr_data->is_paired_end) {
         $description_for_header = 'paired end';
+        $self->_is_inferred_paired_end(1);
     }
     else {
         $description_for_header = 'fragment';
-    }
+        $self->_is_inferred_paired_end(0);
 
+        #Some old imported bam does not have is_paired_end set, patch for now
+        if ($instr_data->can('import_format') and $instr_data->import_format eq 'bam') {
+            my $bam_file = $instr_data->bam_path;
+            if ($bam_file and -e $bam_file) {
+                my $output_file = $bam_file . '.flagstat';
+                unless (-s $output_file) {
+                    $output_file = $self->temp_scratch_directory . '/import_bam.flagstat';
+                    die unless $self->_create_bam_flagstat($bam_file, $output_file);
+                }
+                my $stats = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($output_file);
+                die $self->error_message('Failed to get flagstat data on input bam: '. $bam_file) unless $stats;
+
+                if ($stats->{reads_paired_in_sequencing} > 0) {
+                    $description_for_header = 'paired end';
+                    $self->_is_inferred_paired_end(1);
+                }
+            }
+        }
+    }
 
     # build the header
     my $id_tag       = $self->read_and_platform_group_tag_id;

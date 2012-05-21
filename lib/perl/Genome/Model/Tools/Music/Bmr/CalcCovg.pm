@@ -271,7 +271,7 @@ sub execute {
 
     # Construct the command that calculates coverage per ROI
     my $calcRoiCovg_cmd = "gmt music bmr calc-covg-helper --normal-tumor-bam-pair \"$line\" --roi-file \"$roi_file\" ".
-    "--reference-sequence \"$ref_seq\" --output-dir \"$roi_covg_dir\" $optional_params";
+    "--reference-sequence \"$ref_seq\" --output-file \"$roi_covg_dir/$sample.covg\" $optional_params";
 
     # If user only wants the calcRoiCovg commands, write them to file and skip running calcRoiCovg
     if( defined $cmd_list_file )
@@ -292,7 +292,7 @@ sub execute {
         normal_tumor_bam_pair => $line,
         roi_file => $roi_file,
         reference_sequence => $ref_seq, 
-        output_dir => $roi_covg_dir,
+        output_file => $roi_covg_dir."/".$sample.".covg",
       );
       if ($normal_min_depth) {
         $params{"normal_min_depth"} = $normal_min_depth;

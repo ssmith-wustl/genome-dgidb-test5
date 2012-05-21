@@ -18,8 +18,6 @@ class Genome::DruggableGene::GeneNameReport {
     has => [
         name => { is => 'Text'},
         nomenclature => { is => 'Text'},
-        source_db_name => { is => 'Text'},
-        source_db_version => { is => 'Text'},
         description => {
             is => 'Text',
             is_optional => 1,
@@ -50,12 +48,26 @@ class Genome::DruggableGene::GeneNameReport {
             to => 'drug',
             is_many => 1,
         },
+        source_db_name => {
+            via => 'citation',
+            to => 'source_db_name',
+        },
+        source_db_version => {
+            via => 'citation',
+            to => 'source_db_version',
+        },
+        source_db_url => {
+            is => 'Text',
+            calculate_from => ['source_db_name'],
+            calculate => q| Genome::DruggableGene::Citation->source_db_name_to_url($source_db_name) |,
+        },
         citation => {
-            calculate_from => ['source_db_name', 'source_db_version'],
-            calculate => q|
-                my $citation = Genome::DruggableGene::Citation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
-                return $citation;
-            |,
+            is => 'Genome::DruggableGene::Citation',
+            id_by => 'citation_id',
+        },
+        citation_id => {
+            is => 'Text',
+            implied_by => 'citation',
         },
         is_kinase => {
             calculate => q{
@@ -97,6 +109,11 @@ sub original_data_source_url {
         $url = $base_url . $source_id;
     }elsif($self->source_db_name eq 'Entrez'){
         $url = $base_url . $source_id;
+    }elsif($self->source_db_name eq 'GO'){
+        my ($go_short_name_and_id) = map($_->category_value, grep($_->category_name eq 'go_short_name_and_id', $self->gene_categories));
+        my (undef, $go_id) = split('_', $go_short_name_and_id);
+        $go_id =~ s/^go//;
+        $url = $base_url . $go_id;
     }else{
         $url = join('', $base_url, $source_id);
     }

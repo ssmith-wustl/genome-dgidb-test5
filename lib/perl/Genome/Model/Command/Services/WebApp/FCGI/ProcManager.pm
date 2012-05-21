@@ -61,7 +61,7 @@ sub pm_wait {
         });
     }
 
-    my $restart_command = '/gsc/scripts/sbin/genome_view';
+    my $restart_command = '/gsc/scripts/sbin/gsc-cron-user /gsc/scripts/sbin/genome_view';
 
     ### wait for HUP then start the command and a listener.
 

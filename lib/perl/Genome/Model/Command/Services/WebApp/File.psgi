@@ -28,9 +28,10 @@ sub load_modules {
 }
 
 sub dispatch_request {
-    sub ( POST + /view/x/druggable-gene-go + %* + *file~ ) {
+    sub ( POST + /view/x/druggable-gene-go + %@families~&* + *file~ ) {
         load_modules();
-        my ($self, $params, $file, $env) = @_;
+        my ($self, $families, $params, $file, $env) = @_;
+
         my @gene_names;
         @gene_names = Genome::Sys->read_file($file->path) if $file;
         push @gene_names, split(/[\r\n]/,$params->{'genes'});
@@ -38,8 +39,9 @@ sub dispatch_request {
         @gene_names = grep{/[\w\d]/}@gene_names;
         @gene_names = map{uc $_}@gene_names;
 
-        my $command = Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions->execute(
+        my $command = Genome::DruggableGene::Command::GeneNameGroup::LookupFamilies->execute(
                 gene_identifiers => \@gene_names,
+                allowed_families => $families,
                 );
         my %params = (
                 data => $command->result,
@@ -56,7 +58,7 @@ sub dispatch_request {
                             rest      => '/view',
                             resources => '/view/genome/resource.html',
                         },
-                        );
+                    );
                 return [200, ['Content-type' => "text/html"], [$html->content]];
             } elsif(/tsv/) {
                 return [200, ['Content-type' => "text/tsv"], [join("\n", $command->output)]];
@@ -95,9 +97,11 @@ sub dispatch_request {
             push @filter, $filter;
         }
 
+        my $filter = join ',', @filter;
+
         my $command = Genome::DruggableGene::Command::GeneNameGroup::LookupInteractions->execute(
             gene_identifiers => \@gene_names,
-#            filter => join(',',@filter),
+            filter => $filter,
         );
         my %params = (
             data => $command->result,

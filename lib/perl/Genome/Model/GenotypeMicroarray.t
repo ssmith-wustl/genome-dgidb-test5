@@ -30,10 +30,9 @@ sub test_dependent_cron_ref_align {
     isa_ok($gm_m, 'Genome::Model::GenotypeMicroarray', 'gm_m') or return;
 
     my @dependent_cron_ref_align = $gm_m->dependent_cron_ref_align;
-    is(@dependent_cron_ref_align, 1, 'got one model from dependent_cron_ref_align') or return;
-    is($dependent_cron_ref_align[0]->name, 'Test Build 36 Reference Alignment', 'that one model was "Test Build 36 Reference Alignment"') or return;
-    isnt($dependent_cron_ref_align[0]->name, 'Test Build 37 Reference Alignment', 'that one model wasn\'t "Test Build 37 Reference Alignment"') or return;
-    isnt($dependent_cron_ref_align[0]->name, 'Test Build 36 Reference Alignment with Genotype Microarray Model', 'that one model wasn\'t "Test Build 36 Reference Alignment with Genotype Microarray Model"') or return;
+    is(@dependent_cron_ref_align, 2, 'got two models from dependent_cron_ref_align') or return;
+    is($dependent_cron_ref_align[0]->name, 'Another Test Build 36 Reference Alignment', 'other model was "Another Test Build 36 Reference Alignment"') or return;
+    is($dependent_cron_ref_align[1]->name, 'Test Build 36 Reference Alignment', 'one model was "Test Build 36 Reference Alignment"') or return;
 
     return 1;
 }
@@ -57,11 +56,27 @@ sub test_dependent_cron_ref_align_init {
     my $gm_pp = Genome::ProcessingProfile::GenotypeMicroarray->get(name => 'infinium wugc');
     isa_ok($gm_pp, 'Genome::ProcessingProfile::GenotypeMicroarray', 'gm_pp') or return;
 
+    my $individual = Genome::Individual->create(name => 'Test Individual');
+    isa_ok($individual, 'Genome::Individual', 'created individual') or return;
+
     my $subject = Genome::Sample->create(name => 'Test Sample');
     isa_ok($subject, 'Genome::Sample', 'subject') or return;
 
+    my $other_subject = Genome::Sample->create(name => 'Another Test Sample');
+    isa_ok($other_subject, 'Genome::Sample', 'another test subject created') or return;
+
     my $library = Genome::Library->create(name => 'Test Sample Library', sample_id => $subject->id);
     isa_ok($library, 'Genome::Library', 'library') or return;
+
+    my $other_library = Genome::Library->create(name => 'Another Test Library', sample_id => $other_subject->id);
+    isa_ok($other_library, 'Genome::Library', 'other library') or return;
+
+    my $genotype_data = Genome::InstrumentData::Imported->create(
+        library => $library,
+    );
+    isa_ok($genotype_data, 'Genome::InstrumentData::Imported', 'genotype data') or return;
+
+    $other_subject->default_genotype_data($genotype_data);
 
     my $build_36 = Genome::Model::Build::ReferenceSequence->get(name => 'NCBI-human-build36');
     isa_ok($build_36, 'Genome::Model::Build::ReferenceSequence', 'build_36') or return;
@@ -75,6 +90,7 @@ sub test_dependent_cron_ref_align_init {
         subject_id => $subject->id,
         subject_class_name => $subject->class,
         reference_sequence_build => $build_36,
+        instrument_data => [$genotype_data],
     );
     isa_ok($gm_m, 'Genome::Model::GenotypeMicroarray', 'gm_m') or return;
 
@@ -96,6 +112,17 @@ sub test_dependent_cron_ref_align_init {
         auto_assign_inst_data => 1,
     );
     isa_ok($build_36_ref_align, 'Genome::Model::ReferenceAlignment', 'build_36_ref_align') or return;
+
+    my $other_build_36_ref_align = Genome::Model::ReferenceAlignment->create(
+        name => 'Another Test Build 36 Reference Alignment',
+        processing_profile => $ra_pp,
+        subject_id => $other_subject->id,
+        subject_class_name => $other_subject->class,
+        reference_sequence_build => $build_36,
+        auto_assign_inst_data => 1,
+    );
+    isa_ok($other_build_36_ref_align, 'Genome::Model::ReferenceAlignment', 'build_36_ref_align') or return;
+    $other_build_36_ref_align->genotype_microarray_model(undef);
 
     my $build_36_ref_align_with_existing_gm_model = Genome::Model::ReferenceAlignment->create(
         name => 'Test Build 36 Reference Alignment with Genotype Microarray Model',

@@ -9,7 +9,7 @@ require Carp;
 use Data::Dumper;
 
 class Genome::Model::Command::Services::AssignQueuedInstrumentData {
-    is  => 'Command',
+    is  => 'Command::V2',
     has => [
         test => {
             is          => 'String',
@@ -36,11 +36,6 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
             is_optional => 1,
             default     => 0,
             doc         => 'Process newest PSEs first',
-        },
-        pse_id => {
-            is          => 'Number',
-            is_optional => 1,
-            doc         => 'Ignore other parameters and only process this PSE.',
         },
         _existing_models_with_existing_assignments => {
             is => 'HASH',
@@ -204,7 +199,10 @@ sub execute {
         my $subject = $instrument_data->sample;
 
         if($instrument_data->ignored() ) {
-            next;
+            $self->status_message('Skipping ignored data ' . $instrument_data->id . ' on PSE '.$pse->id);
+            $self->_update_instrument_data_tgi_lims_status_to($pse->{_instrument_data}, 'ignored');
+            push @completable_pses, $pse;
+            next PSE;
         }
 
         my @process_errors;
@@ -213,7 +211,8 @@ sub execute {
             if ( $instrument_data_type =~ /454/i and $subject->name =~ /^n\-cn?trl$/i ) {
                 # Do not process 454 negative control (n-ctrl, n-cntrl)
                 $self->status_message('Skipping n-ctrl PSE '.$pse->id);
-                GSC::PSEParam->create(pse_id => $pse->id, param_name => 'failed_aqid', param_value => 1) unless $pse->added_param('failed_aqid');
+                $self->_update_instrument_data_tgi_lims_status_to($instrument_data, 'ignored');
+                push @completable_pses, $pse;
                 next PSE;
             }
 
@@ -268,7 +267,7 @@ sub execute {
 
                     if(scalar(@assigned > 0)) {
                         for my $m (@assigned) {
-                            $pse->add_param('genome_model_id', $m->id);
+                            $pse->add_param('genome_model_id', $m->id) unless (grep { $_ eq $m->id } $pse->added_param('genome_model_id'));
                         }
                         #find or create default qc models if applicable
                         $self->create_default_qc_models(@assigned);
@@ -380,7 +379,7 @@ sub execute {
                 "Leaving queue instrument data PSE inprogress, due to errors. \n"
                     . join("\n",@process_errors)
             );
-            GSC::PSEParam->create(pse_id => $pse->id, param_name => 'failed_aqid', param_value => 1) unless $pse->added_param('failed_aqid');
+            $self->_update_instrument_data_tgi_lims_status_to($pse->{_instrument_data}, 'failed');
         }
         else {
             # Set the pse as completed since this is the end of the line
@@ -395,13 +394,35 @@ sub execute {
 
     $self->status_message("Completing PSEs...");
     for my $pse (@completable_pses) {
+        # Set PSE status to completed
         $pse->pse_status("completed");
-        $pse->{_instrument_data}->remove_attribute(attribute_label => 'tgi_lims_status');
-        $pse->{_instrument_data}->add_attribute(
-            attribute_label => 'tgi_lims_status',
-            attribute_value => 'processed',
-        );
+        # Rm pse param(s) for failed aqid
+        my @failed_aqid_pse_params = GSC::PSEParam->get(pse_id => $pse->id, param_name => 'failed_aqid');
+        for my $failed_aqid_pse_param ( @failed_aqid_pse_params ) {
+            $failed_aqid_pse_param->delete;
+        }
+        $self->_update_instrument_data_tgi_lims_status_to($pse->{_instrument_data}, 'processed');
     }
+
+    return 1;
+}
+
+sub _update_instrument_data_tgi_lims_status_to {
+    my ($self, $instrument_data, $status) = @_;
+
+    # These should not happen - developer error
+    Carp::confess('No instrument data given to update instrument data tgi lims status!') if not $instrument_data;
+    Carp::confess('No status given to update instrument data tgi lims status!') if not $status;
+    Carp::confess("No invalid status ($status) given to update instrument data tgi lims status!") if not grep { $status eq $_ } (qw/ processed failed ignored /);
+
+    # Rm tgi lims status attribute(s)
+    $instrument_data->remove_attribute(attribute_label => 'tgi_lims_status');
+
+    # Set tgi lims status attribute to processed
+    $instrument_data->add_attribute(
+        attribute_label => 'tgi_lims_status',
+        attribute_value => $status,
+    );
 
     return 1;
 }
@@ -564,56 +585,88 @@ sub is_tcga_reference_alignment {
 sub load_pses {
     my $self = shift;
 
-    my $pse_sorter;
+    # Get 'new' instrument data
+    $self->status_message('Getting NEW instrument data...');
+    my %new_instrument_data = map { $_->id => $_ } Genome::InstrumentData->get(
+       'attributes.attribute_label' => 'tgi_lims_status',
+       'attributes.attribute_value' => [qw/ new /],
+       -hint => 'sample',
+    );
+    $self->status_message('Found '.scalar(keys %new_instrument_data).' NEW instrument data');
 
-    if ($self->newest_first) {
-        $pse_sorter = sub { $b->id <=> $a->id };
+    # Get 'failed' instrument data
+    $self->status_message('Getting FAILED instrument data...');
+    my %failed_instrument_data = map { $_->id => $_ } Genome::InstrumentData->get(
+       'attributes.attribute_label' => 'tgi_lims_status',
+       'attributes.attribute_value' => [qw/ failed /],
+       -hint => 'sample',
+    );
+    $self->status_message('Found '.scalar(keys %failed_instrument_data).' FAILED instrument data');
+    return if not %new_instrument_data and not %failed_instrument_data; # ok
+
+    # Get the inprogress QIDFGMs mapped to instrument data
+    $self->status_message('Getting inprogress QIDFGM PSEs...');
+    my @qidfgms = GSC::PSE->get(
+        ps_id => 3733,
+        pse_status => 'inprogress',
+    );
+    if ( not @qidfgms ) {
+        Carp::confess( $self->error_message('No inprogess QIDFGMS found, but have new/failed instrument data to process!') );
     }
-    else {
-        $pse_sorter = sub { $a->id <=> $b->id };
-    }
-
-    my @pses;
-    if($self->pse_id) { #process a specific PSE
-        @pses = GSC::PSE->get(
-            ps_id => 3733,
-            pse_status => 'inprogress',
-            id => $self->pse_id,
-        );
-    } else {
-        @pses = GSC::PSE->get(
-            ps_id      => 3733,
-            pse_status => 'inprogress',
-        );
-
-        if($self->test) {
-            @pses = grep($_->pse_id < 0, @pses);
+    $self->status_message('Found '.scalar(@qidfgms).' QIDFGM PSEs');
+    
+    # Map QIDFGMs to instrument data
+    for my $qidfgm ( @qidfgms ) {
+        my ($instrument_data_id) = $qidfgm->added_param('instrument_data_id');
+        if ( not $instrument_data_id ) {
+            $self->warning_message('No instrument data id for QIDFGM! '.$qidfgm->id);
+            next;
+        }
+        #print Data::Dumper::Dumper($qidfgm->id, $instrument_data_id, \%new_instrument_data, \%failed_instrument_data);
+        if ( exists $new_instrument_data{$instrument_data_id} ) {
+            $new_instrument_data{$instrument_data_id}->{_qidfgm} = $qidfgm;
+        }
+        elsif ( exists $failed_instrument_data{$instrument_data_id} ) {
+            $failed_instrument_data{$instrument_data_id}->{_qidfgm} = $qidfgm;
+        }
+        else {
+            $self->warning_message("Expected to find 'new' or 'failed' instrument data ($instrument_data_id) for inprogress QIDFGM PSE ".$qidfgm->id." but did not. It could have the incorrect status or be double processed.");
         }
     }
-    return unless @pses;
 
-    $self->status_message('Found '.scalar(@pses));
+    # Sort the instrument data, newest first if requested
+    my @instrument_data;
+    if ($self->newest_first) {
+        @instrument_data = sort { $b->id cmp $a->id } values %new_instrument_data;
+        push @instrument_data, sort { $b->id cmp $a->id } values %failed_instrument_data;
+    }
+    else {
+        @instrument_data = sort { $a->id cmp $b->id } values %new_instrument_data;
+        push @instrument_data, sort { $a->id cmp $b->id } values %failed_instrument_data;
+    }
 
-    my @fresh_pses = sort $pse_sorter grep{not $_->added_param('failed_aqid')}@pses;
-    my @previously_failed_pses = sort $pse_sorter grep{$_->added_param('failed_aqid')}@pses;
-
-    my @sorted_pses;
-    push @sorted_pses, @fresh_pses, @previously_failed_pses;
-
-    # Don't try to check more PSEs than we might be able to hold information for in memory.
-    if(scalar(@sorted_pses) > $self->max_pses_to_check) {
-        @sorted_pses = splice(@sorted_pses, 0, $self->max_pses_to_check);
+    # Don't try to check more than we might be able to hold information for in memory.
+    if( @instrument_data > $self->max_pses_to_check ) {
+        @instrument_data = splice(@instrument_data, 0, $self->max_pses_to_check);
         $self->status_message('Limiting checking to ' . $self->max_pses_to_check);
     }
 
-    $self->preload_data(@sorted_pses); #The checking uses this data, so need to load it first
+    # Preload or whatever
+    $self->preload_data(\%new_instrument_data); #The checking uses this data, so need to load it first
 
+    # Check the instrument data
     my @checked_pses;
-    for my $pse (@sorted_pses){
-        if($self->check_pse($pse)){
-            push @checked_pses, $pse;
+    for my $instrument_data ( @instrument_data ) {
+        my $qidfgm = delete $instrument_data->{_qidfgm};
+        if ( not $qidfgm ) {
+            $self->warning_message('No QIDFGM for new/failed instrument data! '.$instrument_data->id);
+            next;
+        }
+        $qidfgm->{_instrument_data} = $instrument_data;
+        if($self->check_pse($qidfgm)){
+            push @checked_pses, $qidfgm;
         } else {
-            GSC::PSEParam->create(pse_id => $pse->id, param_name => 'failed_aqid', param_value => 1) unless $pse->added_param('failed_aqid');
+            $self->_update_instrument_data_tgi_lims_status_to($qidfgm->{_instrument_data}, 'failed');
         }
     }
     $self->status_message('Of those, '.scalar(@checked_pses). ' PSEs passed check pse.');
@@ -631,25 +684,11 @@ sub load_pses {
 
 #for efficiency--load these together instead of separate queries for each one
 sub preload_data {
-    my $self = shift;
-    my @pses = @_;
+    my ($self, $instrument_data) = @_;
 
-    my @pse_params = GSC::PSEParam->get(pse_id => [ map { $_->pse_id } @pses ]);
-
-    my @instrument_data_ids =
-    map { $_->param_value }
-    grep { $_->param_name eq 'instrument_data_id' }
-    @pse_params;
-
-    $self->status_message("Pre-loading " . scalar(@instrument_data_ids) . " instrument data");
-    my @instrument_data = Genome::InstrumentData->get(\@instrument_data_ids);
-    my @sample_ids = map { $_->sample_id } @instrument_data;
-
-    $self->status_message("Pre-loading " . scalar(@sample_ids) . " samples");
-    my @samples = Genome::Sample->get(\@sample_ids);
-
-    $self->status_message("Pre-loading models for " . scalar(@sample_ids) . " samples");
-    my @models = Genome::Model->get(subject_id => \@sample_ids);
+    my @samples = map { $_->sample } values %$instrument_data;
+    $self->status_message("Pre-loading models for " . scalar(@samples) . " samples");
+    my @models = Genome::Model->get(subject_id => [ map { $_->id } @samples ]);
     $self->status_message("  got " . scalar(@models) . " models");
 
     my %taxon_ids = map { $_->taxon_id => 1 } grep($_->taxon_id, @samples);
@@ -684,7 +723,7 @@ sub check_pse {
         return;
     }
 
-    my $instrument_data = Genome::InstrumentData->get($instrument_data_id);
+    my $instrument_data = $pse->{_instrument_data};
     if ( not $instrument_data and $instrument_data_type eq 'sanger' ) {
         my $analyze_traces_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
         my $run_name = $analyze_traces_pse->run_name();
@@ -694,6 +733,7 @@ sub check_pse {
         }
         $instrument_data_id = $run_name;
         $instrument_data = Genome::InstrumentData->get($instrument_data_id);
+        $pse->{_instrument_data} = $instrument_data;
     }
 
     unless ( $instrument_data ) {
@@ -702,7 +742,6 @@ sub check_pse {
             . " id '$instrument_data_id'.  PSE_ID is '$pse_id'");
         return;
     }
-    $pse->{_instrument_data} = $instrument_data;
 
     if ( $instrument_data_type eq 'solexa' ) {
         if($instrument_data->target_region_set_name) {
@@ -756,10 +795,12 @@ sub assign_instrument_data_to_models {
     }
 
     #we don't want to (automagically) assign rna seq and non-rna seq data to the same model.
-    if (@models and $self->_is_rna_instrument_data($genome_instrument_data)){
-        @models = grep($_->isa('Genome::Model::RnaSeq'), @models);
-    }else{
-        @models = grep(!($_->isa('Genome::Model::RnaSeq')), @models);
+    unless ($genome_instrument_data->isa('Genome::InstrumentData::454')) { #454 data should be allowed to be in MC16S models that it's explicitly looking for
+        if (@models and $self->_is_rna_instrument_data($genome_instrument_data)){
+            @models = grep($_->isa('Genome::Model::RnaSeq'), @models);
+        }else{
+            @models = grep(!($_->isa('Genome::Model::RnaSeq')), @models);
+        }
     }
 
     if($reference_sequence_build) {
@@ -832,9 +873,15 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             my $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build);
             $model_params{dbsnp_build} = $dbsnp_build if $dbsnp_build;
         }
+
+        #annotion build inputs
         if ( $processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')){
             my $annotation_build = Genome::Model::ImportedAnnotation->annotation_build_for_reference($reference_sequence_build);
             $model_params{annotation_reference_build} = $annotation_build if $annotation_build;
+        }
+        if ( $processing_profile->isa('Genome::ProcessingProfile::RnaSeq')){
+            my $annotation_build = Genome::Model::ImportedAnnotation->annotation_build_for_reference($reference_sequence_build);
+            $model_params{annotation_build} = $annotation_build if $annotation_build;
         }
     }
 
