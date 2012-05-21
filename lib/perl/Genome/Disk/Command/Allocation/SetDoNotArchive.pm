@@ -54,11 +54,18 @@ sub _resolve_allocations_from_paths {
         }
 
         my $allocation = Genome::Disk::Allocation->_get_parent_allocation($allocation_path);
-        unless ($allocation) {
-            $self->warning_message("No allocation found for path $path");
+        if ($allocation) {
+            push @allocations, $allocation;
             next;
         }
-        push @allocations, $allocation;
+
+        my @allocations_for_path = Genome::Disk::Allocation->_get_child_allocations($allocation_path);
+        if (@allocations_for_path) {
+            push @allocations, @allocations_for_path;
+            next;
+        }
+
+        $self->warning_message("No allocation found for path $path");
     }
     return @allocations;
 }
