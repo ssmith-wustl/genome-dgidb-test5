@@ -28,11 +28,11 @@ class Genome::Model::Command::Admin::FailedModelTickets {
             default_value => 1,
             doc => 'Include builds with status Unstartable',
         },
-		ignore_pending_rerun => {
-			is => 'Boolean',
-			default_value => 0,
-			doc => 'Ignore builds which are followed by a later build that is scheduled or running.'
-		}
+        include_pending => {
+            is => 'Boolean',
+            default_value => 0,
+            doc => 'Include builds whose model status is requested, scheduled, or running.',
+        },
     ],
 };
 
@@ -49,7 +49,7 @@ sub execute {
     my $rt = _login_sso();
     $rt = _login_direct() if not $rt;
 
-    # Retrieve tickets - 
+    # Retrieve tickets -
     $self->status_message('Looking for tickets...');
     my @ticket_ids;
     try {
@@ -92,7 +92,7 @@ sub execute {
             -hint => [qw/ build /],
         );
     }
-    if ( (not $self->include_unstartable or not @unstartable_events) and 
+    if ( (not $self->include_unstartable or not @unstartable_events) and
          (not $self->include_failed or not @events) ) {
         $self->status_message('No failed or unstartable build events found!');
         return 1;
@@ -105,12 +105,13 @@ sub execute {
         #If the latest build of the model succeeds, ignore those old
         #failing ones that will be cleaned by admin "cleanup-succeeded".
         next if $model->status eq 'Succeeded';
-		
-		if ($self->ignore_pending_rerun) {
-			next if $model->status eq 'Scheduled';
-			next if $model->status eq 'Running';
-		}
-		
+
+        unless ($self->include_pending) {
+            next if $model->status eq 'Requested';
+            next if $model->status eq 'Scheduled';
+            next if $model->status eq 'Running';
+        }
+
         next if $models_and_builds{ $model->id } and $models_and_builds{ $model->id }->id > $build->id;
         $models_and_builds{ $model->id } = $build;
     }
@@ -209,8 +210,7 @@ sub execute {
 }
 
 sub _server {
-    #return 'https://rt.gsc.wustl.edu/';
-    return 'https://rt-dev.gsc.wustl.edu/';
+    return 'https://rt.gsc.wustl.edu/';
 }
 
 sub _get_pw {
@@ -251,7 +251,7 @@ sub _login_sso {
     return RT::Client::REST->new(server => _server(), _cookie =>  $mech->{cookie_jar});
 }
 
-sub _login_direct { 
+sub _login_direct {
     my $self = shift;
 
     local $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
@@ -316,7 +316,7 @@ sub _guess_build_error_from_notes {
     foreach my $line (@lines) {
         my ($err) = (split(/ERROR:\s+/, $line))[1];
         chomp $err;
-        $errors{$err} = 1; 
+        $errors{$err} = 1;
     }
     return join("\n", sort keys %errors);
 }

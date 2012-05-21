@@ -56,8 +56,6 @@ sub _sync_database {
             if (defined $meta->data_source and $meta->data_source->id eq 'Genome::DataSource::GMSchema') {
                 $meta->data_source($self->_ds_tag);
 
-                print $meta->data_source(), "\n";
-
                 # Columns are stored directly on the meta object as an optimization, need to be updated
                 # in addition to table/column objects.
                 my (undef, $cols) = @{$meta->{'_all_properties_columns'}};
