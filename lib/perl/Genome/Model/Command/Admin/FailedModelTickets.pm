@@ -210,8 +210,7 @@ sub execute {
 }
 
 sub _server {
-    #return 'https://rt.gsc.wustl.edu/';
-    return 'https://rt-dev.gsc.wustl.edu/';
+    return 'https://rt.gsc.wustl.edu/';
 }
 
 sub _get_pw {
