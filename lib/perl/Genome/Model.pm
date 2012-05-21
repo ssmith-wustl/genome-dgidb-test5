@@ -613,7 +613,7 @@ sub _preprocess_subclass_description {
             $prop_desc->{'to'} = $prop_name;
             $prop_desc->{'is_mutable'} = 0;
             $prop_desc->{'is_delegated'} = 1;
-            if ($prop_desc->{'default_value'}) {
+            if (defined $prop_desc->{'default_value'}) {
                 $prop_desc->{'_profile_default_value'} = delete $prop_desc->{'default_value'};
             }
         }
