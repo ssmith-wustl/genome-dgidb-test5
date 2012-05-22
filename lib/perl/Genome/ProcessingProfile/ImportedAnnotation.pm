@@ -169,7 +169,17 @@ sub generate_rna_seq_files {
     }
 
     unless($build->generate_RNA_annotation_files('gtf', $build->reference_sequence_id)){
-        $self->error_message("Failed to generate RNA Seq files!");
+        $self->error_message("Failed to generate RNA Seq gtf files!");
+        return;
+    }
+
+    unless($build->generate_RNA_annotation_files('bed', $build->reference_sequence_id,0)){
+        $self->error_message("Failed to generate RNA Seq bed files!");
+        return;
+    }
+
+    unless($build->generate_RNA_annotation_files('bed', $build->reference_sequence_id,1)){
+        $self->error_message("Failed to generate RNA Seq squashed bed files!");
         return;
     }
 
