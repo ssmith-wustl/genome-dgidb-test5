@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Workflow;
 # added mim depth on Oct 26
-
+# changed path of ClusterCoverage from GMT biosamtools to GMT RefCov
 
 my $DEFAULT_ZENITH = '5';
 my $DEFAULT_MIN_DEPTH = '1';
@@ -57,7 +57,7 @@ sub execute {
     my $self = shift;
     
     
-    my $cmd = '/usr/bin/perl `which gmt` bio-samtools cluster-coverage --bam-file='. $self->bam_file .' --minimum-zenith='. $self->zenith_depth .' --minimum-depth='. $self->minimum_depth .' --stats-file='. $self->stats_file .' --bed-file='. $self->bed_file ;
+    my $cmd = '/usr/bin/perl `which gmt` ref-cov cluster-coverage --bam-file='. $self->bam_file .' --minimum-zenith='. $self->zenith_depth .' --minimum-depth='. $self->minimum_depth .' --stats-file='. $self->stats_file .' --bed-file='. $self->bed_file ;
     
     Genome::Sys->shellcmd(
         cmd => $cmd,

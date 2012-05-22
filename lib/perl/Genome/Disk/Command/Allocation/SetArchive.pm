@@ -1,10 +1,10 @@
-package Genome::Disk::Command::Allocation::SetArchivable;
+package Genome::Disk::Command::Allocation::SetArchive;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::Disk::Command::Allocation::SetArchivable {
+class Genome::Disk::Command::Allocation::SetArchive {
     is => 'Command::V2',
     has => [
         allocations => {

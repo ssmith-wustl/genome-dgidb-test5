@@ -83,8 +83,8 @@ sub _sync_database {
         eval { 
             my $sync_time_start = Time::HiRes::time();
             eval {
-                my $pg_sync_rv = Genome::DataSource::Main->_sync_database(@_);
-                my $pg_commit_rv = Genome::DataSource::Main->commit;
+                my $pg_sync_rv = Genome::DataSource::PGTest->_sync_database(@_);
+                my $pg_commit_rv = Genome::DataSource::PGTest->commit;
             };
             my $sync_time_duration = Time::HiRes::time() - $sync_time_start;
             if ($@) {

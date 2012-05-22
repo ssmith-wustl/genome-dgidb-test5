@@ -54,10 +54,13 @@ sub execute {
         $previous_result = $source_build->final_result_for_variant_type($self->variant_type .'s');
     }
 
+    my $tumor_model = $source_build->can('tumor_model')? $source_build->tumor_model : $source_build->model->tumor_model;
+    my $normal_model = $source_build->can('normal_model')? $source_build->normal_model : $source_build->model->normal_model;
+
     my $manual_result = Genome::Model::Tools::DetectVariants2::Result::Manual->get_or_create(
         variant_type => $self->variant_type,
-        sample_id => $source_build->tumor_model->subject->id,
-        control_sample_id => $source_build->normal_model->subject->id,
+        sample_id => $tumor_model->subject->id,
+        control_sample_id => $normal_model->subject->id,
         reference_build_id => $source_build->tumor_build->reference_sequence_build->id,
         original_file_path => $self->variant_file,
         description => $self->description,

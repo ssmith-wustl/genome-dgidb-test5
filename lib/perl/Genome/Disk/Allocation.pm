@@ -661,7 +661,15 @@ sub _archive {
         input_directory => $current_allocation_path,
     );
     unless ($tar_rv) {
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess "Could not create tarball for allocation contents!";
+    }
+
+    # Check size of tar_path and abort if "too small" <1GB=1024^3
+    unless (-s $tar_path < 1073741824) {
+        unlink $tar_path;
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        confess "Aborting storage of archive that is too small (<1GB)";
     }
 
     my $cmd = "mkdir -p $archive_allocation_path && rsync -rlHpgt $tar_path $archive_allocation_path/";
@@ -747,6 +755,8 @@ sub _unarchive {
     }
 
     my $archive_path = $self->absolute_path;
+
+    # TODO Could make this allow any viable volume instead of just choosing the active volume paired with the archive volume
     my $active_path = join('/', $self->volume->active_mount_path, $self->group_subdirectory, $self->allocation_path);
     eval { 
         unless ($self->is_archived) {
@@ -782,6 +792,8 @@ sub _unarchive {
         unless ($untar_rv) {
             confess "Could not untar tarball " . $self->tar_path . " at " . $self->absolute_path;
         }
+
+        $self->archivable(0, 'allocation was unarchived');
 
         # Commit changes, which will release locks
         unless (UR::Context->commit) {
@@ -1087,9 +1099,13 @@ sub _get_group_subdir_from_full_path_and_mount_path {
 sub _verify_no_child_allocations {
     my ($class, $path) = @_;
     $path =~ s/\/+$//;
-    my ($allocation) = $class->get('allocation_path like' => $path . '/%');
-    return 0 if $allocation;
-    return 1;
+    return !($class->_get_child_allocations($path));
+}
+
+sub _get_child_allocations {
+    my ($class, $path) = @_;
+    $path =~ s/\/+$//;
+    return $class->get('allocation_path like' => $path . '/%');
 }
 
 # Makes sure the supplied kb amount is valid (nonzero and bigger than mininum)

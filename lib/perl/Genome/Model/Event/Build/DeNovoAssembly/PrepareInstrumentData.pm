@@ -80,6 +80,7 @@ sub execute {
 
     $self->status_message('Process instrument data');
     INST_DATA: for my $instrument_data ( reverse @instrument_data ) {
+
         my $process_ok = $self->_process_instrument_data($instrument_data);
         return if not $process_ok;
         my $update_metrics = $self->_update_metrics;
@@ -246,6 +247,18 @@ sub _process_instrument_data {
 
     if ( defined $self->_base_limit ) { # coverage limit by bases
         my $current_base_limit = $self->_base_limit;
+
+        # sort reads by qual and use the best reads
+        my $read_count = eval { $instrument_data->read_count; };
+        my $read_length = eval { $instrument_data->read_length; };
+        if ( $read_count and $read_length ) {
+            my $inst_data_input_bases = $read_count * $read_length;
+            if ( $inst_data_input_bases > $current_base_limit ) {
+                $self->status_message('Sorting input reads by average base quality');
+                push @read_processor_parts, 'sort by-avg-qual';
+            }
+        }
+
         $self->status_message("Limiting bases by base count of $current_base_limit");
         push @read_processor_parts, 'limit by-bases --bases '.$current_base_limit;
     }
@@ -262,6 +275,7 @@ sub _process_instrument_data {
 
     # Run
     my $sx_cmd = join(' | ', @sx_cmd_parts);
+
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $sx_cmd); };
     if ( not $rv ) {
         $self->error_message('Failed to execute gmt sx command: '.$@);

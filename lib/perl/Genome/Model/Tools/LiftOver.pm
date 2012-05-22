@@ -59,9 +59,9 @@ sub execute {
 
     if(defined($self->lift_direction)){
         if($self->lift_direction eq "hg19ToHg18"){
-            $chain_file = "/gscmnt/sata112/info/medseq/reference_sequences/Homo_sapiens/liftOver_files/hg19_GRCh37_Build-37/hg19ToHg18.over.chain";
+            $chain_file = "/gscmnt/gc12001/info/model_data/chain_files/hg19Tohg18/hg19ToHg18.over.chain";
         } elsif ($self->lift_direction eq "hg18ToHg19"){
-            $chain_file = "/gscmnt/sata112/info/medseq/reference_sequences/Homo_sapiens/liftOver_files/hg18ToHg19.over.chain.gz";
+            $chain_file = "/gscmnt/gc12001/info/model_data/chain_files/hg18Tohg19/hg18ToHg19.over.chain";
         } else {
             die "unknown lift-direction: " . $self->lift_direction;
         }

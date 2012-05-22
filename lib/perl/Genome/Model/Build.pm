@@ -419,11 +419,11 @@ sub newest_workflow_instance {
 sub cpu_slot_hours {
     my $self = shift;
     my $breakdown = $self->_cpu_slot_usage_breakdown(@_);
-
     my $total = 0;
     for my $step (sort keys %$breakdown) {
         my $sum     = $breakdown->{$step}{sum};
         my $count   = $breakdown->{$step}{count};
+        print join("\t","BREAKDOWN:",$self->id,$self->model->name,$step,$sum,$count);
         $total += $sum;
     }
 
@@ -629,18 +629,25 @@ sub reallocate {
 
 sub all_allocations {
     my $self = shift;
-    my @allocations = $self->disk_allocation;
+
+    my @allocations;
+    push @allocations, $self->disk_allocation if $self->disk_allocation;
+
     for my $input ($self->inputs) {
-        push @allocations, Genome::Disk::Allocation->get(
+        my @input_allocations = Genome::Disk::Allocation->get(
             owner_id => $input->value_id,
             owner_class_name => $input->value_class_name,
         );
+        push @allocations, @input_allocations if @input_allocations;
     }
+
     my @users = Genome::SoftwareResult::User->get(
         user_id => $self->id,
         user_class_name => $self->subclass_name,
     );
-    push @allocations, map { $_->software_result->disk_allocations } @users;
+    my @user_allocations = map { $_->software_result->disk_allocations } @users;
+    push @allocations, @user_allocations if @user_allocations;
+
     return @allocations;
 }
 
