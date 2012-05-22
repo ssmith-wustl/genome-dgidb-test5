@@ -1177,10 +1177,13 @@ sub output_germline_files
     );
     $cmd_obj->execute;
 
-    # Annotate the GATK germline indels since the somatic pipeline doesn't usually do it
-    warn "Submitting a job to annotate the indels...\n";
-    $cmd = "bsub gmt annotate transcript-variants --annotation-filter top --reference-transcripts " . $self->reference_transcripts . " ";
-    $cmd .= "--variant-file $output_indel_gatk.bed --output-file $output_indel_gatk.anno";
+    # Apply FP-filter using Normal BAM, and annotate the output
+    warn "Submitting a job to apply FP-filter on GATK Indels, and annotate the output...\n";
+    my $cmd = "bsub -R 'select[mem>8000] rusage[mem=8000]' -M 8000000 'gmt somatic filter-false-indels ";
+    $cmd .= "--reference " . $self->reference . " --variant-file $output_indel_gatk.bed --bam-file $normal_bam ";
+    $cmd .= "--output-file $output_indel_gatk.fpfilter --filtered-file $output_indel_gatk.fpfilter.removed --max-mm-qualsum-diff 100; ";
+    $cmd .= "gmt annotate transcript-variants --annotation-filter top --reference-transcripts " . $self->reference_transcripts . " ";
+    $cmd .= "--variant-file $output_indel_gatk.fpfilter --output-file $output_indel_gatk.fpfilter.anno'";
     system($cmd);
   }
   else
