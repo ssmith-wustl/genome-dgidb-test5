@@ -33,7 +33,9 @@ sub help_synopsis { return help_brief() . "\n" };
 sub execute {
     my $self = shift;
     for my $build (map { $_->last_complete_build } $self->models) {
+        next unless $build;
         for my $allocation ($build->all_allocations) {
+            next unless $allocation;
             next unless $allocation->archivable;
             $allocation->archivable(0, $self->reason);
         }

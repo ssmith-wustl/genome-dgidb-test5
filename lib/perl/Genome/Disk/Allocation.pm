@@ -1099,9 +1099,13 @@ sub _get_group_subdir_from_full_path_and_mount_path {
 sub _verify_no_child_allocations {
     my ($class, $path) = @_;
     $path =~ s/\/+$//;
-    my ($allocation) = $class->get('allocation_path like' => $path . '/%');
-    return 0 if $allocation;
-    return 1;
+    return !($class->_get_child_allocations($path));
+}
+
+sub _get_child_allocations {
+    my ($class, $path) = @_;
+    $path =~ s/\/+$//;
+    return $class->get('allocation_path like' => $path . '/%');
 }
 
 # Makes sure the supplied kb amount is valid (nonzero and bigger than mininum)
