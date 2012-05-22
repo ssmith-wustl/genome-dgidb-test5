@@ -909,7 +909,6 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         push @ref_align_models, $regular_model;
     }
 
-    $DB::single = $DB::stopper;
     if ( $capture_target and $regular_model->can('reference_sequence_build') and not $regular_model->isa('Genome::Model::RnaSeq')){
         my $roi_list;
         #FIXME This is a lame hack for these capture sets
