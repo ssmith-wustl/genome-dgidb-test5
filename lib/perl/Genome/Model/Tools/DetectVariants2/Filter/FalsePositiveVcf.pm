@@ -457,7 +457,7 @@ sub parse_vcf_line {
         }
 
         for my $required_field ($self->required_format_fields) {
-            unless ($sample_values->{$required_field}) {
+            unless (defined $sample_values->{$required_field}) {
                 die $self->error_message("Could not find a required field: $required_field in the sample data in line $line");
             }
         }

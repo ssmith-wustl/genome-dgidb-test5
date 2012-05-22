@@ -98,7 +98,9 @@ sub execute {
         #  on how to handle per-sample data, when per-instrument-data data is unavailable
         #  although this won't matter once we start using QC models only
         my $index = (map{$_->index_sequence}$model->instrument_data)[0];
+        $index = '-' unless defined $index;
         my $pool = Genome::Model::Command::Services::AssignQueuedInstrumentData->_resolve_pooled_sample_name_for_instrument_data((),$model->instrument_data);
+        $pool = '-' unless defined $pool;
 
         #Build reference of each index and pool to all of their builds to summarize data per each of these
         push @{$index_to_builds{$index}}, $build;
@@ -215,7 +217,9 @@ sub write_full_summary {
         #Take the first instrument_data's index until a decision is made
         #  on how to handle per-sample data, when per-instrument-data data is unavailable
         my ($index) = map{$_->index_sequence}$model->instrument_data;
+        $index = '-' unless defined $index;
         my $pool = Genome::Model::Command::Services::AssignQueuedInstrumentData->_resolve_pooled_sample_name_for_instrument_data((),$model->instrument_data);
+        $pool = '-' unless defined $pool;
         my $libraries = join ' ', map{$_->library->name}$build->instrument_data;
 
         my $lane = join ' ', map{$_->lane}grep{defined $_->lane}$build->instrument_data;
