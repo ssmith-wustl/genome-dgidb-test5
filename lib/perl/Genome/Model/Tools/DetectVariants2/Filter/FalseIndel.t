@@ -16,7 +16,7 @@ if (Genome::Config->arch_os ne 'x86_64') {
     plan skip_all => 'requires 64-bit machine';
 }
 else {
-    plan tests => 6;
+    plan tests => 7;
 }
 
 # Override lock name because if people cancel tests locks don't get cleaned up.
@@ -35,7 +35,7 @@ my $detector_vcf_directory = $test_base_dir. "/detector_vcf_result";
 my $bam_file = join('/', $test_data_dir, 'tumor.tiny.bam');
 my $variant_file = join('/', $test_data_dir, 'indels.hq.bed');
 
-my $expected_result_dir = join('/', $test_base_dir, '3');
+my $expected_result_dir = join('/', $test_base_dir, '4');
 my $expected_output_file = join('/', $expected_result_dir, 'indels.hq.bed');
 my $expected_filtered_file = join('/', $expected_result_dir, 'indels.lq.bed');
 
@@ -69,7 +69,6 @@ $detector_result->add_user(user => $detector_vcf_result, label => 'uses');
 my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::FalseIndel->create(
     previous_result_id => $detector_result->id,
     output_directory => $output_directory,
-
     min_strandedness => 0.01,
     min_var_freq => 0.05,
     min_var_count => 2,
@@ -83,14 +82,25 @@ my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::FalseIndel->
     bam_readcount_version => 0.3,
     bam_readcount_min_base_quality => 1, 
 );
+
 $filter_command->dump_status_messages(1);
 isa_ok($filter_command, 'Genome::Model::Tools::DetectVariants2::Filter::FalseIndel', 'created filter command');
 ok($filter_command->execute(), 'executed filter command');
 
 my $output_diff = Genome::Sys->diff_file_vs_file($expected_output_file, $output_file);
-ok(!$output_diff, 'output file matches expected result')
+ok(!$output_diff, 'output file matches expected result: indels.hq.bed')
     or diag("diff:\n" . $output_diff);
 
 my $filtered_diff = Genome::Sys->diff_file_vs_file($expected_filtered_file, $filtered_file);
-ok(!$filtered_diff, 'filtered file matches expected result')
+ok(!$filtered_diff, 'filtered file matches expected result: indels.lq.bed')
     or diag("diff:\n" . $filtered_diff);
+
+my $expected_vcf = "$expected_result_dir/indels.vcf.gz";
+my $output_vcf   = "$output_directory/indels.vcf.gz";
+my $expected     = `zcat $expected_vcf | grep -v fileDate`;
+my $output       = `zcat $output_vcf | grep -v fileDate`;
+my $diff = Genome::Sys->diff_text_vs_text($output, $expected);
+ok(!$diff, 'filtered vcf file matches expected result: indels.vcf.gz')
+    or diag("diff results:\n" . $diff);
+done_testing();
+

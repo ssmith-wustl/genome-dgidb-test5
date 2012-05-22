@@ -5,7 +5,7 @@ use warnings;
 
 use above "Genome";
 use File::Temp;
-use Test::More tests => 11;
+use Test::More tests => 13;
 use Data::Dumper;
 
 $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -84,4 +84,14 @@ for my $output_file (@expected_output_files){
     ok(!$diff_out, "$output_file output matched expected output") or diag("diff:\n". $diff_out);
 }
 
-#ok(-s $test_output_dir."/indels.vcf.gz", "Found indels.vcf.gz");  off for now
+ok(-s $test_output_dir."/indels.vcf.gz", "Found indels.vcf.gz"); 
+
+my $expected_vcf = "$expected_directory/indels.vcf.gz";
+my $output_vcf   = "$test_output_dir/indels.vcf.gz";
+my $expected     = `zcat $expected_vcf | grep -v fileDate`;
+my $output       = `zcat $output_vcf | grep -v fileDate`;
+my $diff = Genome::Sys->diff_text_vs_text($output, $expected);
+ok(!$diff, 'indels.vcf.gz output matched expected output')
+    or diag("diff results:\n" . $diff);
+done_testing();
+
