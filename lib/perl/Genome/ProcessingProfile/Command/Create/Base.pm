@@ -156,6 +156,7 @@ sub _properties_for_class {
         $properties{ $property_name } = {
             is => exists $property->{data_type} ? $property->{data_type} : 'Text',
             is_optional => 1,
+            is_many => exists $property->{is_many} ? $property->{is_many} : 0,
             doc =>  $property->doc . ($property->is_optional ? " (optional)" : ""),
         };
         if (defined $property->default_value) {
@@ -174,12 +175,22 @@ sub _target_class_property_names {
 
 sub _get_target_class_params {
     my $self = shift;
-
     my %params;
-    for my $property_name ( $self->_target_class_property_names ) {
-        my $value = $self->$property_name;
-        next unless defined $value;
-        $params{$property_name} = $value;
+    my $class_name = $self->_target_class_name;
+    my $class_meta = $class_name->__meta__;
+    for my $property ($class_name->params_for_class) {
+        my $meta = $class_meta->property_meta_for_name($property);
+        my $property_name = $meta->property_name;
+        my @values = grep { defined $_ } $self->$property_name;
+        if (@values == 0) {
+            next;
+        }
+        elsif ($meta->is_many or @values > 1) {
+            $params{$property_name} = \@values;
+        }
+        else {
+            $params{$property_name} = $values[0];
+        }
     }
 
     return %params;
