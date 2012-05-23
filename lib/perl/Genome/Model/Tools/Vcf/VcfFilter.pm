@@ -221,23 +221,26 @@ sub execute {
                 my @filter_values;
                 for my $alt (@alts) {
                     # Calculate the stop position that should be in the bed file for this variant
-                    my $stop;
-
                     # If this is an insertion, we need the length of it to uniquely identify the variant between bed and vcf
+                    # convert_indel_string is used to reset the indel start position. Some vcf like the ones from samtools mpileup
+                    # will have some common bases shown in both ref and alt columns.  
+                    # 1	83433754	.	ATTT	ATTTT
+                    # 1	107286849	.	GATAT	GAT
                     my $key;
-                    if (length($alt) > length($ref)) {
-                        # Insertion
+                    if (length($alt) > length($ref)) { # Insertion
+                        my (undef, $start) = Genome::Model::Tools::Bed::Convert::Indel::SamtoolsToBed->convert_indel_string($fields[1], $ref, $alt); 
                         my $insertion_length = length($alt) - length($ref);
-                        $stop = $fields[1];
-                        $key = join(":", ($fields[0], $fields[1], $stop, $insertion_length) );
-                    } elsif (length($alt) < length($ref)) {
-                        # Deletion
-                        $stop = $fields[1] + (length($ref) - length($alt));
-                        $key = join(":", ($fields[0], $fields[1], $stop) );
-                    } else {
-                        # SNV
-                        $stop = $fields[1]; 
-                        $key = join(":", ($fields[0], $fields[1], $stop) );
+                        my $stop = $start;
+                        $key = join(":", ($fields[0], $start, $stop, $insertion_length));
+                    } 
+                    elsif (length($alt) < length($ref)) {# Deletion
+                        my (undef, $start) = Genome::Model::Tools::Bed::Convert::Indel::SamtoolsToBed->convert_indel_string($fields[1], $ref, $alt);
+                        my $stop = $start + (length($ref) - length($alt));
+                        $key = join(":", ($fields[0], $start, $stop));
+                    } 
+                    else {# SNV
+                        my $stop = $fields[1]; 
+                        $key = join(":", ($fields[0], $fields[1], $stop));
                     }
 
                     if ($filter_keep){
