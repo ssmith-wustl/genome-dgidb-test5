@@ -46,6 +46,8 @@ sub sub_command_sort_position { 2 }
 sub execute {
     my $self = shift;
 
+    #
+
     my $after = $self->after;
 
     my @patients = $self->patients;
@@ -57,17 +59,29 @@ sub execute {
     my @all_models = Genome::Model->get(subject_id => [@patient_ids, @sample_ids]);
     my @all_builds = Genome::Model::Build->get(model_id => [ map { $_->id } @all_models ], -hints => ['disk_allocation','newest_workflow_instance']);
     my @all_events = Genome::Model::Event->get(build_id => [ map { $_->id } @all_builds ]);
-    #my @all_sr = Genome::SoftwareResult->get("users.user_id" => [ map { $_->id } @all_builds ]);
-    
-    $DB::single = 1;
-    my @all_wf_names = map { $_->workflow_name } @all_builds;
-    my @all_workflows = Workflow::Model::Instance->get(name => \@all_wf_names);
-    my @children = Workflow::Operation::Instance->get(parent_instance_id => [map { $_->id } @all_workflows]);
-    my @execs = Workflow::Operation::InstanceExecution->get(instance_id => [ map { $_->id } @children ]);
+    my @all_sr = Genome::SoftwareResult->get("users.user_id" => [ map { $_->id } @all_builds ]);
+  
+    my @da = Genome::Disk::Allocation->get(
+      owner_id => [
+        map { $_->id } (@all_sr, @all_events, @all_builds)
+      ]
+    );
 
-    my @force_build_ids;
-    if (my @builds = $self->builds) {
-        @force_build_ids = map { $_->id } @builds;
+    if (1) {
+        $DB::single = 1;
+        my @all_wf_names = map { $_->workflow_name } @all_builds;
+        my @all_workflows = Workflow::Model::Instance->get(name => \@all_wf_names, -hint => ['cache_workflow']);
+        my @children = Workflow::Operation::Instance->get(parent_instance_id => [map { $_->id } @all_workflows]);
+        my @execs = Workflow::Operation::InstanceExecution->get(instance_id => [ map { $_->id } @children ]);
+        while (@execs) {
+            my @child_instances = Workflow::Operation::Instance->get(parent_execution_id => [ map { $_->id } @execs ]);
+            @execs = Workflow::Operation::InstanceExecution->get(instance_id => [ map { $_->id } @child_instances ]);
+        }
+        
+        my @force_build_ids;
+        if (my @builds = $self->builds) {
+            @force_build_ids = map { $_->id } @builds;
+        }
     }
 
     my @row_names = (
@@ -140,6 +154,8 @@ sub execute {
         my %seen_builds;
         my %seen_dirs;
         my %subject_gbases;
+
+        #warn "**** LOOPING OVER BUILDS ***********************************************\n";
 
         for my $build (@patient_builds) {
             next if $seen_builds{$build->id};
@@ -250,6 +266,19 @@ sub execute {
     }
     else {
         die "unknown output format " . $self->format . "???";
+    }
+
+    my @o = $UR::Context::current->all_objects_loaded('UR::Object');
+    my @c = grep { $_->__changes__ } grep { $_->class !~ /^UR::/ and $_->class !~ /Command/  and $_->class eq /Workflow::Operation(::Instance|)$/ } @o;
+    if (@c) {
+        print "*************** CHANGES *********\n";
+        print scalar(@o),"\n";
+        print scalar(@c),"\n";
+        print join("\n",map { "$_" } @c),"\n";
+        print Data::Dumper::Dumper($c[0], [ $c[0]->__changes__ ]);
+        IO::File->new(">/tmp/obj.dat")->print(Data::Dumper::Dumper($c[0]));
+        warn "exiting because therea are changes which would be committed to the database...\n";
+        exit;
     }
 
     return 1;

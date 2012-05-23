@@ -37,9 +37,15 @@ sub execute {
         );
 
         for my $param ( sort { $a cmp $b } $pp->params_for_class ) {
-            my $value = $pp->$param;
-            if (Scalar::Util::blessed($value)) {
-                $value = $value->__display_name__;
+            my @values = $pp->$param;
+            foreach my $value (@values) {
+                if (Scalar::Util::blessed($value)) {
+                    $value = $value->__display_name__;
+                }
+            }
+            my $value;
+            if (@values != 0 and $values[0]) {
+                $value = join(",",@values);
             }
             printf(
                 "%s: %s\n",

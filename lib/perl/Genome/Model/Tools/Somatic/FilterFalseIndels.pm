@@ -592,7 +592,8 @@ sub execute {
 		}
 #            }
     }
-    
+    $ffh->close;
+    $ofh->close;
     close($input);
 
     print $stats{'num_variants'} . " variants\n";
