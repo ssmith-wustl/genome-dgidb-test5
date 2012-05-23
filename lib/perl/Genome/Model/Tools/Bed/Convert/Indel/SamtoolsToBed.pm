@@ -48,7 +48,7 @@ sub process_source {
 
             my @indel_list = split /,/, $variant_bases;
             for my $indel_str (@indel_list) {
-                my ($conv_indel_str, $pos) = $self->_convert_indel_string($position, $reference_bases, $indel_str);
+                my ($conv_indel_str, $pos) = $self->convert_indel_string($position, $reference_bases, $indel_str);
                 unless ($conv_indel_str and $pos) {
                     $self->warning_message("Failed to convert indel string: $indel_str from $line");
                     next;
@@ -111,7 +111,7 @@ sub process_source {
 #17    71072558    71072558    */G
 #17    71072555    71072555    */AAG
 
-sub _convert_indel_string {
+sub convert_indel_string {
     my ($self, $pos, $ref_str, $indel_str) = @_;
     my ($ref_length, $indel_length) = (length($ref_str), length($indel_str));
 
