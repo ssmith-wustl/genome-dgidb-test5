@@ -1697,8 +1697,8 @@ sub _is_pcgp {
         my $project_id = $work_order->project_id;
         my $project_name = $work_order->research_project_name;
 
-        if ( grep($project_id eq $_, (2230523, 2230525, 2259255, 2342358)) or
-             grep($project_name =~ /$_/, ('^PCGP','^Pediatric Cancer'))) {
+        if (defined($project_id) && grep($project_id eq $_, (2230523, 2230525, 2259255, 2342358))
+            || defined($project_name) && grep($project_name =~ /$_/, ('^PCGP','^Pediatric Cancer'))) {
             return 1;
         }
     }
@@ -1710,7 +1710,7 @@ sub _is_rna {
     my ($self, $instrument_data) = @_;
 
     my $sample = $instrument_data->sample;
-    if(grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
+    if(defined($sample->sample_type) && grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
         return 1;
     }
     return 0;
@@ -1720,7 +1720,7 @@ sub _is_rna_instrument_data {
     my $self = shift;
     my $instrument_data = shift;
     my $sample = $instrument_data->sample;
-    if(grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
+    if(defined($sample->sample_type) && grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
         return 1;
     }
     return 0;
