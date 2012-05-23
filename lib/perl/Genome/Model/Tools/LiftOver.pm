@@ -94,30 +94,35 @@ sub execute {
             $F[3] =~ s/\*/-/g;
             
             #tabbed format - 1  123  456  A  T
+
+            #we're combining all the other fields into the name field since liftover is picky 
+            #about it's format. I've chosen a delimiter "?|?" unlikely to be found in any real
+            #files (I hope). Feel free to update this to something less hacky later on.
+            my $extraFields = join("?|?",(@F[3..$#F]));
+                                   
+            #spaces also get treated as delimiters by liftover, so we'll replace them with 
+            #something equally unlikely 
+            $extraFields =~ s/ /?_?/g;
+
             
             ## liftover doesn't like insertion coordinates (start=stop), so we
             ## add one to the stop to enable a liftover, and remove it on the other side
             ## this is effectively the same as not changing from anno to bed for insertions
             if (($F[3] =~ /0/) || ($F[3] =~ /\-/)){ #indel INS
-                #$F[2] = $F[2]-1;
-                print OUTFILE join("\t",("chr$F[0]",$F[1],$F[2],join("/",($F[3],$F[4]))));
+                print OUTFILE join("\t",("chr$F[0]",$F[1],$F[2],$extraFields));
 
             } elsif (($F[4] =~ /0/) || ($F[4] =~ /\-/)){ #indel DEL
                 $F[1] = $F[1]-1;
-                print OUTFILE join("\t",("chr$F[0]",$F[1],$F[2],join("/",($F[3],$F[4]))));
+                print OUTFILE join("\t",("chr$F[0]",$F[1],$F[2],$extraFields));
 
             } else { #SNV
                 $F[1] = $F[1]-1;
-                print OUTFILE join("\t",("chr$F[0]",$F[1],$F[2],join("/",($F[3],$F[4]))));
+                print OUTFILE join("\t",("chr$F[0]",$F[1],$F[2],$extraFields));
             }
 
-            if(@F > 4){
-                print OUTFILE "\t" . join("\t",@F[5..$#F])
-            }
             print OUTFILE "\n";
         }
         close(OUTFILE);
-
 
         $source_file = "$tempdir/inbed";
         $lofile = "$tempdir/outbed";
@@ -167,12 +172,18 @@ sub execute {
         {
             chomp($line);
             my @F = split("\t",$line);
+            my @bases = split(/\?\|\?/,$F[3]);
 
-            my @bases = split("/",$F[3]);
+            #restore trailing fields
+            my $extraFields;
+            if(@bases > 2){
+                $extraFields = join("\t",@bases[2..$#bases]);
+                $extraFields =~ s/\?_\?/ /g;
+            }
 
+            #convert back to 1-based
             $F[0] =~ s/^chr//g;
             if (($bases[0] =~ /^\-/) ||($bases[0] =~ /^0/)){ #indel INS
-                #$F[2] = $F[2]+1; #don't need this because we added one above
                 print OUTFILE join("\t",($F[0],$F[1],$F[2],$bases[0],$bases[1]));
             } elsif (($bases[1] =~ /^\-/) ||($bases[1] =~ /^0/)){ #indel DEL
                 $F[1] = $F[1]+1;
@@ -181,8 +192,8 @@ sub execute {
                 $F[1] = $F[1]+1;
                 print OUTFILE join("\t",($F[0],$F[1],$F[2],$bases[0],$bases[1]));
             }            
-            if(@F > 3){
-                print OUTFILE "\t" . join("\t",@F[4..$#F])
+            if(@bases > 2){
+                print OUTFILE "\t" . $extraFields;
             }
             print OUTFILE "\n";
         }

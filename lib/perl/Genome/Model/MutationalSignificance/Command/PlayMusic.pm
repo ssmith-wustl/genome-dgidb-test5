@@ -7,10 +7,22 @@ use Workflow::Simple;
 
 my @has;
 
+my %module_input_exceptions;
+my %parallel_by;
 
+my $DONT_USE = "don't use this";
 
 BEGIN {
-    my %module_input_exceptions = (
+#This data structure keeps track of parallel_by commands.
+    %parallel_by = (
+        "Genome::Model::Tools::Music::Bmr::CalcCovgHelper" => "normal_tumor_bam_pair",
+        "Genome::Model::MutationalSignificance::Command::CalcCovg" => "somatic_variation_build",
+    );
+#This data structure specifies the component command modules that are called by
+#the workflow, as well as any inputs to those commands that are provided
+#inside the workflow rather than as user inputs.  Any input properties from
+#the listed modules not in this data structure will be made input properties#to this command.
+    %module_input_exceptions = (
         "Genome::Model::Tools::Music::Proximity" => {
         },
         "Genome::Model::Tools::Music::PathScan" => {
@@ -39,16 +51,30 @@ BEGIN {
             output_file => ['input connector', 'pfam_output_file'],
         },
         "Genome::Model::Tools::Music::Bmr::CalcCovgHelper" => {
-            normal_tumor_bam_pair => [],
-            output_file => [],
+            normal_tumor_bam_pair => ['input connector', 'normal_tumor_bam_pairs'],
+            output_dir => ['input connector', 'roi_covg_dir'],
         },
         "Genome::Model::Tools::Music::Bmr::CalcCovg" => {
             output_dir => ["Genome::Model::MutationalSignificance::Command::MergeCalcCovg", 'output_dir'],
-            cmd_list_file => [],
-            cmd_prefix => [],
-            normal_min_depth => [],
-            tumor_min_depth => [],
-            min_mapq => [],
+            cmd_list_file => $DONT_USE,
+            cmd_prefix => $DONT_USE, 
+            #The following have default values on CalcCovgHelper but not on CalcCovg
+            normal_min_depth => ['input connector', 'normal_min_depth'],
+            tumor_min_depth => ['input connector', 'tumor_min_depth'],
+            min_mapq => ['input connector', 'min_mapq'],
+        },
+        "Genome::Model::MutationalSignificance::Command::CalcCovg" => {
+            somatic_variation_build => ['input connector', 'somatic_variation_builds'],
+            output_dir => ['input connector', 'roi_covg_dir'],
+            #These are optional on the PlayMusic command, but mandatory on the CalcCovg module
+            music_build => ['input connector', 'music_build'], 
+            normal_min_depth => ['input connector', 'normal_min_depth'],
+            tumor_min_depth => ['input connector', 'tumor_min_depth'],
+            min_mapq => ['input connector', 'min_mapq'],
+        },
+        "Genome::Model::MutationalSignificance::Command::MergeCalcCovg" => {
+            output_dir => ['input connector', 'output_dir'],
+            output_files => 1, #set source at runtime
         },
     );
 
@@ -60,7 +86,7 @@ BEGIN {
         for my $p (@p) {
             if ($p->can("is_input") and $p->is_input){
                 my $name = $p->property_name;
-                unless ($seen{$p->property_name} or $module_input_exceptions{$module}{$name}) {
+                unless ($seen{$p->property_name} or exists $module_input_exceptions{$module}{$name}) {
                     my %data = %{ UR::Util::deep_copy($p) };
                     for my $key (keys %data) {
                         delete $data{$key} if $key =~ /^_/;
@@ -82,7 +108,7 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
     has_optional_input => [
         music_build => {
             is => 'Genome::Model::Build',
-            doc => 'Build that is using the results of this workflow.'
+            doc => 'Build that is using the software results from this command',
         },
         somatic_variation_builds => {
             is => 'Genome::Model::Build::SomaticVariation',
@@ -300,191 +326,82 @@ sub _create_workflow {
     my $output_connector = $workflow->get_output_connector;
 
     my $command_module;
-    my $calc_covg_operation;
-    my $link;
-    if ($self->somatic_variation_builds){
-        $command_module = 'Genome::Model::MutationalSignificance::Command::CalcCovg';
-        $calc_covg_operation = $workflow->add_operation(
-            name => $self->_get_operation_name_for_module($command_module),
-            operation_type => Workflow::OperationType::Command->create(
-                command_class_name => $command_module,
-            ),
-            parallel_by => 'somatic_variation_build',
-        );
 
-        $link = $workflow->add_link(
-            left_operation => $input_connector,
-            left_property => 'somatic_variation_builds',
-            right_operation => $calc_covg_operation,
-            right_property => 'somatic_variation_build',
-        );
-
-        $link = $workflow->add_link(
-            left_operation => $input_connector,
-            left_property => 'music_build',
-            right_operation => $calc_covg_operation,
-            right_property => 'music_build',
-        );
+    if ($self->somatic_variation_builds) {
+        delete $module_input_exceptions{"Genome::Model::Tools::Music::Bmr::CalcCovgHelper"};
+        $module_input_exceptions{"Genome::Model::MutationalSignificance::Command::MergeCalcCovg"}{"output_files"} = ['Genome::Model::MutationalSignificance::Command::CalcCovg',"output_file"],
     }
     else {
-        $command_module = 'Genome::Model::Tools::Music::Bmr::CalcCovgHelper';
-        $calc_covg_operation = $workflow->add_operation(
-            name => $self->_get_operation_name_for_module($command_module),
-            operation_type => Workflow::OperationType::Command->create(
-                command_class_name => $command_module,
-            ),
-            parallel_by => 'normal_tumor_bam_pair',
-        );
-
-        $link = $workflow->add_link(
-            left_operation => $input_connector,
-            left_property => 'normal_tumor_pairs',
-            right_operation => $calc_covg_operation,
-            right_property => 'normal_tumor_bam_pair',
-        );
+        delete $module_input_exceptions{"Genome::Model::MutationalSignificance::Command::CalcCovg"};
+        $module_input_exceptions{"Genome::Model::MutationalSignificance::Command::MergeCalcCovg"}{"output_files"} = ['Genome::Model::Tools::Music::Bmr::CalcCovgHelper',"final_output_file"],
     }
 
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'roi_covg_dir',
-        right_operation => $calc_covg_operation,
-        right_property => 'output_dir',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'reference_sequence',
-        right_operation => $calc_covg_operation,
-        right_property => 'reference_sequence',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'roi_file',
-        right_operation => $calc_covg_operation,
-        right_property => 'roi_file',
-    );
-
-    if ($self->normal_min_depth) {
-        $link = $workflow->add_link(
-            left_operation => $input_connector,
-            left_property => 'normal_min_depth',
-            right_operation => $calc_covg_operation,
-            right_property => 'normal_min_depth',
-        );
-    }
-
-    if ($self->tumor_min_depth) {
-        $link = $workflow->add_link(
-            left_operation => $input_connector,
-            left_property => 'tumor_min_depth',
-            right_operation => $calc_covg_operation,
-            right_property => 'tumor_min_depth',
-        );
-    }
-
-    if ($self->min_mapq) {
-        $link = $workflow->add_link(
-            left_operation => $input_connector,
-            left_property => 'min_mapq',
-            right_operation => $calc_covg_operation,
-            right_property => 'min_mapq',
-        );
-    }
-
-    $command_module = 'Genome::Model::MutationalSignificance::Command::MergeCalcCovg';
-    my $merge_calc_covg_operation = $workflow->add_operation(
-        name => $self->_get_operation_name_for_module($command_module),
-        operation_type => Workflow::OperationType::Command->create(
-            command_class_name => $command_module,
-        ),
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $calc_covg_operation,
-        left_property => 'output_file',
-        right_operation => $merge_calc_covg_operation,
-        right_property => 'output_files',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'output_dir',
-        right_operation => $merge_calc_covg_operation,
-        right_property => 'output_dir',
-    );
-
-    my @no_dependencies = ('Proximity', 'ClinicalCorrelation', 'CosmicOmim', 'Pfam');
-    my @bmr = ('Bmr::CalcCovg', 'Bmr::CalcBmr');
-    my @depend_on_bmr = ('PathScan', 'Smg');
-    my @depend_on_smg = ('MutationRelation');
+    my @no_dependencies = ('Genome::Model::Tools::Music::Proximity', 'Genome::Model::Tools::Music::ClinicalCorrelation', 'Genome::Model::Tools::Music::CosmicOmim', 'Genome::Model::Tools::Music::Pfam');
+    my @bmr = ('Genome::Model::MutationalSignificance::Command::CalcCovg', 'Genome::Model::Tools::Music::Bmr::CalcCovgHelper', 'Genome::Model::MutationalSignificance::Command::MergeCalcCovg','Genome::Model::Tools::Music::Bmr::CalcCovg', 'Genome::Model::Tools::Music::Bmr::CalcBmr');
+    my @depend_on_bmr = ('Genome::Model::Tools::Music::PathScan', 'Genome::Model::Tools::Music::Smg');
+    my @depend_on_smg = ('Genome::Model::Tools::Music::MutationRelation');
     for my $command_name (@no_dependencies, @bmr, @depend_on_bmr, @depend_on_smg) {
         $workflow = $self->_append_command_to_workflow($command_name, $workflow)
                     or return;
     }
 
+    my $link;
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::Proximity'),                                                            $workflow),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::Tools::Music::Proximity',                                                            $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
         right_property => 'proximity_result',
     );
 
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::Pfam'), $workflow),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::Tools::Music::Pfam', $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
         right_property => 'pfam_result',
     );
 
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::MutationRelation'), $workflow),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::Tools::Music::MutationRelation', $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
         right_property => 'mr_result',
     );
 
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::PathScan'), $workflow),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::Tools::Music::PathScan', $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
         right_property => 'pathscan_result',
     );
 
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::Smg'), $workflow),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::Tools::Music::Smg', $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
         right_property => 'smg_result',
     );
     
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::CosmicOmim'), $workflow),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::Tools::Music::CosmicOmim', $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
         right_property => 'cosmic_result',
     );
 
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::ClinicalCorrelation'), $workflow),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::Tools::Music::ClinicalCorrelation', $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
         right_property => 'cct_result',
     );
 
-    my $op = $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::Bmr::CalcCovg'), $workflow);
+    my $op = $self->_get_operation_for_module_name('Genome::Model::Tools::Music::Bmr::CalcCovg', $workflow);
     $op->operation_type->lsf_resource("-R \'select[mem>16000] rusage[mem=16000]\' -M 16000000");
-    $op = $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::Bmr::CalcBmr'), $workflow);
+    $op = $self->_get_operation_for_module_name('Genome::Model::Tools::Music::Bmr::CalcBmr', $workflow);
     $op->operation_type->lsf_resource("-R \'select[mem>64000] rusage[mem=64000]\' -M 64000000");
-    $op = $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::Smg'), $workflow);
+    $op = $self->_get_operation_for_module_name('Genome::Model::Tools::Music::Smg', $workflow);
     $op->operation_type->lsf_resource("-R \'select[mem>16000] rusage[mem=16000] span[hosts=1]\' -n ".$self->processors." -M 16000000");
     return $workflow;
-}
-
-sub _get_operation_name_for_module {
-    my $self = shift;
-    my $command_name = shift;
-    return Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string($command_name));
 }
 
 sub _get_operation_for_module_name {
@@ -506,22 +423,40 @@ sub _append_command_to_workflow {
     my $workflow = shift;
     my $lsf_project = shift;
     my $lsf_queue = shift;
-    my $command_module = join('::', 'Genome::Model::Tools::Music', $command_name);
+    my $command_module = $command_name;
+    unless (defined $module_input_exceptions{$command_name}) {
+        return $workflow;
+    }
     my $command_meta = $command_module->__meta__;
-    my $operation_name = $self->_get_operation_name_for_module($command_module);
-    my $operation = $workflow->add_operation(
-        name => $operation_name,
-        operation_type => Workflow::OperationType::Command->create(
-            command_class_name => $command_module,
-        )
-    );
+    my $operation_name = $command_module;
+    my $operation;
+    if ($parallel_by{$operation_name}){
+        $operation = $workflow->add_operation(
+            name => $operation_name,
+            operation_type => Workflow::OperationType::Command->create(
+                command_class_name => $command_module,
+            ),
+            parallel_by => $parallel_by{$operation_name},
+        );
+    }
+    else {
+        $operation = $workflow->add_operation(
+            name => $operation_name,
+            operation_type => Workflow::OperationType::Command->create(
+                command_class_name => $command_module,
+            )
+        );
+    }
     $operation->operation_type->lsf_queue($lsf_queue);
     $operation->operation_type->lsf_project($lsf_project);
-    my %links = $self->_play_music_dependencies;
+
     for my $property ($command_meta->_legacy_properties()) {
         next unless exists $property->{is_input} and $property->{is_input};
         my $property_name = $property->property_name;
-        my $property_def = $links{$operation_name}{$property_name};
+        my $property_def = $module_input_exceptions{$operation_name}{$property_name};
+        if ($property_def eq $DONT_USE) {
+            $property_def = undef;
+        }
         if (!$property_def) {
             if (grep {/^$property_name$/} @{$workflow->operation_type->input_properties}) {
                 $property_def = [$workflow->get_input_connector->name, $property_name];
@@ -549,55 +484,6 @@ sub _append_command_to_workflow {
         }
     }
     return $workflow;
-}
-
-sub _play_music_dependencies {
-    #If the input property doesn't come from directly from the input connector with the same name, specify it here
-    my $self = shift;
-    my %operation_names = (
-        bmr_calc_bmr_operation => 'Genome::Model::Tools::Music::Bmr::CalcBmr',
-        bmr_calc_covg_operation => 'Genome::Model::Tools::Music::Bmr::CalcCovg',
-        smg_operation => 'Genome::Model::Tools::Music::Smg',
-        path_scan_operation => 'Genome::Model::Tools::Music::PathScan',
-        mutation_relation_operation => 'Genome::Model::Tools::Music::MutationRelation',
-        proximity_operation => 'Genome::Model::Tools::Music::Proximity',
-        clinical_correlation_operation => 'Genome::Model::Tools::Music::ClinicalCorrelation',
-        cosmic_omim_operation => 'Genome::Model::Tools::Music::CosmicOmim',
-        pfam_operation => 'Genome::Model::Tools::Music::Pfam',
-        merge_calc_covg_operation => 'Genome::Model::MutationalSignificance::Command::MergeCalcCovg',
-    );
-    my %names = map {$_ => $self->_get_operation_name_for_module($operation_names{$_})} keys %operation_names;
-    my %links = (
-        $names{path_scan_operation} => {
-            gene_covg_dir => [$names{bmr_calc_covg_operation}, 'gene_covg_dir'],
-            bmr => [$names{bmr_calc_bmr_operation}, 'bmr_output'],
-            output_file => ['input connector', 'path_scan_output_file'],
-        },
-        $names{smg_operation} => {
-            gene_mr_file => [$names{bmr_calc_bmr_operation}, 'gene_mr_file'],
-            output_file => ['input connector', 'smg_output_file'],
-        },
-        $names{mutation_relation_operation} => {
-            output_file => ['input connector', 'mutation_relation_output_file'],
-            gene_list => [$names{smg_operation}, 'output_file'],
-        },
-        $names{bmr_calc_bmr_operation} => {
-            output_dir => [$names{bmr_calc_covg_operation}, 'output_dir'], 
-        },
-        $names{clinical_correlation_operation} => {
-            output_file => ['input connector', 'clinical_correlation_output_file'],
-        },
-        $names{cosmic_omim_operation} => {
-            output_file => ['input connector', 'cosmic_omim_output_file'],
-        },
-        $names{pfam_operation} => {
-            output_file => ['input connector', 'pfam_output_file'],
-        },
-        $names{bmr_calc_covg_operation} => {
-            output_dir => [$names{merge_calc_covg_operation}, 'output_dir'],
-        },
-    );
-    return %links;
 }
 
 1;
