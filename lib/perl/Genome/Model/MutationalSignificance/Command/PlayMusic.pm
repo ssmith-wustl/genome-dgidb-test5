@@ -53,6 +53,7 @@ BEGIN {
         "Genome::Model::Tools::Music::Bmr::CalcCovgHelper" => {
             normal_tumor_bam_pair => ['input connector', 'normal_tumor_bam_pairs'],
             output_dir => ['input connector', 'roi_covg_dir'],
+            output_file => $DONT_USE,
         },
         "Genome::Model::Tools::Music::Bmr::CalcCovg" => {
             output_dir => ["Genome::Model::MutationalSignificance::Command::MergeCalcCovg", 'output_dir'],
