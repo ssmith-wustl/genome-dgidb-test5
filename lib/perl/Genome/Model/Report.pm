@@ -164,7 +164,15 @@ sub _add_model_info {
     for my $object ( keys %objects_attrs ) {
         for my $attr ( @{$objects_attrs{$object}} ) {
             if ($self->$object->can($attr)){
-                my $value = $self->$object->$attr;
+                my $value;
+                my @values = $self->$object->$attr;
+                my $property_meta = $self->$object->__meta__->property_meta_for_name($attr);
+                if ($property_meta and $property_meta->is_many) {
+                    $value = join(",",@values);
+                }
+                else {
+                    $value = $values[0];
+                }
                 $attr =~ s#\_#\-#g;
                 my $element = $build_node->addChild( $self->_xml->createElement($attr) )
                     or return;
