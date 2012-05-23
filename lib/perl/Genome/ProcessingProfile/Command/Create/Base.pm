@@ -181,18 +181,14 @@ sub _get_target_class_params {
     for my $property ($class_name->params_for_class) {
         my $meta = $class_meta->property_meta_for_name($property);
         my $property_name = $meta->property_name;
-        print "getting $property_name\n";
         my @values = grep { defined $_ } $self->$property_name;
         if (@values == 0) {
-            print "$property_name not defined\n";
             next;
         }
         elsif ($meta->is_many or @values > 1) {
-            print "returning array ref for $property_name\n";
             $params{$property_name} = \@values;
         }
         else {
-            print "returning single value for $property_name\n";
             $params{$property_name} = $values[0];
         }
     }
