@@ -29,7 +29,8 @@ class Genome::Model::Tools::Lims::ApipeBridge::UpdateGenomeAndGscTaxon {
     ],
 };
 
-sub help_brief { return 'Fix a taxon in GSC and Genome'; }
+sub help_brief { return 'Update a property of a taxon in Genome and GSC'; }
+sub help_detail { return help_brief(); }
 
 sub property_map {
     return (
