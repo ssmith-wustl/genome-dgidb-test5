@@ -219,6 +219,9 @@ sub get_or_create_roi_bed {
 
     my @substructure_files = glob($self->data_directory.'/annotation_data/substructures/*.csv');
 
+    my $reference_index = $self->reference_sequence->full_consensus_sam_index_path;
+    my %chrom_stop = map {chomp; split(/\t/)} `cut -f 1,2 $reference_index`;
+
     my ($out_file, $out) = Genome::Sys->create_temp_file;
     foreach my $file (@substructure_files) {
         my $fh = Genome::Sys->open_file_for_reading($file);
@@ -233,6 +236,10 @@ sub get_or_create_roi_bed {
             my $structure_type = $fields[8];
             my $ordinal = $fields[11];
             my $strand;
+
+            unless ($chrom_stop{$chrom}) {
+                next;
+            }
             if ($fields[32] eq '-1') {
                 $strand = 'rev';
             }
@@ -242,9 +249,6 @@ sub get_or_create_roi_bed {
             my $description = join(":", $gene_id, $transcript_id,
                 $structure_type, $ordinal,
                 $strand);
-
-            my $reference_index = $self->reference_sequence->full_consensus_sam_index_path;
-            my %chrom_stop = map {chomp; split(/\t/)} `cut -f 1,2 $reference_index`;
 
             if (%params) {
                 if ($params{one_based}) {
