@@ -13,13 +13,13 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::Model::Tools::Lims::ApipeBridge::FixTaxon') or die;
+use_ok('Genome::Model::Tools::Lims::ApipeBridge::UpdateGenomeAndGscTaxon') or die;
 
 my $name = '__TEST_TAXON__';
 my $taxon = Genome::Taxon->__define__(name => $name, domain => 'Eukaryota', estimated_genome_size => 10);
 my $gsc_taxon = GSC::Organism::Taxon->create(id => $taxon->id, species_name => $name, domain => 'Eukaryota', pse_id => 1);
 
-my $fixer = Genome::Model::Tools::Lims::ApipeBridge::FixTaxon->create(
+my $fixer = Genome::Model::Tools::Lims::ApipeBridge::UpdateGenomeAndGscTaxon->create(
     taxon => $taxon,
     name => 'estimated_genome_size',
     value => 10_000_000,

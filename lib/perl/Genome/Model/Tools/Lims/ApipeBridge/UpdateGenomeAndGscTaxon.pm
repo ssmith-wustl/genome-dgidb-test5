@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Lims::ApipeBridge::FixTaxon;
+package Genome::Model::Tools::Lims::ApipeBridge::UpdateGenomeAndGscTaxon;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 
 use Data::Dumper;
 
-class Genome::Model::Tools::Lims::ApipeBridge::FixTaxon { 
+class Genome::Model::Tools::Lims::ApipeBridge::UpdateGenomeAndGscTaxon { 
     is => 'Command::V2',
     has => [
         taxon => {
