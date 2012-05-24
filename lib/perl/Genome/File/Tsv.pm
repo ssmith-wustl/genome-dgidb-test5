@@ -1,4 +1,4 @@
-package Genome::File::Tsv
+package Genome::File::Tsv;
 
 use strict;
 use warnings;
