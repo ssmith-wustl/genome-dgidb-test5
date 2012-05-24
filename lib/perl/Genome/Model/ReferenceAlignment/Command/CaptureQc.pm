@@ -80,8 +80,10 @@ sub execute {
             $cov_stats = $cov_result->coverage_stats_summary_hash_ref->{0};
         };
         if( $@ ){
-            $align_stats = $build->alignment_summary_hash_ref->{0};
-            $cov_stats = $build->coverage_stats_summary_hash_ref->{0};
+            eval{
+                $align_stats = $build->alignment_summary_hash_ref->{0};
+                $cov_stats = $build->coverage_stats_summary_hash_ref->{0};
+            };
         }
         $build_to_metrics{$build->id} = $self->get_metrics_for_non_qc_data(
             $align_stats,
@@ -245,17 +247,21 @@ sub get_metrics_for_non_qc_data {
 
     my %metric_to_value;
 
-    my $unique_on_target = $align_stats->{unique_target_aligned_bp};
-    my $duplicate_on_target = $align_stats->{duplicate_target_aligned_bp};
-    my $unique_off_target = $align_stats->{unique_off_target_aligned_bp};
-    my $duplicate_off_target = $align_stats->{duplicate_off_target_aligned_bp};
-    my $unaligned = $align_stats->{total_unaligned_bp};
+    my $unique_on_target = $align_stats->{unique_target_aligned_bp} || 0;
+    my $duplicate_on_target = $align_stats->{duplicate_target_aligned_bp} || 0;
+    my $unique_off_target = $align_stats->{unique_off_target_aligned_bp} || 0;
+    my $duplicate_off_target = $align_stats->{duplicate_off_target_aligned_bp} || 0;
+    my $unaligned = $align_stats->{total_unaligned_bp} || 0;
 
     my $total = $unique_on_target+$duplicate_on_target+$unique_off_target+$duplicate_off_target+$unaligned;
-    my $percent_unique_on_target = $unique_on_target/$total*100;
-    my $percent_duplicate_on_target = $duplicate_on_target/$total*100;
-    my $percent_unique_off_target = $unique_off_target/$total*100;
-    my $percent_duplicate_off_target = $duplicate_off_target/$total*100;
+    my ($percent_unique_on_target, $percent_unique_off_target, $percent_duplicate_off_target, $percent_duplicate_on_target, $percent_unaligned) = (0,0,0,0,0);
+    eval{
+        $percent_unique_on_target = $unique_on_target/$total*100;
+        $percent_duplicate_on_target = $duplicate_on_target/$total*100;
+        $percent_unique_off_target = $unique_off_target/$total*100;
+        $percent_duplicate_off_target = $duplicate_off_target/$total*100;
+        $percent_unaligned = $unaligned/$total*100;
+    };
 
     #Default coverage depth percentage is zero - there may not be depth information, especially for 30x and 40x
     $metric_to_value{'%40Depth'} = $cov_stats->{40}{pc_target_space_covered} || 0;
@@ -266,14 +272,14 @@ sub get_metrics_for_non_qc_data {
 
     $metric_to_value{'%Dup'} = $align_stats->{percent_duplicates} || 0;
 
-    $metric_to_value{'%Mapped'} = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flagstat)->{'reads_mapped_percentage'};
+    $metric_to_value{'%Mapped'} = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flagstat)->{'reads_mapped_percentage'} || 0;
 
-    $metric_to_value{'%UniqOn'} = $percent_unique_on_target;
-    $metric_to_value{'%UniqOff'} = $percent_unique_off_target;
+    $metric_to_value{'%UniqOn'} = $percent_unique_on_target || 0;
+    $metric_to_value{'%UniqOff'} = $percent_unique_off_target || 0;
 
-    $metric_to_value{'%TotalOn'} = $percent_duplicate_on_target + $percent_unique_on_target;
-    $metric_to_value{'%TotalOff'} = $percent_duplicate_off_target + $percent_unique_off_target;
-    $metric_to_value{'%Unaligned'} = $unaligned/$total*100;
+    $metric_to_value{'%TotalOn'} = $percent_duplicate_on_target + $percent_unique_on_target || 0;
+    $metric_to_value{'%TotalOff'} = $percent_duplicate_off_target + $percent_unique_off_target || 0;
+    $metric_to_value{'%Unaligned'} = $percent_unaligned || 0;
 
     if ($self->debug) {
         while (my ($metric,$value) = each %metric_to_value) {
