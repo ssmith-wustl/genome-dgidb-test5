@@ -19,8 +19,8 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     unless ($self) { return; }
-    unless ($] > 5.012) {
-        die 'Bio::DB::Sam requires perl 5.12! Consider using gmt5.12.1 instead of gmt for all Synthesizer  commands!';
+    unless ($] > 5.010) {
+        die 'Bio::DB::Sam requires perl 5.10! Consider using gmt5.10 instead of gmt for all Synthesizer  commands!';
     }
     require Bio::DB::Sam;
     return $self;
