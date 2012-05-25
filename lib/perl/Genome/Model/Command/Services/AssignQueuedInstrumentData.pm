@@ -37,6 +37,11 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
             default     => 0,
             doc         => 'Process newest PSEs first',
         },
+        pse_id => {
+            is          => 'Number',
+            is_optional => 1,
+            doc         => 'Ignore other parameters and only process this PSE.'
+        },
         _existing_models_with_existing_assignments => {
             is => 'HASH',
             doc => 'Existing models that already had the instrument data for a PSE assigned',
@@ -610,10 +615,19 @@ sub load_pses {
 
     # Get the inprogress QIDFGMs mapped to instrument data
     $self->status_message('Getting inprogress QIDFGM PSEs...');
-    my @qidfgms = GSC::PSE->get(
-        ps_id => 3733,
-        pse_status => 'inprogress',
-    );
+    my @qidfgms;
+    if($self->pse_id){
+        @qidfgms = GSC::PSE->get(
+            ps_id => 3733,
+            pse_status => 'inprogress',
+            id => $self->pse_id,
+        );
+    }else {
+        @qidfgms = GSC::PSE->get(
+            ps_id => 3733,
+            pse_status => 'inprogress',
+        );
+    }
     if ( not @qidfgms ) {
         Carp::confess( $self->error_message('No inprogess QIDFGMS found, but have new/failed instrument data to process!') );
     }
