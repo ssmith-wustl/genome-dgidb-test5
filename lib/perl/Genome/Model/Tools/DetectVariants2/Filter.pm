@@ -623,7 +623,10 @@ sub _convert_bed_to_detector {
             }
 
             while (my $parsed_variant = shift @parsed_variants ) {
-                my ($dchr,$dpos,$dref,$dvar) = @{$parsed_variant};
+                my ($dchr,$dpos,$dref,@dvar) = @{$parsed_variant};
+                my ($dvar) = grep($_ eq $var, @dvar);
+                $dvar ||= "";
+                $DB::single = 1;
                 if(($chr eq $dchr)&&($stop == $dpos)&&($ref eq $dref)&&($var eq $dvar)){
                     print $ofh $dline."\n";
 
