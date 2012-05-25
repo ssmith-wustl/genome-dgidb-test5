@@ -5,8 +5,74 @@ use warnings;
 
 use Genome;
 
+my @has_param;
+my %module_input_exceptions;
+my %parallel_by;
+
+my $DONT_USE = "don't use this";
+
+BEGIN {
+    %parallel_by = (
+        "Genome::Model::MutationalSignificance::Command::CreateMafFile" => "somatic_variation_build",
+    );
+    %module_input_exceptions = (
+        'Genome::Model::MutationalSignificance::Command::MergeMafFiles' => {
+            maf_files => ["Genome::Model::MutationalSignificance::Command::CreateMafFile", 'maf_file'],
+            maf_path => ["input connector", "merged_maf_path"],
+        },
+        'Genome::Model::MutationalSignificance::Command::CreateMafFile' => {
+            somatic_variation_build => ['input connector', 'somatic_variation_builds'],
+            output_dir => ['input connector', 'create_maf_output_dir'],
+        },
+        'Genome::Model::MutationalSignificance::Command::CreateROI' => {
+            annotation_build => ['input connector', 'annotation_build'], #input to model, not param
+        },
+        'Genome::Model::MutationalSignificance::Command::CreateBamList' => {
+            somatic_variation_builds => ['input connector', 'somatic_variation_builds'],
+            bam_list => ["input connector", "bam_list"],
+        },
+        'Genome::Model::MutationalSignificance::Command::PlayMusic' => {
+            bam_list => ["Genome::Model::MutationalSignificance::Command::CreateBamList", "bam_list"],
+            maf_file => ["Genome::Model::MutationalSignificance::Command::MergeMafFiles", "maf_path"],
+            roi_file => ["Genome::Model::MutationalSignificance::Command::CreateROI", "roi_path"],
+            reference_sequence => ['input connector', 'reference_sequence'],
+            output_dir => ['input connector', 'output_dir'],
+            log_directory => ['input connector', 'log_directory'],
+            music_build => ['input connector', 'music_build'],
+            somatic_variation_builds => ['input connector', 'somatic_variation_builds'],
+        },
+    );
+    my %seen;
+    my @modules = keys %module_input_exceptions;
+    foreach my $module (@modules) {
+        my $module_meta = UR::Object::Type->get($module);
+        my @p = $module_meta->properties;
+        for my $p (@p) {
+            if ($p->can("is_input") and $p->is_input){
+                my $name = $p->property_name;
+                unless ($seen{$p->property_name} or $module_input_exceptions{$module}{$name}) {
+                    my %data = %{ UR::Util::deep_copy($p) };
+                    for my $key (keys %data) {
+                        delete $data{$key} if $key =~ /^_/;
+                    }
+                    delete $data{id};
+                    delete $data{db_committed};
+                    delete $data{class_name};
+                    delete $data{is_input};
+                    $data{is_param} = 1;
+                    push @has_param, $name, \%data;
+                    $seen{$name} = 1;
+                }
+            }
+        }    
+    }
+}
+
 class Genome::Model::MutationalSignificance {
     is        => 'Genome::Model',
+    has => [
+        processing_profile => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id', },
+    ],
     has_input => [
         somatic_variation_models => {
             is    => 'Genome::Model::SomaticVariation',
@@ -18,13 +84,7 @@ class Genome::Model::MutationalSignificance {
             doc => 'annotation to use for roi file',
         },
     ],
-    has_param => [
-        processors => {
-            is => 'Integer',
-            default_value => 6,
-            doc => 'TODO',
-        },
-	],
+    has_param => \@has_param,
 };
 
 sub help_synopsis {
@@ -57,123 +117,58 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
     my $lsf_queue = shift; # TODO: the workflow shouldn't need this yet
     my $lsf_project = shift;
      
+    my @input_properties;    
+
     if (!defined $lsf_queue || $lsf_queue eq '' || $lsf_queue eq 'inline') {
         $lsf_queue = 'apipe';
     }
     if (!defined $lsf_project || $lsf_project eq '') {
         $lsf_project = 'build' . $build->id;
     }
-     
+    my $meta = $self->__meta__;
+    my $build_meta = $build->__meta__;
+    my @input_params = $build_meta->properties(        
+        class_name => $build->class,        
+        is_input => 1,
+    );
+
+    map {my $name = $_->property_name; my @values = $build->$name; if (defined $values[0]){push @input_properties,   $name} }@input_params;
+
+    @input_params = $meta->properties(
+        class_name => $self->class,
+        is_param => 1,
+    );
+
+    map {my $name = $_->property_name; my @values =  $self->$name; if (defined $values[0]){push @input_properties,   $name} }@input_params;
+
+    push @input_properties, "output_dir";
+    push @input_properties, "music_build";
+    push @input_properties, "clinical_data_file";
+    push @input_properties, "merged_maf_path";
+    push @input_properties, "create_maf_output_dir";
+    push @input_properties, "bam_list";
+    push @input_properties, "reference_sequence";
+    push @input_properties, "log_directory";
 
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
-        input_properties => ['music_build','clinical_data_file', 'merged_maf_path', 'create_maf_output_dir', 'bam_list', 'processors', 'pathway_file', 'reference_sequence','reference_build','somatic_variation_builds','annotation_build', 'output_dir', 'log_directory', 'roi_flank_size', 'excluded_reference_sequence_patterns', 'included_feature_type_patterns'],
-        output_properties => ['smg_result','pathscan_result','mr_result','pfam_result','proximity_result',
-                              'cosmic_result','cct_result'],
+        input_properties => \@input_properties,
+        output_properties => ['smg_result','pathscan_result','mr_result','pfam_result','proximity_result', 'cosmic_result','cct_result'],
     );
 
     my $log_directory = $build->log_directory;
     $workflow->log_dir($log_directory);
  
-    my $input_connector = $workflow->get_input_connector;
     my $output_connector = $workflow->get_output_connector;
 
     # For now, just get the ultra-high confidence variants.
     # TODO: figure out how to add in the manual review ones
 
-
-    #Merge MAF files
-    my $command_module = 'Genome::Model::MutationalSignificance::Command::MergeMafFiles';
-    my $merged_maf_operation = $workflow->add_operation(
-        name => $self->_get_operation_name_for_module($command_module),
-        operation_type => Workflow::OperationType::Command->create(
-            command_class_name => $command_module,
-        ),
-    );
-
-    # Create MAF files
- 
-    $command_module = 'Genome::Model::MutationalSignificance::Command::CreateMafFile';
-    my $create_maf_operation = $workflow->add_operation(
-        name => $self->_get_operation_name_for_module($command_module),
-        operation_type => Workflow::OperationType::Command->create(
-            command_class_name => $command_module,
-        ),
-        parallel_by => 'somatic_variation_build',
-    );
-
-    $create_maf_operation->operation_type->lsf_queue($lsf_queue);
-    $create_maf_operation->operation_type->lsf_project($lsf_project);
- 
-    my $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'somatic_variation_builds',
-        right_operation => $create_maf_operation,
-        right_property => 'somatic_variation_build'
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'create_maf_output_dir',
-        right_operation => $create_maf_operation,
-        right_property => 'output_dir',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $create_maf_operation,
-        left_property => 'maf_file',
-        right_operation => $merged_maf_operation,
-        right_property => 'maf_files',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'merged_maf_path',
-        right_operation => $merged_maf_operation,
-        right_property => 'maf_path',
-    );
-
-    #Create ROI BED file
-    $command_module = 'Genome::Model::MutationalSignificance::Command::CreateROI';
-    my $roi_operation = $workflow->add_operation(
-        name => $self->_get_operation_name_for_module($command_module),
-        operation_type => Workflow::OperationType::Command->create(
-            command_class_name => $command_module,
-        )
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'annotation_build',
-        right_operation => $roi_operation,
-        right_property => 'annotation_build',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'roi_flank_size',
-        right_operation => $roi_operation,
-        right_property => 'flank_size',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'excluded_reference_sequence_patterns',
-        right_operation => $roi_operation,
-        right_property => 'excluded_reference_sequence_patterns',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'included_feature_type_patterns',
-        right_operation => $roi_operation,
-        right_property => 'included_feature_type_patterns',
-    );
 =cut
     #Create clinical data file
     $command_module = 'Genome::Model::MutationalSignificance::Command::CreateClinicalData',
     my $clinical_data_operation = $workflow->add_operation(
-        name => $self->_get_operation_name_for_module($command_module),
+        name => $command_module,
         operation_type => Workflow::OperationType::Command->create(
             command_class_name => $command_module,
         )
@@ -186,69 +181,51 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
         right_property => 'clinical_data_file',
     );
 =cut
-    #Create BAM list
-    $command_module = 'Genome::Model::MutationalSignificance::Command::CreateBamList';
-    my $create_bam_list_operation = $workflow->add_operation(
-        name => $self->_get_operation_name_for_module($command_module),
-        operation_type => Workflow::OperationType::Command->create(
-            command_class_name => $command_module,
-        )
-    );
 
+    my @commands = ('Genome::Model::MutationalSignificance::Command::CreateMafFile','Genome::Model::MutationalSignificance::Command::MergeMafFiles','Genome::Model::MutationalSignificance::Command::CreateROI','Genome::Model::MutationalSignificance::Command::CreateBamList',"Genome::Model::MutationalSignificance::Command::PlayMusic");
+
+    for my $command_name (@commands) {
+        $workflow = $self->_append_command_to_workflow($command_name,
+            $workflow, $lsf_project, $lsf_queue) or return;
+    } 
+    my $link;
     $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'somatic_variation_builds',
-        right_operation => $create_bam_list_operation,
-        right_property => 'somatic_variation_builds',
-    );
-
-    $link = $workflow->add_link(
-        left_operation => $input_connector,
-        left_property => 'bam_list',
-        right_operation => $create_bam_list_operation,
-        right_property => 'bam_list',
-    );
-
-    $workflow = $self->_append_command_to_workflow('Genome::Model::MutationalSignificance::Command::PlayMusic',
-                                                    $workflow, $lsf_project, $lsf_queue);
-
-    $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::MutationalSignificance::Command::PlayMusic'),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::MutationalSignificance::Command::PlayMusic',
                                                             $workflow),
         left_property => 'proximity_result',
         right_operation => $output_connector,
         right_property => 'proximity_result',
     );
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::MutationalSignificance::Command::PlayMusic'),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::MutationalSignificance::Command::PlayMusic',
                                                             $workflow),
         left_property => 'pfam_result',
         right_operation => $output_connector,
         right_property => 'pfam_result',
     );
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::MutationalSignificance::Command::PlayMusic'),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::MutationalSignificance::Command::PlayMusic',
                                                             $workflow),
         left_property => 'mr_result',
         right_operation => $output_connector,
         right_property => 'mr_result',
     );
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::MutationalSignificance::Command::PlayMusic'),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::MutationalSignificance::Command::PlayMusic',
                                                             $workflow),
         left_property => 'pathscan_result',
         right_operation => $output_connector,
         right_property => 'pathscan_result',
     );
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::MutationalSignificance::Command::PlayMusic'),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::MutationalSignificance::Command::PlayMusic',
                                                             $workflow),
         left_property => 'smg_result',
         right_operation => $output_connector,
         right_property => 'smg_result',
     );
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::MutationalSignificance::Command::PlayMusic'),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::MutationalSignificance::Command::PlayMusic',
                                                             $workflow),
         left_property => 'cosmic_result',
         right_operation => $output_connector,
@@ -256,7 +233,7 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
     );
 
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::MutationalSignificance::Command::PlayMusic'),
+        left_operation => $self->_get_operation_for_module_name('Genome::Model::MutationalSignificance::Command::PlayMusic',
                                                             $workflow),
         left_property => 'cct_result',
         right_operation => $output_connector,
@@ -264,12 +241,6 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
     );
 
     return $workflow;
-}
-
-sub _get_operation_name_for_module {
-    my $self = shift;
-    my $command_name = shift;
-    return Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string($command_name));
 }
 
 sub _get_operation_for_module_name {
@@ -292,20 +263,34 @@ sub _append_command_to_workflow {
     my $lsf_project = shift;
     my $lsf_queue = shift;
     my $command_meta = $command_module->__meta__;
-    my $operation_name = $self->_get_operation_name_for_module($command_module);
-    my $operation = $workflow->add_operation(
-        name => $operation_name,
-        operation_type => Workflow::OperationType::Command->create(
-        command_class_name => $command_module,
-        )
-    );
-        $operation->operation_type->lsf_queue($lsf_queue);
-        $operation->operation_type->lsf_project($lsf_project);
-    my %links = $self->_play_music_dependencies;
+    my $operation_name = $command_module;
+    my $operation;
+    if ($parallel_by{$operation_name}) {
+        $operation = $workflow->add_operation(
+            name => $operation_name,
+            operation_type => Workflow::OperationType::Command->create(
+                command_class_name => $command_module,
+            ),
+            parallel_by => $parallel_by{$operation_name},
+        );
+    }
+    else {
+        $operation = $workflow->add_operation(
+            name => $operation_name,
+            operation_type => Workflow::OperationType::Command->create(
+                command_class_name => $command_module,
+            )
+        );
+    }
+    $operation->operation_type->lsf_queue($lsf_queue);
+    $operation->operation_type->lsf_project($lsf_project);
     for my $property ($command_meta->_legacy_properties()) {
         next unless exists $property->{is_input} and $property->{is_input};
         my $property_name = $property->property_name;
-        my $property_def = $links{$operation_name}{$property_name};
+        my $property_def = $module_input_exceptions{$operation_name}{$property_name};
+        if (defined $property_def and $property_def eq $DONT_USE) {
+            $property_def = undef;
+        }
         if (!$property_def) {
             if (grep {/^$property_name$/} @{$workflow->operation_type->input_properties}) {
                 $property_def = [$workflow->get_input_connector->name, $property_name];
@@ -335,32 +320,27 @@ sub _append_command_to_workflow {
     return $workflow;
 }
 
-sub _play_music_dependencies {
-    #If the input property doesn't come from directly from the input connector with the same name, specify it here
-    my $self = shift;
-    my %operation_names = (
-        create_bam_list_operation => 'Genome::Model::MutationalSignificance::Command::CreateBamList',
-        merge_maf_files_operation => 'Genome::Model::MutationalSignificance::Command::MergeMafFiles',
-        create_clinical_data_operation => 'Genome::Model::MutationalSignificance::Command::CreateClinicalData',
-        create_roi_operation => 'Genome::Model::MutationalSignificance::Command::CreateROI',
-        play_music_operation => 'Genome::Model::MutationalSignificance::Command::PlayMusic',
-    );
-    my %names = map {$_ => $self->_get_operation_name_for_module($operation_names{$_})} keys %operation_names;
-    my %links = (
-        $names{play_music_operation} => {
-            bam_list => [$names{create_bam_list_operation}, 'bam_list'],
-            maf_file => [$names{merge_maf_files_operation}, 'maf_path'],
-            roi_file => [$names{create_roi_operation}, 'roi_path'],
-        },
-    ); 
-    return %links;
-}
-
 sub _map_workflow_inputs {
     my $self = shift;
     my $build = shift;
- 
+
     my @inputs = ();
+ 
+    my $meta = $self->__meta__;
+    my $build_meta = $build->__meta__;
+    my @all_params = $build_meta->properties(
+        class_name => $build->class,
+        is_input => 1,
+    );
+    
+    map {my $name = $_->property_name; my @values = $build->$name; if (defined $values[0]){my $value; if ($_->is_many){$value = \@values} else{$value = $values[0]} push @inputs, $name => $value}} @all_params;
+    
+    @all_params = $meta->properties(
+        class_name => $self->class,
+        is_param => 1,
+    );
+
+    map {my $name = $_->property_name; my @values = $self->$name; if (defined $values[0]){my $value; if ($_->is_many){$value = \@values} else{$value = $values[0]} push @inputs, $name => $value}} @all_params;
  
     my @builds = $build->somatic_variation_builds;
     my $base_dir = $build->data_directory;
@@ -369,19 +349,11 @@ sub _map_workflow_inputs {
     push @inputs, log_directory => $build->log_directory;
     push @inputs, merged_maf_path => $base_dir."/final.maf";
     push @inputs, create_maf_output_dir => $base_dir;
-    push @inputs, pathway_file => '/gscmnt/gc2108/info/medseq/tcga_ucec/music/endometrioid_grade_1or2_input/pathway_dbs/KEGG_120910'; #TODO: move to params
-    push @inputs, processors => $self->processors;
     push @inputs, reference_sequence => $builds[0]->reference_sequence_build->fasta_file;
-    push @inputs, reference_build => "Build37";
-    push @inputs, somatic_variation_builds => \@builds;
-    push @inputs, annotation_build => $build->annotation_build;
     push @inputs, output_dir => $base_dir;
     push @inputs, bam_list => $base_dir."/bam_list.txt";
     push @inputs, clinical_data_file => $base_dir."/clinical_data.txt";
 
-    push @inputs, excluded_reference_sequence_patterns => ["^HS","^Un","^MT","^LRG"];
-    push @inputs, included_feature_type_patterns => ["cds_exon","rna"];
-    push @inputs, roi_flank_size => 2;
     return @inputs;
 }
 
