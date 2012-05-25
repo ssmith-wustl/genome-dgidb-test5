@@ -768,7 +768,10 @@ sub shellcmd {
     }
 
     $self->status_message("RUN: $cmd");
-    my $exit_code = system($cmd);
+
+    # Set -o pipefail ensures the command will fail if it contains pipes and intermediate pipes fail.
+    # Export SHELLOPTS ensures that if there are nested "bash -c"'s, each will inherit pipefail
+    my $exit_code = system('bash', '-c', "set -o pipefail; export SHELLOPTS; $cmd");
     if ( $exit_code == -1 ) {
         Carp::croak("ERROR RUNNING COMMAND. Failed to execute: $cmd");
     } elsif ( $exit_code & 127 ) {
