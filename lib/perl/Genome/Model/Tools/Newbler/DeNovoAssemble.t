@@ -23,7 +23,7 @@ my $input_fastq = $test_suite_dir.'/2869511846-input.fastq';
 ok ( -s $input_fastq, 'Input fastq file exists' ) or die;
 
 my $temp_dir = Genome::Sys->create_temp_directory();
-ok ( -d $temp_dir, "Created temp test dir" ) or die;
+ok ( -d $temp_dir, "Created temp test dir at $temp_dir" ) or die;
 
 my $create = Genome::Model::Tools::Newbler::DeNovoAssemble->create(
     version          => 'mapasm454_source_03152011',
@@ -46,12 +46,14 @@ for my $file ( @files_to_compare ) {
 }
 
 #files that don't match due to time stamp and temp dir locations
-my @files_with_diffs = qw/
-    454NewblerMetrics.txt    454NewblerProgress.txt
-/;
-for my $file ( @files_with_diffs ) {
+my %files_with_diffs = (
+    '454NewblerMetrics.txt' => 4,
+    '454NewblerProgress.txt' => 2,
+);
+for my $file (sort keys %files_with_diffs) {
     my @diffs = `sdiff -s $temp_dir/$file $test_suite_dir/$file`;
-    ok ( scalar @diffs == 2, "Correctly found 2 differences in $file" );
+    my $expected_num_diffs = $files_with_diffs{$file};
+    ok ( scalar @diffs == $expected_num_diffs, "Correctly found 2 differences in $file" );
 }
 
 #ace and phdball files should match bec default time stamp used
