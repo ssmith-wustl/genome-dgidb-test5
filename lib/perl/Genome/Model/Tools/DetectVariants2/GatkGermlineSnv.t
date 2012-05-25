@@ -59,6 +59,11 @@ is($rv, 1, 'Testing for successful execution.  Expecting 1.  Got: '.$rv);
 # snvs.hq - ref seq path will be different, so do this to compare the file
 my ($expected_snvs_hq_params, $expected_snvs_hq_data) = _load_snvs_hq("$expected_data/snvs.hq");
 my ($got_snvs_hq_params, $got_snvs_hq_data) = _load_snvs_hq("$tmpdir/snvs.hq");
+
+# We should not care about the input dir path so this doesnt break when test data moves
+delete $got_snvs_hq_params->{input_file};
+delete $expected_snvs_hq_params->{input_file};
+
 is_deeply($got_snvs_hq_params, $expected_snvs_hq_params, 'snvs.hq params match');
 is_deeply($got_snvs_hq_data, $expected_snvs_hq_data, 'snvs.hq data matches');
 
