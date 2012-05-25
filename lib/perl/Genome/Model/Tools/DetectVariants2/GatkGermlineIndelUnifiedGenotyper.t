@@ -49,6 +49,11 @@ is($rv, 1, 'Testing for successful execution.  Expecting 1.  Got: '.$rv);
 # indels.hq - ref seq path will be different, so do this to compare the file
 my ($expected_indels_hq_params, $expected_indels_hq_data) = _load_indels_hq("$expected_data/indels.hq");
 my ($got_indels_hq_params, $got_indels_hq_data) = _load_indels_hq("$tmpdir/indels.hq");
+
+# We should not care about the input dir path so this doesnt break when test data moves
+delete $got_indels_hq_params->{input_file};
+delete $expected_indels_hq_params->{input_file};
+
 is_deeply($got_indels_hq_params, $expected_indels_hq_params, 'indels.hq params match');
 is_deeply($got_indels_hq_data, $expected_indels_hq_data, 'indels.hq data matches');
 
