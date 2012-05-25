@@ -455,7 +455,7 @@ sub _append_command_to_workflow {
         next unless exists $property->{is_input} and $property->{is_input};
         my $property_name = $property->property_name;
         my $property_def = $module_input_exceptions{$operation_name}{$property_name};
-        if ($property_def eq $DONT_USE) {
+        if (defined $property_def and $property_def eq $DONT_USE) {
             $property_def = undef;
         }
         if (!$property_def) {
