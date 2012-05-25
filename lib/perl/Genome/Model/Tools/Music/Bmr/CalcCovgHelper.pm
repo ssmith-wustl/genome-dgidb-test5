@@ -183,10 +183,12 @@ sub execute {
   elsif( system( "$calcRoiCovg_cmd" ) != 0 )
   {
     print STDERR "Failed to execute: $calcRoiCovg_cmd\n";
+    return;
   }
   else
   {
     print "$output_file generated and stored.\n";
+    return 1;
   }
 
 }

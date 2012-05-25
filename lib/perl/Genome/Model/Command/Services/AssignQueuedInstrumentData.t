@@ -952,6 +952,7 @@ $pse_8->add_reference_sequence_build_param_for_processing_profile( $processing_p
 
 my $command_5 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
+    pse_id => '-7775309',
 );
 
 

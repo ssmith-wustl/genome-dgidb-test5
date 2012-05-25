@@ -78,7 +78,7 @@ sub create {
             $class->error_message("In order for a processing profile to used as a 'based on', it must have params that can be copied and at least one of them changed. The based on processing profile (".$other_profile->id." ".$other_profile->name.") does not have any params, and cannot be used.");
             return;
         }
-
+$DB::single=1;
         for my $param (@params) {
             my $param_name = $param->name;
             if ($class->can($param_name)) {
@@ -87,7 +87,16 @@ sub create {
                     $bx = $bx->add_filter($param_name => undef);
                 }
                 unless ($bx->specifies_value_for($param_name)) {
-                    $bx = $bx->add_filter($param_name => $other_profile->$param_name);
+                    my $property_meta = $class->__meta__->property_meta_for_name($param_name);
+                    my $value;
+                    if ($property_meta->is_many) {
+                        my @values = $other_profile->$param_name;
+                        $value = \@values;;
+                    }
+                    else {
+                        $value = $other_profile->$param_name;
+                    }
+                    $bx = $bx->add_filter($param_name => $value);
                 }
             } else {
                 $class->warning_message("Skipping parameter '$param_name'; It does not exist on " . $class . " perhaps '$param_name' was deprecated or replaced.");

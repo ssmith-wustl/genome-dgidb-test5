@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Lims::ApipeBridge::FixTaxon;
+package Genome::Model::Tools::Lims::ApipeBridge::UpdateGenomeAndGscTaxon;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 
 use Data::Dumper;
 
-class Genome::Model::Tools::Lims::ApipeBridge::FixTaxon { 
+class Genome::Model::Tools::Lims::ApipeBridge::UpdateGenomeAndGscTaxon { 
     is => 'Command::V2',
     has => [
         taxon => {
@@ -29,7 +29,8 @@ class Genome::Model::Tools::Lims::ApipeBridge::FixTaxon {
     ],
 };
 
-sub help_brief { return 'Fix a taxon in GSC and Genome'; }
+sub help_brief { return 'Update a property of a taxon in Genome and GSC'; }
+sub help_detail { return help_brief(); }
 
 sub property_map {
     return (
