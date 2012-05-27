@@ -5,6 +5,7 @@ use warnings;
 
 use File::Copy;
 use Genome;
+use Genome::Info::IUB;
 
 class Genome::Model::Tools::DetectVariants2::VarscanSomatic {
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
@@ -125,7 +126,7 @@ sub _parse_snv_for_bed_intersection {
 
     my ($chromosome, $position, $reference, undef, $depth1, $depth2, undef, undef, undef, $qual, undef, $consensus, @extra) = split("\t", $line);
 
-    return [$chromosome, $position, $reference, $consensus];
+    return [$chromosome, $position, $reference, (Genome::Info::IUB->variant_alleles_for_iub($reference, $consensus), $consensus)];
 }
 
 1;
