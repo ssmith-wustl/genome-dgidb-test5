@@ -27,6 +27,7 @@ sub source {
     return 'Samtools';
 }
 
+#single sample for now
 sub _get_header_columns {
     my $self = shift;
     my @header_columns = ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT",$self->aligned_reads_sample);
@@ -56,7 +57,8 @@ sub parse_line {
         $columns[8] = 'GT:GQ:DP:MQ:AD:FA'; #no way to calculate BQ, VAQ(snp quality)
         $columns[9] = join ':', $gt, $gq, $dp, $mq, $ad, $fa;
 
-        my $new_line = join "\t", @columns;
+        my $col_ct   = scalar $self->_get_header_columns;
+        my $new_line = join "\t", splice(@columns, 0, $col_ct); #remove some unwanted columns in test
         return $new_line;
     }
 
