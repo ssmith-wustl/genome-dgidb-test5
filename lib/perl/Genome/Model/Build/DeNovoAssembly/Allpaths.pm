@@ -59,7 +59,10 @@ sub _instrument_data_is_jumping {
 sub _instrument_data_is_sloptig {
     my ($self, $instrument_data) = @_;
      if (!$self->_instrument_data_is_jumping($instrument_data)) {
-        return 1;
+        if ($instrument_data->original_est_fragment_size <=
+            2.5*$instrument_data->read_length){
+            return 1;
+        }
     }
     else {
         return 0;

@@ -41,6 +41,16 @@ sub _copy_fasta_file {
     }
     push(@fastas, $primary_fasta_path);
 
+    my $remap_file = $build->fasta_file . ".remap";
+    if (-s $remap_file) {
+        $self->status_message("Remapping file found. Copying $remap_file...");
+        my $destination = $primary_fasta_path . ".remap";
+        unless (Genome::Sys->copy_file($remap_file, $destination)) {
+            $self->error_message("Failed to copy $remap_file to $destination");
+            return;
+        }
+    }
+
     $self->status_message("Making bases files from fasta.");
     unless ($build->skip_bases_files){
         my $rv = $self->_make_bases_files($primary_fasta_path, $output_directory);

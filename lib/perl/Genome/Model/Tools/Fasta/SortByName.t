@@ -38,23 +38,7 @@ ok($cmd, 'made fasta sorter command object');
 
 ok($cmd->execute, 'executed sorter');
 
-my $reader = Genome::Data::IO::Reader->create(
-    file => $output,
-    format => 'fasta',
-);
-
-my $expected_reader = Genome::Data::IO::Reader->create(
-    file => $expected,
-    format => 'fasta',
-);
-
-while (my $seq = $reader->next) {
-    my $expected_seq = $expected_reader->next;
-    ok($expected_seq, "got expected seq from file");
-    ok($expected_seq->sequence_name eq $seq->sequence_name, "expected seq " . $expected_seq->sequence_name .
-        " matches generated seq name " . $seq->sequence_name);
-}
-ok(!$expected_reader->next, 'expected file has no extra sequences');
+ok(!Genome::Sys->diff_file_vs_file($expected, $output), 'sorted file matches expected output');
 
 done_testing();
 

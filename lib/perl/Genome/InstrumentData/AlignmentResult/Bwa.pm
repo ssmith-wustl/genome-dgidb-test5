@@ -361,14 +361,17 @@ sub _verify_bwa_samxe_did_happen {
         return;
     }
 
-    my $last_line = `tail -1 $log_file`;
+    my @last_lines = `tail -50 $log_file`;
     my $rp_ct;
+
+    @last_lines = grep {!/^\[bwtcache_destroy\] \d+ cache waits encountered/} @last_lines;
+    my $last_line = $last_lines[-1];
 
     if ($last_line =~ /(\d+) sequences have been processed/) {
         $rp_ct = $1;
     }
     else {
-        $self->error_message("The last line of samxe log: $last_line is not expected");
+        $self->error_message("The last line of samxe logfile: $last_line is not expected");
         return;
     }
 
