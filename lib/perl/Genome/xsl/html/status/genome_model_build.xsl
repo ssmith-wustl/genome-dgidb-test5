@@ -378,6 +378,7 @@
                         </thead>
                         <tbody>
                           <xsl:for-each select="build/aspect[@name='notes']/object">
+                            <xsl:sort select="aspect[@name='entry_date_sort']/value" data-type="number" order="ascending"/>
                             <tr>
                               <td><strong><xsl:value-of select="aspect[@name='header_text']/value"/></strong></td>
                               <td><xsl:value-of select="aspect[@name='entry_date']/value"/></td>
