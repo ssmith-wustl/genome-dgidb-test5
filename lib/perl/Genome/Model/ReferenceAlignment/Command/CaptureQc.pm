@@ -49,8 +49,14 @@ sub help_detail{ help_brief() . "\nExample: genome model reference-alignment cap
 
 sub execute {
     my $self = shift;
-    print "Gathering data\n" if $self->debug;
-    my (%build_to_metrics, %index_to_builds, %pool_to_builds);
+
+    $self->output_metrics( $self->get_metrics($self->get_models) );
+
+    return 1;
+}
+
+sub get_models {
+    my $self = shift;
 
     my @ref_align_models = grep { $_->isa('Genome::Model::ReferenceAlignment') } $self->models;
     unless (@ref_align_models) {
@@ -59,80 +65,25 @@ sub execute {
 
     my @models;
     if ($self->find_qc_models) {
-        my @instrument_data = map{$_->instrument_data} @ref_align_models;
-        @models = Genome::Model::ReferenceAlignment->default_lane_qc_model_for_instrument_data(@instrument_data);
-        my $missing_qc_models = (@instrument_data - @models);
-        if ($missing_qc_models) {
-            warn "Missing $missing_qc_models lane qc model(s).\n";
+        my @missing_qc_models;
+        for my $ref_align_model (@ref_align_models) {
+            my @instrument_data = $ref_align_model->instrument_data;
+            my @qc_models = Genome::Model::ReferenceAlignment->default_lane_qc_model_for_instrument_data(@instrument_data);
+            if (@qc_models) {
+                push @models, @qc_models;
+            } else {
+                push @models, $ref_align_model;
+                push @missing_qc_models, $ref_align_model->id;
+            }
+        }
+        if (@missing_qc_models) {
+            $self->status_message('These ' . scalar @missing_qc_models . ' models are missing qc models: ' . join(',', @missing_qc_models));
         }
     } else {
         @models = @ref_align_models;
     }
-    for my $model (@models) {
-        my $build = $model->last_succeeded_build || next;
-        print 'Gathering data for build: ' . $build->id . "\n" if $self->debug;
 
-        #Non qc data
-        my ($align_stats, $cov_stats);
-        eval{
-            my $cov_result = $build->coverage_stats_result;
-            $align_stats = $cov_result->alignment_summary_hash_ref->{0};
-            $cov_stats = $cov_result->coverage_stats_summary_hash_ref->{0};
-        };
-        if( $@ ){
-            eval{
-                $align_stats = $build->alignment_summary_hash_ref->{0};
-                $cov_stats = $build->coverage_stats_summary_hash_ref->{0};
-            };
-        }
-        $build_to_metrics{$build->id} = $self->get_metrics_for_non_qc_data(
-            $align_stats,
-            $cov_stats,
-            $build->merged_alignment_result->merged_alignment_bam_flagstat
-        );
-
-        #qc data
-        $build_to_metrics{$build->id} = {%{$self->get_metrics_for_qc_data($build)},%{$build_to_metrics{$build->id}}};
-
-
-        #Find all the models for each index and pool
-        #Take the first instrument_data's index until a decision is made
-        #  on how to handle per-sample data, when per-instrument-data data is unavailable
-        #  although this won't matter once we start using QC models only
-        my $index = (map{$_->index_sequence}$model->instrument_data)[0];
-        $index = '-' unless defined $index;
-        my $pool = Genome::Model::Command::Services::AssignQueuedInstrumentData->_resolve_pooled_sample_name_for_instrument_data((),$model->instrument_data);
-        $pool = '-' unless defined $pool;
-
-        #Build reference of each index and pool to all of their builds to summarize data per each of these
-        push @{$index_to_builds{$index}}, $build;
-        push @{$pool_to_builds{$pool}}, $build;
-    }
-
-    print "Summarizing data\n" if $self->debug;
-    my $dir = $self->output_directory;
-    print "Writing subject_summary\n" if $self->debug;
-    my $prefix = $self->prefix;
-    $prefix .= '_' if $prefix;
-    $self->write_full_summary(
-        Genome::Sys->open_file_for_overwriting($dir . "/".$prefix."subject.tsv"),
-        \%build_to_metrics,
-    );
-    print "Writing index_summary\n" if $self->debug;
-    $self->write_averaged_summary(
-        Genome::Sys->open_file_for_overwriting($dir . "/".$prefix."index.tsv"),
-        \%index_to_builds,
-        \%build_to_metrics,
-        'Index',
-    );
-    print "Writing pool_summary\n" if $self->debug;
-    $self->write_averaged_summary(
-        Genome::Sys->open_file_for_overwriting($dir . "/".$prefix."pool.tsv"),
-        \%pool_to_builds,
-        \%build_to_metrics,
-        'Pool',
-    );
-    return 1;
+    return @models;
 }
 
 sub metric_names {
@@ -237,6 +188,84 @@ sub write_full_summary {
             map{ sprintf ("%.2f", $build_to_metrics->{$build->id}{$_}) } $self->metric_names
         ) . "\n";
     }
+}
+
+sub output_metrics {
+    my $self = shift;
+    my ($build_to_metrics, $index_to_builds, $pool_to_builds) = @_;
+
+    print "Summarizing data\n" if $self->debug;
+    my $dir = $self->output_directory;
+    print "Writing subject_summary\n" if $self->debug;
+    my $prefix = $self->prefix;
+    $prefix .= '_' if $prefix;
+    $self->write_full_summary(
+        Genome::Sys->open_file_for_overwriting($dir . "/".$prefix."subject.tsv"),
+        $build_to_metrics,
+    );
+    print "Writing index_summary\n" if $self->debug;
+    $self->write_averaged_summary(
+        Genome::Sys->open_file_for_overwriting($dir . "/".$prefix."index.tsv"),
+        $index_to_builds,
+        $build_to_metrics,
+        'Index',
+    );
+    print "Writing pool_summary\n" if $self->debug;
+    $self->write_averaged_summary(
+        Genome::Sys->open_file_for_overwriting($dir . "/".$prefix."pool.tsv"),
+        $pool_to_builds,
+        $build_to_metrics,
+        'Pool',
+    );
+}
+
+sub get_metrics {
+    my $self = shift;
+    my @models = @_;
+    my ($build_to_metrics, $index_to_builds, $pool_to_builds);
+
+    for my $model (@models) {
+        my $build = $model->last_succeeded_build || next;
+        print 'Gathering data for build: ' . $build->id . "\n" if $self->debug;
+
+        #Non qc data
+        my ($align_stats, $cov_stats);
+        eval{
+            my $cov_result = $build->coverage_stats_result;
+            $align_stats = $cov_result->alignment_summary_hash_ref->{0};
+            $cov_stats = $cov_result->coverage_stats_summary_hash_ref->{0};
+        };
+        if( $@ ){
+            eval{
+                $align_stats = $build->alignment_summary_hash_ref->{0};
+                $cov_stats = $build->coverage_stats_summary_hash_ref->{0};
+            };
+        }
+        $build_to_metrics->{$build->id} = $self->get_metrics_for_non_qc_data(
+            $align_stats,
+            $cov_stats,
+            $build->merged_alignment_result->merged_alignment_bam_flagstat
+        );
+
+        #qc data
+        $build_to_metrics->{$build->id} = {%{$self->get_metrics_for_qc_data($build)},%{$build_to_metrics->{$build->id}}};
+
+
+        #Find all the models for each index and pool
+        #Take the first instrument_data's index until a decision is made
+        #  on how to handle per-sample data, when per-instrument-data data is unavailable
+        #  although this won't matter once we start using QC models only
+        my $index = (map{$_->index_sequence}$model->instrument_data)[0];
+        $index = '-' unless defined $index;
+        my $pool = Genome::Model::Command::Services::AssignQueuedInstrumentData->_resolve_pooled_sample_name_for_instrument_data((),$model->instrument_data);
+        $pool = '-' unless defined $pool;
+
+        #Build reference of each index and pool to all of their builds to summarize data per each of these
+        push @{$index_to_builds->{$index}}, $build;
+        push @{$pool_to_builds->{$pool}}, $build;
+    }
+
+    return ($build_to_metrics, $index_to_builds, $pool_to_builds);
 }
 
 sub get_metrics_for_non_qc_data {
