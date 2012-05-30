@@ -209,6 +209,22 @@ sub create {
 
     $self->_generate_metrics;
 
+    #quick sanity check--all wingspans should run on the same number of total reads
+    my @wingspan_values = split(',', $self->wingspan_values);
+    if(@wingspan_values > 1) {
+        my $total_bp = 0;
+
+        my $alignment_summary = $self->alignment_summary_hash_ref;
+        for my $wingspan (@wingspan_values) {
+            $total_bp ||= $alignment_summary->{$wingspan}{total_bp}; #initialize first time through loop
+
+            unless($total_bp eq $alignment_summary->{$wingspan}{total_bp}) {
+                die($self->error_message('Inconsistent results produced.'));
+            }
+        }
+    }
+
+
     return $self;
 }
 
