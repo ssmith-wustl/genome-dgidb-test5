@@ -8,7 +8,6 @@ use warnings;
 
 use above "Genome";
 use Test::More;
-use Genome::Data::IO::Reader;
 
 use_ok('Genome::Model::Tools::Fasta::SortByName') or die;
 
