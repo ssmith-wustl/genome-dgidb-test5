@@ -41,7 +41,7 @@ sub _copy_fasta_file {
     }
     push(@fastas, $primary_fasta_path);
 
-    my $remap_file = $build->fast_file . ".remap";
+    my $remap_file = $build->fasta_file . ".remap";
     if (-s $remap_file) {
         $self->status_message("Remapping file found. Copying $remap_file...");
         my $destination = $primary_fasta_path . ".remap";
