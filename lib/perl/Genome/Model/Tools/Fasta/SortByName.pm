@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Data::Sorter;
 
 class Genome::Model::Tools::Fasta::SortByName {
     is => 'Command::V2',
@@ -40,14 +39,31 @@ sub execute {
 
     $self->status_message("Sorting fasta " . $self->input_fasta . " by sequence name and putting results in " . $self->sorted_fasta);
 
-    my $sorter = Genome::Data::Sorter->create(
-        input_file => $self->input_fasta,
-        output_file => $self->sorted_fasta,
-        format => 'fasta',
-        sort_by => 'sequence_name',
-    );
-    $sorter->sort;
+    my $input_fh = Genome::Sys->open_file_for_reading($self->input_fasta);
+    my $output_fh = Genome::Sys->open_file_for_writing($self->sorted_fasta);
 
+    my %seqs;
+    my $current_seq;
+    while (my $line = $input_fh->getline) {
+        chomp $line;
+        if ($line =~ /^>/) {
+            $current_seq = $line;
+        }
+        else {
+            $seqs{$current_seq} .= $line;
+        }
+    }
+
+    for my $seq_name (sort keys %seqs) {
+        my $sequence = $seqs{$seq_name};
+        $output_fh->print($seq_name . "\n");
+        for (my $i = 0; $i < (length $sequence); $i += 80) {
+            my $sub_sequence = substr($sequence, $i, 80);
+            $output_fh->print($sub_sequence . "\n");
+        }
+    }
+
+    $self->status_message("Successfully sorted fasta file " . $self->input_fasta . " by sequence name!");
     return 1;
 }
 
