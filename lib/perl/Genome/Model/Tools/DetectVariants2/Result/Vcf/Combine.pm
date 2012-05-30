@@ -31,6 +31,10 @@ class Genome::Model::Tools::DetectVariants2::Result::Vcf::Combine {
             valid_values => ['snvs','indels'],
             doc => 'type of variants being combined',
         },
+        joinx_version => {
+            is => 'Text',
+            doc => 'Version of joinx to use for the combination',
+        },
     ],
 };
 
@@ -87,14 +91,15 @@ sub _run_vcf_converter {
         merge_samples => 1,
         clear_filters => 1,
         use_bgzip => 1,
+        use_version => $self->joinx_version,
     );
 
     # If we are doing an intersection, set the ratio filter to mark things as filtered where they do not agree
     if ($input->class =~ m/Intersect/) {
-        $params{joinx_bin_path} = "/usr/bin/joinx1.6";
         $params{ratio_filter} = "1.0,IntersectionFailure,Variant callers do not agree on this position";
+        $params{sample_priority} = "filtered";
     } else {
-        $params{joinx_bin_path} = "/usr/bin/joinx1.3";
+        $params{sample_priority} = "unfiltered";
     }
 
     my $merge_cmd = Genome::Model::Tools::Joinx::VcfMerge->create(%params);
