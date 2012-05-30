@@ -12,6 +12,24 @@ sub pause {
     my $self = shift;
     return 1 unless -e $ENV{GENOME_DB_PAUSE};
 
+    my @o = grep { ref($_) eq 'UR::DeletedRef' } $self->all_objects_loaded('UR::Object');
+    if (@o) {
+        print Data::Dumper::Dumper(\@o);
+        Carp::confess();
+    }
+
+    # Determine what has changed.
+    my @changed_objects = (
+        $self->all_objects_loaded('UR::Object::Ghost'),
+        grep { $_->__changes__ } $self->all_objects_loaded('UR::Object')
+        #UR::Util->mapreduce_grep(sub { $_[0]->__changes__ },$self->all_objects_loaded('UR::Object'))
+    );
+
+    my @real_changed_objects = grep {UR::Context->resolve_data_source_for_object($_)} @changed_objects;
+
+    return 1 unless (@real_changed_objects);
+
+
     print "Database updating has been paused, please wait until updating has been resumed...\n";
 
     my @data_sources = $self->all_objects_loaded('UR::DataSource::RDBMS');

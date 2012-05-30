@@ -17,8 +17,18 @@ class Genome::DruggableGene::Citation {
     has => [
         source_db_name => {is => 'Text'},
         source_db_version => {is => 'Text'},
-        citation => {is => 'Text'},
-        base_url => {is => 'Text'},
+        citation => {
+            is => 'Text',
+            is_optional => 1,
+        },
+        base_url => {
+            is => 'Text',
+            is_optional => 1,
+        },
+        site_url => {
+            is => 'URL',
+            is_optional => 1,
+        }
     ],
     doc => 'Citation for druggable gene object',
 };

@@ -5,22 +5,21 @@ use strict;
 use Genome;
 use IO::File;
 
-
 class Genome::Model::Tools::FastTier::AddTiers {
     is => 'Command',
     has => [
-	build => {
-	    is => 'Integer',
-	    is_optional => 1,
-	    doc => 'Genome build to use (accepts 36 or 37)',
+        build => {
+            is => 'Integer',
+            is_optional => 1,
+            doc => 'Genome build to use (accepts 36 or 37)',
             default => '36',
-	},
-        
+        },
+
         input_file => {
             is => 'String',
             is_optional => 0,
             is_input => 1,
-            doc => 'input file (assumes the first 3 columns are Chr, Start, Stop)',
+            doc => 'Input file (First 3 columns are Chr, Start, Stop, where Start is 1-based)',
         },
 
         input_is_maf => {
@@ -28,40 +27,39 @@ class Genome::Model::Tools::FastTier::AddTiers {
             is_optional => 1,
             is_input => 1,
             default => 0,
-            doc => 'assumes the input file is a maf, and instead uses columns 5,6,7 for Chr, Start, Stop',
+            doc => 'Assumes the input file is a MAF, and uses columns 5,6,7 for Chr, Start, Stop',
         },
 
         output_file => {
             is => 'String',
             is_optional => 0,
             is_input => 1,
-            doc => 'output file is equivalent to the input file with tier info added as an additional column',
+            doc => 'Output file is equivalent to the input file with tier info added as an additional column',
         },
 
         tier_file_location =>{
             is => 'String',
             is_optional => 1,
             is_input => 1,
-            doc => 'use this to override the default (v3) tiering files',
+            doc => 'Use this to override the default (v3) tiering files',
         },
 
         tiering_version =>{
             is => 'String',
             is_optional => 1,
             is_input => 1,
-            doc => 'use this to override the default (v3) tiering version',
+            doc => 'Use this to override the default (v3) tiering version',
         },
     ]
 };
 
 sub help_brief {
-    "add tiering information to an existing file"
+    "Add tiering information to an existing file. Use --input-is-maf if input is a MAF file."
 }
 
 sub help_detail {
-    "add tiering information to an existing file"
+    "Add tiering information to an existing file. Use --input-is-maf if input is a MAF file."
 }
-
 
 sub execute {
 
@@ -73,109 +71,96 @@ sub execute {
     my $tier_file_location = $self->tier_file_location;
     my $tiering_version = $self->tiering_version;
 
-    unless(defined($tier_file_location)){
-        if($build == 36){
+    unless( defined( $tier_file_location )){
+        if( $build == 36 ){
             $tier_file_location = "/gscmnt/ams1100/info/model_data/2771411739/build102550711/annotation_data/tiering_bed_files_v3";
-        } elsif ($build == 37){
+        }
+        elsif ( $build == 37 ){
             $tier_file_location = "/gscmnt/ams1102/info/model_data/2771411739/build106409619/annotation_data/tiering_bed_files_v3";
-        } else {
+        }
+        else {
             die("only supports builds 36 or 37");
         }
     }
-    
 
-    #create a tmp dir for the output
+    # Create a tmp dir where we'll do the tiering
     my $tempdir = Genome::Sys->create_temp_directory();
-    unless($tempdir) {
-        $self->error_message("Unable to create temporary file $!");
-        die;
-    }
-    open(OUTFILE,">$tempdir/temp.bed") || die "can't open temp segs file for writing ($tempdir/temp.bed)\n";
-      
-    
-    #write out the temporary bed file
-    my $inFh = IO::File->new( $input_file ) || die "can't open input file\n";    
+    ( -e $tempdir ) or die "Unable to create temporary directory $!";
+
+    # Parse the input file, and create a temporary bed file to use with the fast-tiering tool
+    my $bedFh = IO::File->new( "$tempdir/temp.bed", ">" ) or die "Can't open temp file for writing ($tempdir/temp.bed)\n";
+    my $inFh = IO::File->new( $input_file ) or die "Can't open input file\n";
     while( my $line = $inFh->getline )
     {
-        chomp($line);
-        my @F = split("\t",$line);
-        
-        next if ($line =~ /^Hugo_/ || $line =~ /Chromosome/i);
+        next if( $line =~ /^(#|Hugo_Symbol|Chr|chromosome)/ );
+        chomp( $line );
+        my @F = split( /\t/, $line );
 
-        if($input_is_maf){
-            print OUTFILE join("\t",($F[4], $F[5]-1, $F[6])) . "\n";
-        } else {
-            print OUTFILE join("\t",($F[0], $F[1]-1, $F[2])) . "\n";
+        if( $input_is_maf ){
+            $bedFh->print( join( "\t", ( $F[4], $F[5]-1, $F[6] )) . "\n" );
+        }
+        else {
+            $bedFh->print( join( "\t", ( $F[0], $F[1]-1, $F[2] )) . "\n" );
         }
     }
-    close($inFh);
-    close(OUTFILE);
+    $inFh->close;
+    $bedFh->close;
 
-    #sort the bed file
-    my $cmd = "/gscuser/cmiller/usr/bin/bedsort $tempdir/temp.bed >$tempdir/temp.bed.sorted";
-    my $return = Genome::Sys->shellcmd(
-        cmd => "$cmd",
-        );
-    unless($return) {
-        $self->error_message("Failed to execute: Returned $return");
-        die $self->error_message;
-    }
+    # Sort the bed file and run the fast-tier tool on it
+    `joinx sort -s -i $tempdir/temp.bed -o $tempdir/temp.bed.sorted`;
 
-    #annotate that bed file
-    $cmd = "gmt fast-tier fast-tier --tier-file-location $tier_file_location --variant-bed-file $tempdir/temp.bed.sorted --skip-line-count";
-    if(defined($tiering_version)){
+    # Tier the loci in the bed file
+    my $cmd = "gmt fast-tier fast-tier --tier-file-location $tier_file_location --variant-bed-file $tempdir/temp.bed.sorted --skip-line-count";
+    if( defined( $tiering_version )){
         $cmd = $cmd . " --tiering-version $tiering_version";
     }
-
-    $return = Genome::Sys->shellcmd(
-    cmd => "$cmd",
-    );
+    my $return = Genome::Sys->shellcmd( cmd => "$cmd" );
     unless($return) {
         $self->error_message("Failed to execute: Returned $return");
         die $self->error_message;
     }
 
-
-    #now read in the tier files, match them up with the original bed
-    my %tierhash;
-    #read in the tier files
-    my @tiers = ("tier1","tier2","tier3","tier4");
-    foreach my $tier (@tiers){
-        my $inFh = IO::File->new( "$tempdir/temp.bed.sorted.$tier" ) || die "can't open $tier file\n";
-        while( my $line = $inFh->getline )
-        {
-            chomp($line);
-            my @F = split("\t",$line);
-            my $key = $F[0] . ":" . ($F[1]+1) . ":" . $F[2];
-            $tierhash{$key} = $tier        
+    # Now read in the tier files, match them up with the original bed
+    my %tierhash = ();
+    # Read in the tier files
+    my @tiers = ( "tier1", "tier2", "tier3", "tier4" );
+    foreach my $tier ( @tiers ){
+        my $tierFh = IO::File->new( "$tempdir/temp.bed.sorted.$tier" ) or die "can't open $tier file\n";
+        while( my $line = $tierFh->getline ) {
+            chomp( $line );
+            my @F = split( /\t/, $line );
+            my $key = $F[0] . ":" . ( $F[1] + 1 ) . ":" . $F[2];
+            $tierhash{$key} = $tier;
         }
+        $tierFh->close;
     }
- 
-    open(OUTFILE1,">$output_file") || die "can't open outfile for writing ($output_file)\n";
 
-    #match up the tiers with the original file
-    $inFh = IO::File->new( $input_file ) || die "can't open input file\n";
-    while( my $line = $inFh->getline )
-    {
-        #skip header
-        if (($line=~/^Chr/i) || ($line =~ /^#/)){
-            print OUTFILE1 $line;
+    # Match up the tiers with the original file, and write an output file annotated with tier info
+    my $outFh = IO::File->new( $output_file, ">" ) or die "Can't open file for writing ($output_file)\n";
+    $inFh = IO::File->new( $input_file ) or die "Can't open input file\n";
+    while( my $line = $inFh->getline ) {
+
+        # Print out headers unchanged
+        if( $line =~ /^(#|Hugo_Symbol|Chr|chromosome)/ ){
+            $outFh->print( $line );
             next;
         }
-        
-        chomp($line);
-        my @F = split("\t",$line);
+
+        chomp( $line );
+        my @F = split( /\t/, $line );
         my $key;
-        if($input_is_maf){
+        if( $input_is_maf ){
             $key = $F[4] . ":" . $F[5] . ":" . $F[6];
-        } else {
+        }
+        else {
             $key = $F[0] . ":" . $F[1] . ":" . $F[2];
         }
-        print $key unless exists($tierhash{$key});
-        push(@F,$tierhash{$key});
-        print OUTFILE1 join("\t",@F) . "\n";
+        ( defined $tierhash{$key} ) or die "$key not found in hash! Something's not right in the code.\n";
+        push( @F, $tierhash{$key} );
+        $outFh->print( join( "\t", @F ) . "\n" );
     }
-    close(OUTFILE1);
+    $inFh->close;
+    $outFh->close;
 
     return 1;
 }

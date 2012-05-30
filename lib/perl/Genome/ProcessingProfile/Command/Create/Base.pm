@@ -78,7 +78,7 @@ sub create {
             $class->error_message("In order for a processing profile to used as a 'based on', it must have params that can be copied and at least one of them changed. The based on processing profile (".$other_profile->id." ".$other_profile->name.") does not have any params, and cannot be used.");
             return;
         }
-
+$DB::single=1;
         for my $param (@params) {
             my $param_name = $param->name;
             if ($class->can($param_name)) {
@@ -87,7 +87,16 @@ sub create {
                     $bx = $bx->add_filter($param_name => undef);
                 }
                 unless ($bx->specifies_value_for($param_name)) {
-                    $bx = $bx->add_filter($param_name => $other_profile->$param_name);
+                    my $property_meta = $class->__meta__->property_meta_for_name($param_name);
+                    my $value;
+                    if ($property_meta->is_many) {
+                        my @values = $other_profile->$param_name;
+                        $value = \@values;;
+                    }
+                    else {
+                        $value = $other_profile->$param_name;
+                    }
+                    $bx = $bx->add_filter($param_name => $value);
                 }
             } else {
                 $class->warning_message("Skipping parameter '$param_name'; It does not exist on " . $class . " perhaps '$param_name' was deprecated or replaced.");
@@ -156,6 +165,7 @@ sub _properties_for_class {
         $properties{ $property_name } = {
             is => exists $property->{data_type} ? $property->{data_type} : 'Text',
             is_optional => 1,
+            is_many => exists $property->{is_many} ? $property->{is_many} : 0,
             doc =>  $property->doc . ($property->is_optional ? " (optional)" : ""),
         };
         if (defined $property->default_value) {
@@ -174,12 +184,22 @@ sub _target_class_property_names {
 
 sub _get_target_class_params {
     my $self = shift;
-
     my %params;
-    for my $property_name ( $self->_target_class_property_names ) {
-        my $value = $self->$property_name;
-        next unless defined $value;
-        $params{$property_name} = $value;
+    my $class_name = $self->_target_class_name;
+    my $class_meta = $class_name->__meta__;
+    for my $property ($class_name->params_for_class) {
+        my $meta = $class_meta->property_meta_for_name($property);
+        my $property_name = $meta->property_name;
+        my @values = grep { defined $_ } $self->$property_name;
+        if (@values == 0) {
+            next;
+        }
+        elsif ($meta->is_many or @values > 1) {
+            $params{$property_name} = \@values;
+        }
+        else {
+            $params{$property_name} = $values[0];
+        }
     }
 
     return %params;

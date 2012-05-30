@@ -124,7 +124,8 @@ sub input_to_tsv {
 sub import_tsv {
     my $self = shift;
     my $genes_outfile = $self->genes_outfile;
-    my @genes = $self->import_genes($genes_outfile);
+    my $citation = $self->_create_citation('GO', $self->version);
+    my @genes = $self->import_genes($genes_outfile, $citation);
     return 1;
 }
 
@@ -132,6 +133,7 @@ sub import_genes {
     my $self = shift;
     my $version = $self->version;
     my $genes_outfile = shift;
+    my $citation = shift;
     my @genes;
     my @headers = qw/go_id go_short_name human_readable_name go_term go_full_name go_description secondary_go_term go_name alternate_symbol_references/;
     my $parser = Genome::Utility::IO::SeparatedValueReader->create(
@@ -143,7 +145,7 @@ sub import_genes {
     
     $parser->next; #eat the headers
     while(my $go_input = $parser->next){
-        my $gene_name = $self->_create_gene_name_report($go_input->{'go_name'}, 'go_gene_name', 'GO', $version, '');
+        my $gene_name = $self->_create_gene_name_report($go_input->{'go_name'}, $citation, 'go_gene_name', '');
         my $human_readable_name = $go_input->{'human_readable_name'};
         $human_readable_name =~ s/-/ /g;
         my $human_readable = $self->_create_gene_alternate_name_report($gene_name, $human_readable_name, 'human_readable_name', '');

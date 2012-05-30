@@ -65,6 +65,7 @@ sub execute
     $self->prepare_for_execution;
 
     my $registry = $self->connect_registry;
+    my $db_connection = $self->get_db_connection($registry);
     my $ucfirst_species = ucfirst $self->species;
     my $gene_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Gene' );
     my $transcript_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Transcript' );
@@ -77,7 +78,7 @@ sub execute
     my $tss_id = 1;    # starting point for transcript sub struct ids...
 
     my $count = 0;
-    
+    my $pfcount = 0;    
     #species, source and version are id properties on all items
     my $source = 'ensembl';
     my $version = $self->version;
@@ -98,6 +99,7 @@ sub execute
             $self->status_message("Transcript structures from chromosome $chromosome will not be imported because it doesn\'t exist in the reference sequence.");
             next;
         }
+        $self->status_message("Importing transcripts for $chromosome");
         my @ensembl_transcripts = @{ $transcript_adaptor->fetch_all_by_Slice($slice)};
         $self->status_message("Importing ".scalar @ensembl_transcripts." transcripts\n");
 
@@ -189,6 +191,32 @@ sub execute
 
                     $egi_id++;
                 }
+                my $external_gene_id = Genome::ExternalGeneId->create(
+                    egi_id => $egi_id,
+                    gene_id => $gene->id,
+                    id_type => "ensembl_default_external_name",
+                    id_value => $ensembl_gene->external_name,
+                    data_directory => $self->data_directory,
+                    species => $species,
+                    source => $source,
+                    version => $version,
+                    reference_build_id => $self->reference_build->id,
+                ); 
+
+                $egi_id++;
+                $external_gene_id = Genome::ExternalGeneId->create(
+                    egi_id => $egi_id,
+                    gene_id => $gene->id,
+                    id_type => "ensembl_default_external_name_db",
+                    id_value => $ensembl_gene->external_db,
+                    data_directory => $self->data_directory,
+                    species => $species,
+                    source => $source,
+                    version => $version,
+                    reference_build_id => $self->reference_build->id,
+                ); 
+
+                $egi_id++;
             }
 
             #Transcript cols: transcript_id gene_id transcript_start transcript_stop transcript_name source transcript_status strand chrom_name
@@ -376,8 +404,7 @@ sub execute
 
             my $protein;
             my $translation = $ensembl_transcript->translation();
-            if ( defined($translation) )
-            {
+            if ( defined($translation) ) {
                 $protein = Genome::Protein->create(
                     protein_id => $translation->dbID,
                     transcript_id => $transcript->id,
@@ -390,6 +417,62 @@ sub execute
                     reference_build_id => $self->reference_build->id,
                 );
                 push @proteins, $protein;
+
+                my $protein_features = $translation->get_all_ProteinFeatures;
+
+                foreach my $pf (@$protein_features) {
+                    $pfcount++;
+                    my $logic_name = $pf->analysis->logic_name();
+                    my $pf_start = $pf->start;
+                    my $pf_end = $pf->end;
+                    my $interpro_ac = $pf->interpro_ac;
+                    my $idesc = $pf->idesc;
+                    my $program = $pf->analysis->db;
+
+                    if (!$interpro_ac) {
+                        if ($pf->hseqname =~ /SSF/) {
+                            #try prepending the superfamily prefix and querying directly
+                            my $new_id = $pf->hseqname; 
+                            $new_id =~ s/SSF//;
+                            my $query = "select i.interpro_ac,x.display_label from interpro i join xref x on i.interpro_ac = x.dbprimary_acc where i. id=$new_id;";
+                            my $sth = $db_connection->prepare($query);
+                            my $exec_result = $sth->execute;
+                            if (!$exec_result) {
+                                #query failed
+                                $self->error_message("Failed to execute sql query for interpro: $query");
+                                return;
+                            }
+                            if ($exec_result == 0) {
+                                $self->warning_message("Transcript had protein domain, but we couldn't get the domain name out of ensembl.  Protein feature hit name: ".$pf->hseqname); 
+                                next;
+                            }
+                            my $result = $sth->fetchrow_hashref;
+                            $interpro_ac = $result->{interpro_ac};
+
+                            $idesc = $result->{display_label};
+                        }
+                        else {
+                            $self->warning_message("Transcript had protein domain, but ensembl didn't have a domain name.  Protein feature hit name: ".$pf->hseqname); 
+                                next;
+                        }
+                    }
+                    unless ($program) {$program = 'na'};
+
+                    my $interpro_result = Genome::InterproResult->create(
+                        interpro_id => $pfcount,
+                        chrom_name => $chromosome,
+                        transcript_name => $transcript->transcript_name,
+                        data_directory => $self->data_directory,
+                        start => $pf_start,
+                        stop => $pf_end,
+                        rid => 0, #Copied directly from mg-load-ipro 
+                        setid => 'na',
+                        parent_id => 'na',
+                        name => $logic_name."_".$idesc,
+                        interpro_note => "Interpro ".$interpro_ac." ".$idesc,
+                    );
+
+                }
             }
 
             if ($transcript->cds_full_nucleotide_sequence) {
@@ -431,6 +514,7 @@ sub execute
             Genome::TranscriptStructure->unload;
             Genome::Protein->unload;
             Genome::TranscriptCodingSequence->unload;
+            Genome::InterproResult->unload;
 
             #reset logging arrays
             @transcripts = ();
@@ -479,6 +563,15 @@ sub connect_registry{
         -user => $ens_user,
     );
     return $registry;
+}
+
+sub get_db_connection {
+    my $self = shift;
+    my $registry = shift;
+    my $ucfirst_species = ucfirst $self->species;
+    my $db_adaptor = $registry->get_DBAdaptor($ucfirst_species, "core");
+    my $db_connection = $db_adaptor->dbc;
+    return $db_connection;
 }
 
 sub ordcount

@@ -305,7 +305,7 @@ sub execute {
 
     $count = 0;
     foreach my $arg (@all_string_args) {
-        if ($arg->property_name eq 'ensembl_version') {
+        if ($arg->property_name eq 'ensembl_annotation_build_id') {
             splice @all_string_args, $count, 1;
             last;
         }

@@ -37,6 +37,11 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
             default     => 0,
             doc         => 'Process newest PSEs first',
         },
+        pse_id => {
+            is          => 'Number',
+            is_optional => 1,
+            doc         => 'Ignore other parameters and only process this PSE.'
+        },
         _existing_models_with_existing_assignments => {
             is => 'HASH',
             doc => 'Existing models that already had the instrument data for a PSE assigned',
@@ -200,7 +205,7 @@ sub execute {
 
         if($instrument_data->ignored() ) {
             $self->status_message('Skipping ignored data ' . $instrument_data->id . ' on PSE '.$pse->id);
-            $pse->add_param('no_model_generation_attempted',1);
+            $self->_update_instrument_data_tgi_lims_status_to($pse->{_instrument_data}, 'ignored');
             push @completable_pses, $pse;
             next PSE;
         }
@@ -211,7 +216,7 @@ sub execute {
             if ( $instrument_data_type =~ /454/i and $subject->name =~ /^n\-cn?trl$/i ) {
                 # Do not process 454 negative control (n-ctrl, n-cntrl)
                 $self->status_message('Skipping n-ctrl PSE '.$pse->id);
-                $pse->add_param('no_model_generation_attempted',1);
+                $self->_update_instrument_data_tgi_lims_status_to($instrument_data, 'ignored');
                 push @completable_pses, $pse;
                 next PSE;
             }
@@ -267,7 +272,7 @@ sub execute {
 
                     if(scalar(@assigned > 0)) {
                         for my $m (@assigned) {
-                            $pse->add_param('genome_model_id', $m->id);
+                            $pse->add_param('genome_model_id', $m->id) unless (grep { $_ eq $m->id } $pse->added_param('genome_model_id'));
                         }
                         #find or create default qc models if applicable
                         $self->create_default_qc_models(@assigned);
@@ -379,7 +384,7 @@ sub execute {
                 "Leaving queue instrument data PSE inprogress, due to errors. \n"
                     . join("\n",@process_errors)
             );
-            GSC::PSEParam->create(pse_id => $pse->id, param_name => 'failed_aqid', param_value => 1) unless $pse->added_param('failed_aqid');
+            $self->_update_instrument_data_tgi_lims_status_to($pse->{_instrument_data}, 'failed');
         }
         else {
             # Set the pse as completed since this is the end of the line
@@ -394,13 +399,35 @@ sub execute {
 
     $self->status_message("Completing PSEs...");
     for my $pse (@completable_pses) {
+        # Set PSE status to completed
         $pse->pse_status("completed");
-        $pse->{_instrument_data}->remove_attribute(attribute_label => 'tgi_lims_status');
-        $pse->{_instrument_data}->add_attribute(
-            attribute_label => 'tgi_lims_status',
-            attribute_value => 'processed',
-        );
+        # Rm pse param(s) for failed aqid
+        my @failed_aqid_pse_params = GSC::PSEParam->get(pse_id => $pse->id, param_name => 'failed_aqid');
+        for my $failed_aqid_pse_param ( @failed_aqid_pse_params ) {
+            $failed_aqid_pse_param->delete;
+        }
+        $self->_update_instrument_data_tgi_lims_status_to($pse->{_instrument_data}, 'processed');
     }
+
+    return 1;
+}
+
+sub _update_instrument_data_tgi_lims_status_to {
+    my ($self, $instrument_data, $status) = @_;
+
+    # These should not happen - developer error
+    Carp::confess('No instrument data given to update instrument data tgi lims status!') if not $instrument_data;
+    Carp::confess('No status given to update instrument data tgi lims status!') if not $status;
+    Carp::confess("No invalid status ($status) given to update instrument data tgi lims status!") if not grep { $status eq $_ } (qw/ processed failed ignored /);
+
+    # Rm tgi lims status attribute(s)
+    $instrument_data->remove_attribute(attribute_label => 'tgi_lims_status');
+
+    # Set tgi lims status attribute to processed
+    $instrument_data->add_attribute(
+        attribute_label => 'tgi_lims_status',
+        attribute_value => $status,
+    );
 
     return 1;
 }
@@ -524,23 +551,27 @@ sub root_build37_ref_seq {
     return $root_build37_ref_seq;
 }
 
+sub first_compatible_feature_list_name {
+    my $self = shift || die;
+    my $reference = shift || die;
+    my $feature_list_names = shift || die;
+    for my $feature_list_name (@$feature_list_names) {
+        my $feature_list = Genome::FeatureList->get(name => $feature_list_name);
+        unless ($feature_list) {
+            croak("non-existant FeatureList name ($feature_list_name) passed");
+        }
 
-sub tcga_roi_for_model {
-    my $self = shift;
-    my $model = shift;
+        my $feature_list_reference = $feature_list->reference;
+        unless ($feature_list_reference) {
+            croak("reference not set for FeatureList (name = $feature_list_name)");
+        }
 
-    my $reference_sequence_build = $model->reference_sequence_build;
-
-    my $root_build37_ref_seq = $self->root_build37_ref_seq;
-    my $tcga_cds_roi_list;
-    if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)) {
-        $tcga_cds_roi_list = 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37';
+        if ($reference->is_compatible_with($feature_list_reference)) {
+            return $feature_list_name;
+        }
     }
-    else {
-        $tcga_cds_roi_list = 'agilent sureselect exome version 2 broad refseq cds only';
-    }
 
-    return $tcga_cds_roi_list;
+    return;
 }
 
 sub is_tcga_reference_alignment {
@@ -564,62 +595,96 @@ sub load_pses {
     my $self = shift;
 
     # Get 'new' instrument data
-    $self->status_message('Getting "new" instrument data...');
-    my %instrument_data = map { $_->id => $_ } Genome::InstrumentData->get(
+    $self->status_message('Getting NEW instrument data...');
+    my %new_instrument_data = map { $_->id => $_ } Genome::InstrumentData->get(
        'attributes.attribute_label' => 'tgi_lims_status',
-       'attributes.attribute_value' => 'new',
+       'attributes.attribute_value' => [qw/ new /],
        -hint => 'sample',
     );
-    $self->status_message('Found '.scalar(keys %instrument_data).' instrument data');
-    return if not %instrument_data;
+    $self->status_message('Found '.scalar(keys %new_instrument_data).' NEW instrument data');
 
-    # Get the QIDFGM for each instrument data
-    $self->status_message('Getting inprogress QIDFGM PSEs...');
-    my @pses = GSC::PSE->get(
-        ps_id => 3733,
-        pse_status => 'inprogress',
+    # Get 'failed' instrument data
+    $self->status_message('Getting FAILED instrument data...');
+    my %failed_instrument_data = map { $_->id => $_ } Genome::InstrumentData->get(
+       'attributes.attribute_label' => 'tgi_lims_status',
+       'attributes.attribute_value' => [qw/ failed /],
+       -hint => 'sample',
     );
-    $self->status_message('Found '.scalar(@pses).' QIDFGM PSEs');
-    return unless @pses;
+    $self->status_message('Found '.scalar(keys %failed_instrument_data).' FAILED instrument data');
+    return if not %new_instrument_data and not %failed_instrument_data; # ok
 
-    my $pse_sorter;
+    # Get the inprogress QIDFGMs mapped to instrument data
+    $self->status_message('Getting inprogress QIDFGM PSEs...');
+    my @qidfgms;
+    if($self->pse_id){
+        @qidfgms = GSC::PSE->get(
+            ps_id => 3733,
+            pse_status => 'inprogress',
+            id => $self->pse_id,
+        );
+    }else {
+        @qidfgms = GSC::PSE->get(
+            ps_id => 3733,
+            pse_status => 'inprogress',
+        );
+    }
+    if ( not @qidfgms ) {
+        Carp::confess( $self->error_message('No inprogess QIDFGMS found, but have new/failed instrument data to process!') );
+    }
+    $self->status_message('Found '.scalar(@qidfgms).' QIDFGM PSEs');
+    
+    # Map QIDFGMs to instrument data
+    for my $qidfgm ( @qidfgms ) {
+        my ($instrument_data_id) = $qidfgm->added_param('instrument_data_id');
+        if ( not $instrument_data_id ) {
+            $self->warning_message('No instrument data id for QIDFGM! '.$qidfgm->id);
+            next;
+        }
+        #print Data::Dumper::Dumper($qidfgm->id, $instrument_data_id, \%new_instrument_data, \%failed_instrument_data);
+        if ( exists $new_instrument_data{$instrument_data_id} ) {
+            $new_instrument_data{$instrument_data_id}->{_qidfgm} = $qidfgm;
+        }
+        elsif ( exists $failed_instrument_data{$instrument_data_id} ) {
+            $failed_instrument_data{$instrument_data_id}->{_qidfgm} = $qidfgm;
+        }
+        else {
+            $self->warning_message("Expected to find 'new' or 'failed' instrument data ($instrument_data_id) for inprogress QIDFGM PSE ".$qidfgm->id." but did not. It could have the incorrect status or be double processed.");
+        }
+    }
+
+    # Sort the instrument data, newest first if requested
+    my @instrument_data;
     if ($self->newest_first) {
-        $pse_sorter = sub { $b->id <=> $a->id };
+        @instrument_data = sort { $b->id cmp $a->id } values %new_instrument_data;
+        push @instrument_data, sort { $b->id cmp $a->id } values %failed_instrument_data;
     }
     else {
-        $pse_sorter = sub { $a->id <=> $b->id };
+        @instrument_data = sort { $a->id cmp $b->id } values %new_instrument_data;
+        push @instrument_data, sort { $a->id cmp $b->id } values %failed_instrument_data;
     }
 
-    my @fresh_pses = sort $pse_sorter grep{not $_->added_param('failed_aqid')}@pses;
-    my @previously_failed_pses = sort $pse_sorter grep{$_->added_param('failed_aqid')}@pses;
-
-    my @sorted_pses;
-    push @sorted_pses, @fresh_pses, @previously_failed_pses;
-
-    # Don't try to check more PSEs than we might be able to hold information for in memory.
-    if(scalar(@sorted_pses) > $self->max_pses_to_check) {
-        @sorted_pses = splice(@sorted_pses, 0, $self->max_pses_to_check);
+    # Don't try to check more than we might be able to hold information for in memory.
+    if( @instrument_data > $self->max_pses_to_check ) {
+        @instrument_data = splice(@instrument_data, 0, $self->max_pses_to_check);
         $self->status_message('Limiting checking to ' . $self->max_pses_to_check);
     }
 
-    $self->preload_data(\%instrument_data); #The checking uses this data, so need to load it first
+    # Preload or whatever
+    $self->preload_data(\%new_instrument_data); #The checking uses this data, so need to load it first
 
+    # Check the instrument data
     my @checked_pses;
-    for my $pse ( @sorted_pses ) {
-        my ($instrument_data_id) = $pse->added_param('instrument_data_id');
-        if ( not $instrument_data_id ) {
-            $self->warning_message('No instrument_data_id for QIDGFM PSE: '.$pse->id);
+    for my $instrument_data ( @instrument_data ) {
+        my $qidfgm = delete $instrument_data->{_qidfgm};
+        if ( not $qidfgm ) {
+            $self->warning_message('No QIDFGM for new/failed instrument data! '.$instrument_data->id);
             next;
         }
-        $pse->{_instrument_data} = delete $instrument_data{$instrument_data_id};
-        if ( not $pse->{_instrument_data} ) {
-            $self->warning_message("Expected to find 'new' instrument data ($instrument_data_id) for inprogress QIDFGM PSE ".$pse->id." but did not. It could have the incorrect status or be double processed.");
-            next;
-        }
-        if($self->check_pse($pse)){
-            push @checked_pses, $pse;
+        $qidfgm->{_instrument_data} = $instrument_data;
+        if($self->check_pse($qidfgm)){
+            push @checked_pses, $qidfgm;
         } else {
-            GSC::PSEParam->create(pse_id => $pse->id, param_name => 'failed_aqid', param_value => 1) unless $pse->added_param('failed_aqid');
+            $self->_update_instrument_data_tgi_lims_status_to($qidfgm->{_instrument_data}, 'failed');
         }
     }
     $self->status_message('Of those, '.scalar(@checked_pses). ' PSEs passed check pse.');
@@ -862,19 +927,17 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         push @ref_align_models, $regular_model;
     }
 
-    $DB::single = $DB::stopper;
-    if ( $capture_target and $regular_model->can('reference_sequence_build') and not $regular_model->isa('Genome::Model::RnaSeq')){
-        my $roi_list;
-        #FIXME This is a lame hack for these capture sets
+    if ( $capture_target and $reference_sequence_build and not $regular_model->isa('Genome::Model::RnaSeq')){
+        # FIXME This is a lame hack for these capture sets
         my %build36_to_37_rois = get_build36_to_37_rois();
-
         my $root_build37_ref_seq = $self->root_build37_ref_seq;
 
-        if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)
-                and exists $build36_to_37_rois{$capture_target}) {
+        my $roi_list = $capture_target;
+        if ($reference_sequence_build
+            and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)
+            and exists $build36_to_37_rois{$capture_target}
+        ) {
             $roi_list = $build36_to_37_rois{$capture_target};
-        } else {
-            $roi_list = $capture_target;
         }
 
         unless($self->assign_capture_inputs($regular_model, $capture_target, $roi_list)) {
@@ -882,67 +945,30 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
-        #Also want to make a second model against a standard region of interest
-        my $wuspace_model = Genome::Model->create(%model_params);
-        unless ( $wuspace_model ) {
-            $self->error_message('Failed to create wu-space model: '.Dumper(\%model_params));
-            for my $model (@new_models) { $model->delete; }
-            return;
-        }
-        push @new_models, $wuspace_model;
-
-        my $wuspace_name = $wuspace_model->default_model_name(
-            instrument_data => $genome_instrument_data,
-            capture_target => $capture_target,
-            roi => 'wu-space',
+        my %roi_sets = (
+            'WU-Space' => [
+                'NCBI-human.combined-annotation-58_37c_cds_exon_and_rna_merged_by_gene',
+                'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA',
+            ],
+            'TCGA-CDS' => [
+                'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37',
+                'agilent sureselect exome version 2 broad refseq cds only',
+            ],
         );
-        if ( not $wuspace_name ) {
-            $self->error_message('Failed to get wu-space model name for params: '.Dumper(\%model_params));
-            for my $model (@new_models) { $model->delete; }
-            return;
+        for my $roi_set (keys %roi_sets) {
+            my $roi_set_names = $roi_sets{$roi_set};
+            my $roi_set_name = $self->first_compatible_feature_list_name($reference_sequence_build, $roi_set_names);
+            if ($roi_set_name) {
+                my $roi_set_model = $self->create_roi_model($roi_set, $genome_instrument_data, $roi_set_name, %model_params);
+                if ($roi_set_model) {
+                    push @new_models, $roi_set_model;
+                } else {
+                    $self->error_message("Failed to create $roi_set model.");
+                    for my $model (@new_models) { $model->delete; }
+                    return;
+                }
+            }
         }
-        $wuspace_model->name($wuspace_name);
-
-        my $wuspace_roi_list;
-        if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)) {
-            $wuspace_roi_list = 'NCBI-human.combined-annotation-58_37c_cds_exon_and_rna_merged_by_gene';
-        } else {
-            $wuspace_roi_list = 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA';
-        }
-
-        unless($self->assign_capture_inputs($wuspace_model, $capture_target, $wuspace_roi_list)) {
-            for my $model (@new_models) { $model->delete; }
-            return;
-        }
-
-        #In addition, make a third model for TCGA against another standard ROI
-        my $tcga_cds_model = Genome::Model->create(%model_params);
-        unless ( $tcga_cds_model ) {
-            $self->error_message('Failed to create tcga-cds model: ' . Dumper(\%model_params));
-            for my $model (@new_models) { $model->delete; }
-            return;
-        }
-        push @new_models, $tcga_cds_model;
-
-        my $tcga_cds_name = $tcga_cds_model->default_model_name(
-            instrument_data => $genome_instrument_data,
-            capture_target => $capture_target,
-            roi => 'tcga-cds',
-        );
-        if ( not $tcga_cds_name ) {
-            $self->error_message('Failed to get tcga-cds model name for params: ' . Dumper(\%model_params));
-            for my $model (@new_models) { $model->delete; }
-            return;
-        }
-        $tcga_cds_model->name($tcga_cds_name);
-
-        my $tcga_cds_roi_list = $self->tcga_roi_for_model($tcga_cds_model);
-
-        unless($self->assign_capture_inputs($tcga_cds_model, $capture_target, $tcga_cds_roi_list)) {
-            for my $model (@new_models) { $model->delete; }
-            return;
-        }
-
     }
 
     for my $m (@new_models) {
@@ -1001,6 +1027,61 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     # Based of the ref-align models so that alignment can shortcut
     push(@new_models , $self->create_default_qc_models(@ref_align_models));
     return @new_models;
+}
+
+sub create_roi_model {
+    my $self = shift;
+    my $roi = shift || die;
+    my $genome_instrument_data = shift || die;
+    my $region_of_interest_set_name = shift || die;
+    my %model_params = @_;
+    die unless keys %model_params;
+
+    my $abortion_message = sub {
+        my $message = shift;
+        return $self->error_message("Aborting creation of $roi model, $message.");
+    };
+    my $deletion_message = sub {
+        my $message = shift;
+        return $self->error_message("Deleting partially created $roi model, $message.");
+    };
+
+    my $target_region_set_name = eval { $genome_instrument_data->target_region_set_name };
+    unless ($target_region_set_name) {
+        $abortion_message->('instrument data does not have a target region');
+        return;
+    }
+
+    my $model = Genome::Model->create(%model_params);
+    unless ($model) {
+        $abortion_message->('failed to create model');
+        return;
+    }
+
+    my $roi_model_name = $model->default_model_name(
+        instrument_data => $genome_instrument_data,
+        capture_target => $target_region_set_name,
+        roi => lc($roi),
+    );
+    unless ($roi_model_name) {
+        $deletion_message->('failed to resolve default model name');
+        $model->delete;
+        return;
+    }
+
+    unless ($model->name($roi_model_name)) {
+        $deletion_message->('failed to rename to default model name');
+        $model->delete;
+        return;
+    }
+
+    unless($self->assign_capture_inputs($model, $target_region_set_name, $region_of_interest_set_name)) {
+        $deletion_message->('failed to assign capture inputs');
+        $model->delete;
+        return;
+    }
+
+    return $model;
 }
 
 sub get_build36_to_37_rois {
@@ -1651,8 +1732,8 @@ sub _is_pcgp {
         my $project_id = $work_order->project_id;
         my $project_name = $work_order->research_project_name;
 
-        if ( grep($project_id eq $_, (2230523, 2230525, 2259255, 2342358)) or
-             grep($project_name =~ /$_/, ('^PCGP','^Pediatric Cancer'))) {
+        if (defined($project_id) && grep($project_id eq $_, (2230523, 2230525, 2259255, 2342358))
+            || defined($project_name) && grep($project_name =~ /$_/, ('^PCGP','^Pediatric Cancer'))) {
             return 1;
         }
     }
@@ -1664,7 +1745,7 @@ sub _is_rna {
     my ($self, $instrument_data) = @_;
 
     my $sample = $instrument_data->sample;
-    if(grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
+    if(defined($sample->sample_type) && grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
         return 1;
     }
     return 0;
@@ -1674,7 +1755,7 @@ sub _is_rna_instrument_data {
     my $self = shift;
     my $instrument_data = shift;
     my $sample = $instrument_data->sample;
-    if(grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
+    if(defined($sample->sample_type) && grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
         return 1;
     }
     return 0;

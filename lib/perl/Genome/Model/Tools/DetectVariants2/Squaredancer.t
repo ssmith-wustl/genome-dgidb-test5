@@ -60,7 +60,13 @@ ok($command, 'Created `gmt detect-variants2 squaredancer` command');
 $command->dump_status_messages(1);
 ok($command->execute, 'Executed `gmt detect-variants2 squaredancer` command');
 
-is(compare($expected_output, $test_out), 0, "svs.hq output as expected");
+
+# Exclude the file path in output to make sure this test does not fail when paths change
+my $expected_output_text = `cat $expected_output | cut -s -f11 --complement`;
+my $test_output_text = `cat $test_out | cut -s -f11 --complement`;
+
+my $diff = Genome::Sys->diff_text_vs_text($expected_output_text, $test_output_text);
+ok(!$diff, "svs.hq output as expected");
 
 done_testing();
 exit;

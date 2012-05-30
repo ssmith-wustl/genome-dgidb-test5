@@ -25,6 +25,7 @@ class Genome::InstrumentData {
         sample_id => { is => 'Number', is_delegated => 1, via => 'library', to => 'sample_id' },
         sample => { is => 'Genome::Sample', id_by => 'sample_id' },
         sample_name => { via => 'sample', to => 'name' },
+        models => { is => 'Genome::Model', reverse_as => 'instrument_data', is_many => 1, },
     ],
     has_optional => [
         #TODO: may want to make these immutable, but needed them for

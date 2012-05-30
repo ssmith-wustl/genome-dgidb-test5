@@ -51,11 +51,6 @@ sub _run_vcf_converter {
     my $type = shift;
 
     my $input = $self->input;
-    unless($input->class =~ m/Union/){
-        die $self->error_message("Unioning SNV's is the only currently supported combine_vcf operation");
-    }
-
-
     my $dirname = $self->output_dir;
     unless($dirname){
         die $self->error_message("Could not get dirname!");
@@ -86,14 +81,23 @@ sub _run_vcf_converter {
         die $self->error_message("Could not positively identify samtools input!");
     }
 
-    my $merge_cmd = Genome::Model::Tools::Joinx::VcfMerge->create(
+    my %params = ( 
         input_files => [ ($input_a_vcf,$input_b_vcf)],
         output_file => $output_file,
         merge_samples => 1,
         clear_filters => 1,
         use_bgzip => 1,
-        joinx_bin_path => "/usr/bin/joinx1.3",
     );
+
+    # If we are doing an intersection, set the ratio filter to mark things as filtered where they do not agree
+    if ($input->class =~ m/Intersect/) {
+        $params{joinx_bin_path} = "/usr/bin/joinx1.6";
+        $params{ratio_filter} = "1.0,IntersectionFailure,Variant callers do not agree on this position";
+    } else {
+        $params{joinx_bin_path} = "/usr/bin/joinx1.3";
+    }
+
+    my $merge_cmd = Genome::Model::Tools::Joinx::VcfMerge->create(%params);
 
     unless($merge_cmd->execute){
         die $self->error_message("Could not complete call to gmt vcf vcf-filter!");

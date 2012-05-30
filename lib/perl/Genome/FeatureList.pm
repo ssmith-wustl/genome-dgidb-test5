@@ -206,6 +206,10 @@ sub processed_bed_file_content {
                     $print = 0;
                 }
                 next;
+            } elsif ($line =~ /^track .*?name=/) {
+                $self->warning_message('Unknown track name. Including regions.');
+                $print = 1;
+                next;
             }
         }
         if ($print) {

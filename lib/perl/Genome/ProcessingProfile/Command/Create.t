@@ -10,7 +10,7 @@ use warnings;
 
 use above "Genome";
 
-use Test::More tests => 31;
+use Test::More tests => 38;
 
 use_ok('Genome::ProcessingProfile::Command::Create') or die;
 ok(Genome::ProcessingProfile::Command::Create->sub_command_classes) or die;
@@ -54,6 +54,12 @@ class Genome::ProcessingProfile::Tester {
             is => 'Text',
             is_optional => 1,
         },
+        some_options => {
+            is => 'Text',
+            doc => 'Test is_many params',
+            is_many => 1,
+            is_optional => 1,
+        },
     ],
 };
 
@@ -77,6 +83,11 @@ class Genome::ProcessingProfile::Command::Create::Tester {
         },
         append_event_steps => {
             is => 'Text',
+            is_optional => 1,
+        },
+        some_options => {
+            is => 'Text',
+            is_many => 1,
             is_optional => 1,
         },
     ],
@@ -126,6 +137,35 @@ $creator = Genome::ProcessingProfile::Command::Create::Tester->create(
 );
 ok($creator, 'create w/ based on but no changes');
 ok(!$creator->execute, 'Failed as expected - tried to base on pp w/o changing params');
+
+# test is-many params
+%params = (
+    name => '__TEST__PP__IS_MANY',
+    sequencing_platform => 'solexa',
+    dna_source => 'genomic',
+    roi => 'mouse',
+    append_event_steps => undef,
+    some_options => ['option1','option2'],
+);
+ok(Genome::ProcessingProfile::Command::Create::Tester->execute(%params), "Create tester pp");
+$pp = Genome::ProcessingProfile::Tester->get(name => "__TEST__PP__IS_MANY");
+my @options = $pp->some_options;
+is_deeply(\@options, ['option1','option2'], 'Processing profile with is_many param got a list of options');
+ok($pp, 'Got pp with is_many option');
+
+# create the processing profile that is based on the above
+my $create_alternate_cmd = Genome::ProcessingProfile::Command::Create::Tester->create(
+    based_on => $pp,
+    name => 'alternate_test_based_on_param_value_overrides_default_value',
+    roi => 'alternate_test_based_on_param_value_overrides_default_value', # just to make it unique
+);
+
+ok($create_alternate_cmd->execute(), "created new processing profile");
+my $alternate_pp = $create_alternate_cmd->created_processing_profile;
+ok($alternate_pp, 'got created_processing_profile');
+@options = $alternate_pp->some_options;
+is_deeply(\@options, ['option1','option2'], 'Processing profile with is_many param got a list of options');
+isnt($alternate_pp->roi, $pp->roi, "Successfully overrode roi option");
 
 sub test_command_subclass {
     my $class = 'Genome::ProcessingProfile::Command::Create';
