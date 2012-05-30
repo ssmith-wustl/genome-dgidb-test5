@@ -33,6 +33,7 @@ class Genome::Model::Tools::DetectVariants2::Result::Vcf::Combine {
         },
         joinx_version => {
             is => 'Text',
+            is_input => 1,
             doc => 'Version of joinx to use for the combination',
         },
     ],
