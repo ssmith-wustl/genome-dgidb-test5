@@ -1,4 +1,4 @@
-package Genome::Model::Build::Command::ReferenceAlignment::SubmissionSummary;
+package Genome::Model::ReferenceAlignment::Command::SubmissionSummary;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 
-class Genome::Model::Build::Command::ReferenceAlignment::SubmissionSummary {
+class Genome::Model::ReferenceAlignment::Command::SubmissionSummary {
     is => 'Genome::Command::Base',
     doc => "List a summary of the merged alignment BAMs for the provided builds and a file suitable for submitting the bam list.",
     has => [

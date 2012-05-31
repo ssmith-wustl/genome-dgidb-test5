@@ -1,11 +1,11 @@
-package Genome::Model::Build::Command::ReferenceAlignment::MergedAlignmentBam;
+package Genome::Model::ReferenceAlignment::Command::MergedAlignmentBam;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Build::Command::ReferenceAlignment::MergedAlignmentBam {
+class Genome::Model::ReferenceAlignment::Command::MergedAlignmentBam {
     is => 'Genome::Command::Base',
     doc => "List the path of the merged alignment BAMs for the provided builds.",
     has => [
