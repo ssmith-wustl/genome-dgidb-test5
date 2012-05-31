@@ -56,12 +56,13 @@ sub execute {
     my $log_file = $data_directory . "/" . 'ensembl_import.log';
     my $dump_file = $data_directory . "/" . 'ensembl_import.dump';
     
-    my ($host, $user, $pass) = $self->get_ensembl_info($version);
+    my $db_version = $self->ensembl_db_version_string($version);
+    my ($host, $user, $pass) = $self->get_ensembl_info($db_version);
     
     my $command = join(" " , 
         "genome db ensembl import create-annotation-structures", 
         "--data-directory $annotation_data_directory",
-        "--version $version",
+        "--version $db_version",
         "--host $host",
         "--user $user",
         ($pass ? "--pass $pass" : ''),
@@ -85,6 +86,14 @@ sub get_ensembl_info {
     my $password = defined $ENV{GENOME_DB_ENSEMBL_PASSWORD} ? $ENV{GENOME_DB_ENSEMBL_PASSWORD} : undef;
 
     return ($host, $user, $password);
+}
+
+sub ensembl_db_version_string {
+    my $self = shift;
+    my $ensembl = shift;
+
+    my ($e_version_number, $ncbi_build, $other ) = split(/_/,$ensembl);
+    return $e_version_number."_".$ncbi_build;
 }
 
 sub ensembl_version_string {
