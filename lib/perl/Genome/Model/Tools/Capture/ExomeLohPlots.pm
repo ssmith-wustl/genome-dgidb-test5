@@ -129,7 +129,8 @@ sub execute {                               # replace with real execution logic.
 		
 		foreach my $build (@builds)
 		{
-			if($build->status eq 'Succeeded')
+#			if($build->status eq 'Succeeded')
+			if($build->status ne 'Running')
 			{
 				$last_build_dir = $build->data_directory;
 			}
@@ -163,19 +164,36 @@ sub execute {                               # replace with real execution logic.
 
 			## Combine into single file ##
 			my $combined_outfile = $output_dir . "/varscan.snp.Normal.het";
-			print "Combining and sorting...\n";
-			system("cat $germline_outfile $loh_outfile >$combined_outfile");
-			system("gmt capture sort-by-chr-pos --input $combined_outfile --output $combined_outfile");
+
+			if(!(-e $combined_outfile))
+			{
+				print "Combining and sorting...\n";
+				system("cat $germline_outfile $loh_outfile >$combined_outfile");
+				system("gmt capture sort-by-chr-pos --input $combined_outfile --output $combined_outfile");				
+			}
+
 
 			## Run false-positive filter ##
-			print "Running false-positive filter...\n";
-			my $cmd = "gmt somatic filter-false-positives --variant-file $combined_outfile --output-file $combined_outfile.fpfilter --bam-file $normal_bam --reference " . $self->reference;
-			system($cmd);
+			if(!(-e "$combined_outfile.fpfilter"))
+			{
+				print "Running false-positive filter...\n";
+				my $cmd = "gmt somatic filter-false-positives --variant-file $combined_outfile --output-file $combined_outfile.fpfilter --bam-file $normal_bam --reference " . $self->reference;
+				system("bsub -q long -R\"select[mem>8000] rusage[mem=8000]\" -M 8000000 $cmd");				
+			}
+			else
+			{
+				my $cmd = "gmt varscan loh-segments --variant-file $combined_outfile.fpfilter --output-basename $combined_outfile.fpfilter.plot --varscan-cn-basename varScan.output.copynumber.called.cbs";
+				system("bsub -q long $cmd");				
+				system("bsub -q short $cmd");				
+			}
 
-			$cmd = "gmt varscan loh-segments --variant-file $combined_outfile.fpfilter --output-basename $combined_outfile.fpfilter.plot --varscan-cn-basename varScan.output.cbs";
-			system("bsub -q long $cmd");
+
 
 #			exit(0);
+		}
+		else
+		{
+			warn "No Succeeded build dir for $model_id ($model_name)\n";
 		}
 
 #		exit(0);

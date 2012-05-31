@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Workflow;
 use Workflow::Simple;
-use FindBin qw|$Bin|;
+use File::Basename;
 class Genome::Model::Tools::Dindel::RunWithVcf {
     is => 'Command',
     has => [
@@ -21,6 +21,19 @@ class Genome::Model::Tools::Dindel::RunWithVcf {
     model_id => {
         is=>'String',
         is_input=>1,
+    },
+    roi_bed=> {
+        is=>'String',
+        is_input=>1,
+        is_optional=>1,
+        doc=>"If you'd like to restrict dindel to variants in certain regions, supply a bed file",
+    },
+    include_dindel_sites=> {
+        is=>'String',
+        is_input=>1,
+        is_optional=>1,
+        default=>0,
+        doc=>"If you'd like dindel to use all gapped reads as potential indel sites, set this to 1",
     },
     num_windows_per_file=> {
         is=>'Number',
@@ -69,14 +82,72 @@ sub execute {
 
     $DB::single=1;
     my $vcf_in_dindel_format = $self->convert_vcf_to_dindel_and_left_shift($self->output_directory, $ref_fasta, $self->input_vcf);
+    my ($dindel_var_file, $library_file) = $self->get_cigar_indels($self->output_directory, $ref_fasta, $bam_file);
+#    my $vcf_in_dindel_format = "/gscmnt/gc2146/info/medseq/dindel/test_2368_ALS17_kid/dindel_formatted_vcf_input.left_shifted.variants.txt";
+#    my ($dindel_var_file, $library_file) = ("/gscmnt/gc2146/info/medseq/dindel/test_2368_ALS17_kid/cigar_generated_indels.variants.txt", "/gscmnt/gc2146/info/medseq/dindel/test_2368_ALS17_kid/cigar_generated_indels.libraries.txt");
+    if($self->include_dindel_sites) {
+         $vcf_in_dindel_format = $self->merge_callsets($self->output_directory, $vcf_in_dindel_format, $dindel_var_file);
+    }
+    if($self->roi_bed) {
+        $vcf_in_dindel_format = $self->limit_callset($self->output_directory, $vcf_in_dindel_format, $self->roi_bed);
+    }
     my @windows_files = $self->make_windows($self->output_directory, $vcf_in_dindel_format, $self->num_windows_per_file);
-    my $library_file = $self->get_cigar_indels($self->output_directory, $ref_fasta, $bam_file);
     my $results_dir = $self->run_parallel_analysis($self->output_directory, $ref_fasta, $bam_file, $library_file, $self->make_realigned_bam,\@windows_files);
     my $file_of_results = $self->make_fof($self->output_directory, $results_dir);
     $self->generate_final_vcf($self->output_directory, $file_of_results, $ref_fasta);
    $self->generate_final_bam($self->output_directory, $results_dir, $bam_file);
     return 1;
 }
+
+sub limit_callset {
+    my ($self, $output_dir, $dindel_variant_file, $roi_bed) = @_;
+    $DB::single=1;
+    my ($file, $path, $suffix) = fileparse($dindel_variant_file, ".variants.txt");
+    my $bed_file = $self->dindel_to_bed($dindel_variant_file); #returns a temp file
+    my $temp_out = Genome::Sys->create_temp_file_path;
+    my $cmd ="intersectBed -a $bed_file -b $roi_bed -wa > $temp_out";
+    Genome::Sys->shellcmd(cmd=>$cmd);
+    my $dindel_file = $self->bed_to_dindel($temp_out); #returns a temp file
+    my $output_file = "$path/$file.region_limited.variants.txt";
+    Genome::Sys->shellcmd(cmd=>"cp $dindel_file $output_file");
+    return $output_file;
+}
+
+sub dindel_to_bed {
+    my ($self, $dindel_variant_file) = @_;
+    my ($temp_fh, $temp_path) = Genome::Sys->create_temp_file();
+    my $fh =  IO::File->new($dindel_variant_file);
+    while(my $line = $fh->getline) {
+        my ($chr, $pos, $allele, $pound, $number) = split /\s+/, $line;
+        my $start = $pos -1; #FIXME should be actual bed, not this hack.  It could conceivably include some additional deletions on the edges of the target region.  need to fix bed to dindel at same time
+        $temp_fh->print("$chr\t$start\t$pos\t$allele $pound $number\n");
+    }
+    $temp_fh->close;
+    return $temp_path;
+}
+
+sub bed_to_dindel {
+    my ($self, $bed_file) = @_;
+     my ($temp_fh, $temp_path) = Genome::Sys->create_temp_file();
+    my $fh =  IO::File->new($bed_file);
+    while(my $line = $fh->getline) {
+        my ($chr, $start, $stop, $string) = split /\t/, $line;
+        $temp_fh->print("$chr $stop $string"); ##FIXME: if you fixed dindel to bed then this should also be fixed
+    }
+    $temp_fh->close;
+    return $temp_path;
+}
+
+
+sub merge_callsets {
+    my ($self, $output_dir, $dindel_format_vcf, $dindel_variants) = @_;
+    my $output_file = $output_dir . "/merged_cigar_vcf.variants.txt";
+    my $cmd = "cat $dindel_format_vcf $dindel_variants > $output_file";
+    Genome::Sys->shellcmd(cmd=>"$cmd"); #larson says theres a Genome::sys->cat, but f that guy and that method
+    return $output_file;
+}
+
+
 
 sub generate_final_bam {
     my ($self, $output_dir, $results_dir, $bam_file) = @_;
@@ -263,7 +334,9 @@ sub get_cigar_indels {
         ref_fasta=>$ref_fasta
     );
     if($get_cigar_indels->execute()) {
-        return $output_prefix . ".libraries.txt";
+        my $output_variants = $output_prefix . ".variants.txt";
+        my $output_libs = $output_prefix . ".libraries.txt";
+        return ($output_variants, $output_libs);
     }
     else {
         $self->error_message("fail from GetCigarIndels...exiting");

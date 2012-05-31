@@ -858,8 +858,8 @@ sub gtf_string {
             } elsif ($type eq 'cds_exon') {
                 $type = 'CDS';
                 # These are just ignored by cufflinks and are duplicates, only useful if exon was comprised of utr_exon and cds_exon
-                my $gene_name = $self->gene->name;
-                my $gene_id = $self->gene_name;
+                my $gene_name = $self->gene->name("ensembl_default_external_name");
+                my $gene_id = $self->gene->name("ensembl");
                 unless ($gene_id) { $gene_id = $gene_name }
                 push @cds_strings, $ss->chrom_name ."\t". $ss->source .'_'. $ss->version ."\t". $type ."\t". $ss->structure_start ."\t". $ss->structure_stop ."\t.\t". $ss->strand ."\t". $ss->frame ."\t" .' gene_name "'. $gene_name .'"; gene_id "'. $gene_id .'"; transcript_id "'. $self->transcript_name .'"; exon_number "'. $ordinal .'";';
             } elsif ($type eq 'rna') {
@@ -894,8 +894,8 @@ sub gtf_string {
         unless ($exon_start && $exon_stop) {
             die(Data::Dumper::Dumper($self));
         }
-        my $gene_name = $self->gene->name;
-        my $gene_id = $self->gene_name;
+        my $gene_name = $self->gene->name('ensembl_default_external_name');
+        my $gene_id = $self->gene->name('ensembl');
         unless ($gene_id) { $gene_id = $gene_name }
         $string .= $self->chrom_name ."\t". $self->source .'_'. $self->version ."\texon\t". $exon_start ."\t". $exon_stop ."\t.\t". $exon_strand ."\t.\t".' gene_name "'. $gene_name .'"; gene_id "'. $gene_id .'"; transcript_id "'. $self->transcript_name .'"; exon_number "'. $ordinal .'";' ."\n";
         if (scalar(@cds_strings)) {

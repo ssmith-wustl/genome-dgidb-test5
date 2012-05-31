@@ -94,6 +94,7 @@ sub execute {
     my $genome_size = 0;
     my $masked_genome_size = 0;
     for my $ref_chr (@chromosomes) {
+        $self->status_message("Running samtools faidx on $ref_chr");
         unless(open(FAIDX,"samtools faidx $ref $ref_chr |")) {
             die "Couldn't pipe samtools faidx\n";
         }
@@ -173,6 +174,9 @@ sub execute {
     my @exons;
     #now iterate over all transcripts
     for my $chromosome_name(@chromosomes) {
+        #Preload substructures
+        my @substructures = Genome::TranscriptStructure->get(chrom_name => $chromosome_name,
+                                                data_directory => $build->_annotation_data_directory);
         $transcript_iterator = $build->transcript_iterator(chrom_name => $chromosome_name);
         $self->status_message("Parsing $chromosome_name\n");
         unless($transcript_iterator) {
@@ -197,10 +201,10 @@ sub execute {
                     }
                     $type = undef;
                 }
-                map{ $_->unload } @exons;
             }
-            $transcript->unload;
         }
+        Genome::TranscriptStructure->unload;
+        Genome::Transcript->unload;
     }
 
     my $tier1 = $self->union_genomes($tier1_coding, $tier1_rna); 

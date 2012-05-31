@@ -39,7 +39,7 @@ sub execute {
         for my $job ($build->child_lsf_jobs) {#cycle each job id associated with the build
             #There could be multiple execution blades here, but just grab the first one
             #from what I've noticed, multiple blades listed in the execution column are identical anyways
-            if(`bjobs -W $job` =~ /edu (blade.*?)\.gsc.*?(\d+(?:,\d+)+)/){#This regex is environment specific to the Genome Institute
+            if(`bjobs -W $job` =~ /edu (?:\d+\*)?(blade.*?)\.gsc.*?(\d+(?:,\d+)+)/){#This regex is environment specific to the Genome Institute
                 my $exec_host = $1;
                 my @pids = split ',',$2;
                 next if $seen_host_pids{$exec_host.$2}++;

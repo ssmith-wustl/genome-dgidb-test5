@@ -17,6 +17,11 @@ class Genome::Model::Tools::Joinx::VcfMerge {
         },
     ],
     has_optional_input => [
+        sample_priority => {
+            is => 'Text',
+            doc => 'Sample priority. Order prefers data from file A over B. Unfiltered prefers data from the first filtered sample (intersect). Filters prefers data from the first unfiltered sample (union). Requires joinx1.6+',
+            valid_values => ['order', 'unfiltered', 'filtered'],
+        },
         clear_filters => {
             is => 'Boolean',
             default => 0,
@@ -98,6 +103,17 @@ sub execute {
     my $flags = "";
     if ($self->clear_filters) {
         $flags .= " -c";
+    }
+    if ($self->sample_priority) {
+        if($self->sample_priority eq 'order') {
+            $flags .= " -P o";
+        } elsif ($self->sample_priority eq 'unfiltered') {
+            $flags .= " -P u";
+        } elsif ($self->sample_priority eq 'filtered') {
+            $flags .= " -P f";
+        } else {
+            die $self->error_message("Invalid sample priority set: " . $self->sample_priority);
+        }
     }
     if ($self->merge_samples) {
         $flags .= " -s";

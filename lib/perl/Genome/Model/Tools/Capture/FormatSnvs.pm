@@ -153,7 +153,7 @@ sub fix_chrom
 {
 	my $chrom = shift(@_);
 	$chrom =~ s/chr// if(substr($chrom, 0, 3) eq "chr");
-	$chrom =~ s/[^0-9XYMNT\_random]//g;	
+	$chrom =~ s/[^0-9XYMNTGL\.\_random]//g;	
 
 	return($chrom);
 }

@@ -24,6 +24,7 @@ $vep_class_rank{'5PRIME_UTR'} = 		4;
 $vep_class_rank{'3PRIME_UTR'} = 		5;
 $vep_class_rank{'WITHIN_NON_CODING_GENE'} = 	6;
 $vep_class_rank{'WITHIN_MATURE_miRNA'} = 	7;
+$vep_class_rank{'CODING_UNKNOWN'} = 	        7;
 $vep_class_rank{'SYNONYMOUS_CODING'} = 		8;
 $vep_class_rank{'STOP_LOST'} = 			9;
 $vep_class_rank{'SPLICE_SITE'} = 		10;
@@ -43,6 +44,7 @@ class Genome::Model::Tools::Vcf::MergeWithAnnotation {
 
     has => [                                # specify the command's single-value properties (parameters) <--- 
     vcf_file   => { is => 'Text', doc => "VCF file in uncompressed format", is_input => 1},
+    transcript_annotation_file   => { is => 'Text', doc => "WU Transcript annotation in its native format", is_input => 1},
     vep_annotation_file   => { is => 'Text', doc => "VEP annotation in its native format", is_input => 1},
     regfeat_annotation_file   => { is => 'Text', doc => "Regulatory feature annotation in six-column TSV", is_optional => 1, is_input => 1},
     dbsnp_file => {is => 'String', doc => "dbSNP file ", is_optional => 1, is_input => 1},
@@ -89,11 +91,12 @@ sub execute {                               # replace with real execution logic.
     $stats{'vcf_lines'} = $stats{'vcf_lines_pass'} = $stats{'vcf_lines_pass_snp'} = 0;
     
     ## Load the annotation ##
-    
+    warn "Loading Transcript annotation...\n";
+    my %transcript_annotation = load_annotation($self->transcript_annotation_file);
     warn "Loading VEP annotation...\n";
     my %vep_annotation = load_vep($vep_file);
     warn "Loading dbSNP annotation...\n";
-    my %dbsnp_annotation = load_annotation($self->dbsnp_file) if($self->dbsnp_file);
+    my %dbsnp_annotation = load_dbsnp($self->dbsnp_file) if($self->dbsnp_file);
 
     warn "Loading RegFeat annotation...\n";
     my %regfeat_annotation = load_annotation($self->regfeat_annotation_file) if($self->regfeat_annotation_file);
@@ -125,9 +128,10 @@ sub execute {                               # replace with real execution logic.
         {
             if(substr($line, 0, 6) eq '#CHROM')
             {
-                ## parse out samples ##
+                ## parse out samples ##join("\t", $gene, $transcript, $trv_type, $c_position, $aa_change, $ucsc_cons, $domain);
                 print OUTFILE "chrom\tchr_start\tchr_stop\tref\tvar\t";
-                print OUTFILE "dbSNP_rs\tdbSNP_valstatus\tdbSNP_maf_alleles\tdbSNP_mafs\t";
+                print OUTFILE "dbSNP_rs\tdbSNP_submitters\tdbSNP_maf_alleles\tdbSNP_mafs\t";
+                print OUTFILE "vartype\tgene\ttranscript\ttrv_type\tc_position\taa_change\tucsc_cons\tdomain\t";
                 print OUTFILE "VEP_transcript\tVEP_gene\tVEP_class\tVEP_codon\tVEP_residue\tVEP_aa_change\tVEP_polyphen\tVEP_sift\tVEP_condel\t";
                 print OUTFILE "RegFeat\t";
                 print OUTFILE "SamplesRef\tSamplesHet\tSamplesHom\tSamplesMissing\t";
@@ -176,10 +180,12 @@ sub execute {                               # replace with real execution logic.
                     if($dbsnp_annotation{$key})
                     {
                         $stats{'vcf_lines_pass_snp_dbsnp'}++;
-                        my ($rs, $loc, $type, $valstatus, $submitters, $blacklist, $maf_alleles, $mafs) = split(/\t/, $dbsnp_annotation{$key});
+#                        my ($rs, $loc, $type, $valstatus, $submitters, $blacklist, $maf_alleles, $mafs) = split(/\t/, $dbsnp_annotation{$key});
+                        my ($rs, $submitters, $maf_alleles, $mafs) = split(/\t/, $dbsnp_annotation{$key});
                         $maf_alleles = "-" if(!$maf_alleles);
                         $mafs = "-" if(!$mafs);
-                        $dbsnp_info = join("\t", $rs, $valstatus, $maf_alleles, $mafs);
+#                        $dbsnp_info = join("\t", $rs, $valstatus, $maf_alleles, $mafs);
+                        $dbsnp_info = join("\t", $rs, $submitters, $maf_alleles, $mafs);
                     }
                     
                     my $num_gt_ref = my $num_gt_het = my $num_gt_hom = my $num_gt_missing = 0;
@@ -211,8 +217,10 @@ sub execute {                               # replace with real execution logic.
 
                     ## Get VEP annotation info ##
 
-                    my $vep_annot = "-\t-\t-\t-\t-\t-\t-\t-\t-";
+                    my $tx_annot = "-\t-\t-\t-\t-\t-\t-";
+                    $tx_annot = $transcript_annotation{$key} if($transcript_annotation{$key});
 
+                    my $vep_annot = "-\t-\t-\t-\t-\t-\t-\t-\t-";
 
                     if($vep_annotation{$key})
                     {
@@ -228,7 +236,7 @@ sub execute {                               # replace with real execution logic.
                     }
                     else
                     {
-                        warn "No VEP annotation for $key\n";
+#                        warn "No VEP annotation for $key\n";
                     }
 
                     ## Get regfeats annotation ##
@@ -250,7 +258,7 @@ sub execute {                               # replace with real execution logic.
                     }
 
 
-                    print OUTFILE join("\t", $key, $dbsnp_info, $vep_annot, $regfeat_annot, $num_gt_ref, $num_gt_het, $num_gt_hom, $num_gt_missing, $genotypes) . "\n" if($self->output_file);
+                    print OUTFILE join("\t", $key, $dbsnp_info, $tx_annot, $vep_annot, $regfeat_annot, $num_gt_ref, $num_gt_het, $num_gt_hom, $num_gt_missing, $genotypes) . "\n" if($self->output_file);
 
 
 
@@ -276,19 +284,6 @@ sub execute {                               # replace with real execution logic.
             print $stats{'vcf_lines_pass_snp'} . " passed per-site filters and were variant\n";
             print $stats{'vcf_lines_pass_snp_vep'} . " had VEP annotation\n";
             print $stats{'vcf_lines_pass_snp_dbsnp'} . " were dbSNPs\n";
-            
-            foreach my $vep_class (sort keys %vep_class_counts)
-            {
-                print "\t$vep_class_counts{$vep_class} $vep_class\n";
-            }
-
-            print $stats{'vcf_lines_pass_snp_regfeat'} . " had RegFeat annotation\n";
-
-            foreach my $regfeat_class (sort keys %regfeat_class_counts)
-            {
-                print "\t$regfeat_class_counts{$regfeat_class} $regfeat_class\n";
-            }
-            
 
     
     close(OUTFILE) if($output_file);
@@ -307,7 +302,7 @@ sub convert_genotype
 {
 	my ($ref, $var, $genotype) = @_;
 	
-	return("NN") if($genotype eq '.');
+	return("NN") if($genotype eq '.' || length($genotype) < 2);
 	
 	return($ref . $ref) if($genotype eq '0/0');
 	return($ref . $var) if($genotype eq '0/1');
@@ -570,6 +565,50 @@ sub get_code
 	return(0);
 }
 
+################################################################################################
+# LoadAnnotation - load the VEP annotation 
+#
+################################################################################################
+
+sub load_dbsnp
+{
+    my $annotation_file = shift(@_);
+    my %annotation = ();
+    
+    my $input = new FileHandle ($annotation_file);
+    my $lineCounter = 0;
+
+    while (<$input>)
+    {
+        chomp;
+        my $line = $_;
+        
+        my ($chrom, $chr_start, $chr_stop, $ref, $var, $rs, $genomic, $single, $val_status, $submitters, $zero, $maf_alleles, $mafs) = split(/\t/, $line);
+
+        my $rest_of_line = "";
+
+        if($maf_alleles)
+        {
+            $rest_of_line = join("\t", $rs, $submitters, $maf_alleles, $mafs);            
+        }
+        else
+        {
+            $rest_of_line = join("\t", $rs, $submitters);            
+        }
+
+        my @vars = split(/\//, $var);
+        foreach my $this_var (@vars)
+        {
+            my $key = join("\t", $chrom, $chr_start, $chr_stop, $ref, $this_var);
+            $annotation{$key} = $rest_of_line;
+        }
+
+    }
+    
+    close($input);
+
+    return(%annotation);
+}
 
 ################################################################################################
 # LoadAnnotation - load the VEP annotation 
@@ -589,20 +628,31 @@ sub load_annotation
         chomp;
         my $line = $_;
         
-        my ($chrom, $chr_start, $chr_stop, $ref, $var) = split(/\t/, $line);
+        my ($chrom, $chr_start, $chr_stop, $ref, $var, $gene, $transcript, $species, $source, $version, $strand, $status, $trv_type, $c_position, $aa_change, $ucsc_cons, $domain) = split(/\t/, $line);
 
-        my $rest_of_line = "";
-        
-        my @lineContents = split(/\t/, $line);
-        my $numContents = @lineContents;
-        for(my $colCounter = 5; $colCounter < $numContents; $colCounter++)
-        {
-            $rest_of_line .= "\t" if($colCounter > 5);
-            $rest_of_line .= $lineContents[$colCounter];
-        }
+#        my $rest_of_line = "";
+ #       
+  #      my @lineContents = split(/\t/, $line);
+#        my $numContents = @lineContents;
+#        for(my $colCounter = 5; $colCounter < $numContents; $colCounter++)
+#        {
+#            $rest_of_line .= "\t" if($colCounter > 5);
+#            $rest_of_line .= $lineContents[$colCounter];
+#        }
 
-        my $key = join("\t", $chrom, $chr_start, $chr_stop, $ref, $var);
-        $annotation{$key} = $rest_of_line;
+#        my @vars = split(/\//, $var);
+#        foreach my $this_var (@vars)
+#        {
+            my $key = join("\t", $chrom, $chr_start, $chr_stop, $ref, $var);
+            $gene = "-" if(!$gene);
+            $transcript = "-" if(!$transcript);
+            $c_position = "-" if(!$c_position);
+            $aa_change = "-" if(!$aa_change);
+            $domain = "-" if(!$domain);
+            $ucsc_cons = "-" if(!$ucsc_cons);
+            $annotation{$key} = join("\t", $gene, $transcript, $trv_type, $c_position, $aa_change, $ucsc_cons, $domain);
+#        }
+
     }
     
     close($input);

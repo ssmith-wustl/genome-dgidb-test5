@@ -31,6 +31,8 @@ class Genome::Model::Tools::Analysis::Mendelian::GermlineComparison {
 		inheritance_model	=> { is => 'Text', doc => "Mendelian inheritance model to use", is_optional => 0, is_input => 1, default => 'autosomal-dominant'},
 		reference	=> { is => 'Text', doc => "Path to the reference to use [defaults to build 37]", is_optional => 0, is_input => 1, default => '/gscmnt/sata420/info/model_data/2857786885/build102671028/all_sequences.fa'},
 		output_dir	=> { is => 'Text', doc => "Output directory to contain files", is_optional => 1, is_input => 1},
+		tier1_only	=> { is => 'Text', doc => "If set to 1, restrict variants to tier 1 annotation types", is_optional => 1, is_input => 1},
+		outside_tier1_only	=> { is => 'Text', doc => "If set to 1, only report sites outside tier 1", is_optional => 1, is_input => 1},
 	],
 };
 
@@ -82,7 +84,7 @@ sub execute {                               # replace with real execution logic.
 		
 		my ($family, $sample_name, $affected_status, $dir) = split(/\t/, $line);	
 
-		if($affected_status && $affected_status ne "control")
+		if($affected_status && $affected_status ne "control" && lc($affected_status) ne "unaffected")
 		{
 			$family_affecteds{$family} .= "\n" if($family_affecteds{$family});
 			$family_affecteds{$family} .= $sample_name . "\t" . $dir;
@@ -121,6 +123,7 @@ sub execute {                               # replace with real execution logic.
 	
 	foreach my $family (sort keys %family_affecteds)
 	{
+		open(SUMMARY, ">$output_dir/$family.comparison.out") or die "Can't open outfile: $!\n";
 #		if($family eq "VCH026")
 #		{
 		## Reset family stats ##
@@ -142,7 +145,10 @@ sub execute {                               # replace with real execution logic.
 		}
 
 		print join("\t", $family, "$family_stats{'num_affecteds'} affecteds, $family_stats{'num_controls'} controls") . "\n";	
-
+		print SUMMARY join("\t", $family, "$family_stats{'num_affecteds'} affecteds, $family_stats{'num_controls'} controls") . "\n";	
+		
+		
+		print SUMMARY "sample_name\tsnps\tindels\n";
 
 		## Prepare to compile SNVs and indels ##
 
@@ -188,6 +194,7 @@ sub execute {                               # replace with real execution logic.
 				}
 			}
 
+			print SUMMARY join("\t", $sample_name, $num_snvs, $num_indels) . "\n";
 			print "$num_snvs SNVs, $num_indels indels\n";
 		}
 		
@@ -284,25 +291,27 @@ sub execute {                               # replace with real execution logic.
 		close(CONTROL);
 
 		
-		print $family_stats{'snvs'} . " SNVs\n";
-		print $family_stats{'snvs_control'} . " present in control(s)\n";
-		print $family_stats{'snvs_nocontrol'} . " not seen in control(s)\n";
-		print $family_stats{'snvs_nocontrol_nonsilent'} . " non-silent\n";
+		print SUMMARY $family_stats{'snvs'} . " SNVs\n";
+		print SUMMARY $family_stats{'snvs_control'} . " present in control(s)\n";
+		print SUMMARY $family_stats{'snvs_nocontrol'} . " not seen in control(s)\n";
+		print SUMMARY $family_stats{'snvs_nocontrol_nonsilent'} . " non-silent\n";
 		
 		foreach my $key (sort keys %family_stats)
 		{
-			print "$family_stats{$key} $key\n" if($key =~ 'snvs_nocontrol_');
+			print SUMMARY "$family_stats{$key} $key\n" if($key =~ 'snvs_nocontrol_');
 		}
 		
-		print $family_stats{'indels'} . " INDELs\n";
-		print $family_stats{'indels_control'} . " present in control(s)\n";
-		print $family_stats{'indels_nocontrol'} . " not seen in control(s)\n";
-		print $family_stats{'indels_nocontrol_nonsilent'} . " non-silent\n";
+		print SUMMARY $family_stats{'indels'} . " INDELs\n";
+		print SUMMARY $family_stats{'indels_control'} . " present in control(s)\n";
+		print SUMMARY $family_stats{'indels_nocontrol'} . " not seen in control(s)\n";
+		print SUMMARY $family_stats{'indels_nocontrol_nonsilent'} . " non-silent\n";
 
 		foreach my $key (sort keys %family_stats)
 		{
-			print "$family_stats{$key} $key\n" if($key =~ 'indels_nocontrol_nonsilent_');
+			print SUMMARY "$family_stats{$key} $key\n" if($key =~ 'indels_nocontrol_nonsilent_');
 		}
+		
+		print join("\t", $family, $family_stats{'snvs'}, $family_stats{'snvs_nocontrol'}, $family_stats{'snvs_nocontrol_nonsilent'}, $family_stats{'indels'}, $family_stats{'indels_nocontrol'}, $family_stats{'indels_nocontrol_nonsilent'}) . "\n";
 
 
 #	}		
@@ -347,6 +356,7 @@ sub byChrPos
 sub load_variants
 {                               # replace with real execution logic.
 	my $dir = shift(@_);
+	my $self = shift(@_);
 	my %variants = ();
 	my $post_annotation_file = "$dir/variants/filtered.variants.post_annotation";
 
@@ -365,7 +375,21 @@ sub load_variants
 		my $trv_type = $lineContents[13];
 		my $key = join("\t", $chrom, $chr_start, $chr_stop, $ref, $var);
 		
-		if(is_tier1($trv_type))
+		if($self->tier1_only)
+		{
+			if(is_tier1($trv_type))
+			{
+				$variants{$key} = $line;				
+			}
+		}
+		elsif($self->outside_tier1_only)
+		{
+			if(!is_tier1($trv_type))
+			{
+				$variants{$key} = $line;				
+			}
+		}
+		else
 		{
 			$variants{$key} = $line;
 		}

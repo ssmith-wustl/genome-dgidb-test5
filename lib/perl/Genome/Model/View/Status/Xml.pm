@@ -41,6 +41,7 @@ class Genome::Model::View::Status::Xml {
                     aspects => [
                         'editor_id',
                         'entry_date',
+                        'entry_date_sort',
                         'header_text',
                         'body_text',
                         {
@@ -66,6 +67,7 @@ class Genome::Model::View::Status::Xml {
                             aspects => [
                                 'editor_id',
                                 'entry_date',
+                                'entry_date_sort',
                                 'header_text',
                                 'body_text',
                                 {

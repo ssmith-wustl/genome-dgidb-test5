@@ -37,6 +37,11 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
             default     => 0,
             doc         => 'Process newest PSEs first',
         },
+        pse_id => {
+            is          => 'Number',
+            is_optional => 1,
+            doc         => 'Ignore other parameters and only process this PSE.'
+        },
         _existing_models_with_existing_assignments => {
             is => 'HASH',
             doc => 'Existing models that already had the instrument data for a PSE assigned',
@@ -546,23 +551,27 @@ sub root_build37_ref_seq {
     return $root_build37_ref_seq;
 }
 
+sub first_compatible_feature_list_name {
+    my $self = shift || die;
+    my $reference = shift || die;
+    my $feature_list_names = shift || die;
+    for my $feature_list_name (@$feature_list_names) {
+        my $feature_list = Genome::FeatureList->get(name => $feature_list_name);
+        unless ($feature_list) {
+            croak("non-existant FeatureList name ($feature_list_name) passed");
+        }
 
-sub tcga_roi_for_model {
-    my $self = shift;
-    my $model = shift;
+        my $feature_list_reference = $feature_list->reference;
+        unless ($feature_list_reference) {
+            croak("reference not set for FeatureList (name = $feature_list_name)");
+        }
 
-    my $reference_sequence_build = $model->reference_sequence_build;
-
-    my $root_build37_ref_seq = $self->root_build37_ref_seq;
-    my $tcga_cds_roi_list;
-    if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)) {
-        $tcga_cds_roi_list = 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37';
+        if ($reference->is_compatible_with($feature_list_reference)) {
+            return $feature_list_name;
+        }
     }
-    else {
-        $tcga_cds_roi_list = 'agilent sureselect exome version 2 broad refseq cds only';
-    }
 
-    return $tcga_cds_roi_list;
+    return;
 }
 
 sub is_tcga_reference_alignment {
@@ -606,10 +615,19 @@ sub load_pses {
 
     # Get the inprogress QIDFGMs mapped to instrument data
     $self->status_message('Getting inprogress QIDFGM PSEs...');
-    my @qidfgms = GSC::PSE->get(
-        ps_id => 3733,
-        pse_status => 'inprogress',
-    );
+    my @qidfgms;
+    if($self->pse_id){
+        @qidfgms = GSC::PSE->get(
+            ps_id => 3733,
+            pse_status => 'inprogress',
+            id => $self->pse_id,
+        );
+    }else {
+        @qidfgms = GSC::PSE->get(
+            ps_id => 3733,
+            pse_status => 'inprogress',
+        );
+    }
     if ( not @qidfgms ) {
         Carp::confess( $self->error_message('No inprogess QIDFGMS found, but have new/failed instrument data to process!') );
     }
@@ -909,19 +927,17 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         push @ref_align_models, $regular_model;
     }
 
-    $DB::single = $DB::stopper;
-    if ( $capture_target and $regular_model->can('reference_sequence_build') and not $regular_model->isa('Genome::Model::RnaSeq')){
-        my $roi_list;
-        #FIXME This is a lame hack for these capture sets
+    if ( $capture_target and $reference_sequence_build and not $regular_model->isa('Genome::Model::RnaSeq')){
+        # FIXME This is a lame hack for these capture sets
         my %build36_to_37_rois = get_build36_to_37_rois();
-
         my $root_build37_ref_seq = $self->root_build37_ref_seq;
 
-        if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)
-                and exists $build36_to_37_rois{$capture_target}) {
+        my $roi_list = $capture_target;
+        if ($reference_sequence_build
+            and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)
+            and exists $build36_to_37_rois{$capture_target}
+        ) {
             $roi_list = $build36_to_37_rois{$capture_target};
-        } else {
-            $roi_list = $capture_target;
         }
 
         unless($self->assign_capture_inputs($regular_model, $capture_target, $roi_list)) {
@@ -929,67 +945,30 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
-        #Also want to make a second model against a standard region of interest
-        my $wuspace_model = Genome::Model->create(%model_params);
-        unless ( $wuspace_model ) {
-            $self->error_message('Failed to create wu-space model: '.Dumper(\%model_params));
-            for my $model (@new_models) { $model->delete; }
-            return;
-        }
-        push @new_models, $wuspace_model;
-
-        my $wuspace_name = $wuspace_model->default_model_name(
-            instrument_data => $genome_instrument_data,
-            capture_target => $capture_target,
-            roi => 'wu-space',
+        my %roi_sets = (
+            'WU-Space' => [
+                'NCBI-human.combined-annotation-58_37c_cds_exon_and_rna_merged_by_gene',
+                'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA',
+            ],
+            'TCGA-CDS' => [
+                'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37',
+                'agilent sureselect exome version 2 broad refseq cds only',
+            ],
         );
-        if ( not $wuspace_name ) {
-            $self->error_message('Failed to get wu-space model name for params: '.Dumper(\%model_params));
-            for my $model (@new_models) { $model->delete; }
-            return;
+        for my $roi_set (keys %roi_sets) {
+            my $roi_set_names = $roi_sets{$roi_set};
+            my $roi_set_name = $self->first_compatible_feature_list_name($reference_sequence_build, $roi_set_names);
+            if ($roi_set_name) {
+                my $roi_set_model = $self->create_roi_model($roi_set, $genome_instrument_data, $roi_set_name, %model_params);
+                if ($roi_set_model) {
+                    push @new_models, $roi_set_model;
+                } else {
+                    $self->error_message("Failed to create $roi_set model.");
+                    for my $model (@new_models) { $model->delete; }
+                    return;
+                }
+            }
         }
-        $wuspace_model->name($wuspace_name);
-
-        my $wuspace_roi_list;
-        if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)) {
-            $wuspace_roi_list = 'NCBI-human.combined-annotation-58_37c_cds_exon_and_rna_merged_by_gene';
-        } else {
-            $wuspace_roi_list = 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA';
-        }
-
-        unless($self->assign_capture_inputs($wuspace_model, $capture_target, $wuspace_roi_list)) {
-            for my $model (@new_models) { $model->delete; }
-            return;
-        }
-
-        #In addition, make a third model for TCGA against another standard ROI
-        my $tcga_cds_model = Genome::Model->create(%model_params);
-        unless ( $tcga_cds_model ) {
-            $self->error_message('Failed to create tcga-cds model: ' . Dumper(\%model_params));
-            for my $model (@new_models) { $model->delete; }
-            return;
-        }
-        push @new_models, $tcga_cds_model;
-
-        my $tcga_cds_name = $tcga_cds_model->default_model_name(
-            instrument_data => $genome_instrument_data,
-            capture_target => $capture_target,
-            roi => 'tcga-cds',
-        );
-        if ( not $tcga_cds_name ) {
-            $self->error_message('Failed to get tcga-cds model name for params: ' . Dumper(\%model_params));
-            for my $model (@new_models) { $model->delete; }
-            return;
-        }
-        $tcga_cds_model->name($tcga_cds_name);
-
-        my $tcga_cds_roi_list = $self->tcga_roi_for_model($tcga_cds_model);
-
-        unless($self->assign_capture_inputs($tcga_cds_model, $capture_target, $tcga_cds_roi_list)) {
-            for my $model (@new_models) { $model->delete; }
-            return;
-        }
-
     }
 
     for my $m (@new_models) {
@@ -1048,6 +1027,61 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     # Based of the ref-align models so that alignment can shortcut
     push(@new_models , $self->create_default_qc_models(@ref_align_models));
     return @new_models;
+}
+
+sub create_roi_model {
+    my $self = shift;
+    my $roi = shift || die;
+    my $genome_instrument_data = shift || die;
+    my $region_of_interest_set_name = shift || die;
+    my %model_params = @_;
+    die unless keys %model_params;
+
+    my $abortion_message = sub {
+        my $message = shift;
+        return $self->error_message("Aborting creation of $roi model, $message.");
+    };
+    my $deletion_message = sub {
+        my $message = shift;
+        return $self->error_message("Deleting partially created $roi model, $message.");
+    };
+
+    my $target_region_set_name = eval { $genome_instrument_data->target_region_set_name };
+    unless ($target_region_set_name) {
+        $abortion_message->('instrument data does not have a target region');
+        return;
+    }
+
+    my $model = Genome::Model->create(%model_params);
+    unless ($model) {
+        $abortion_message->('failed to create model');
+        return;
+    }
+
+    my $roi_model_name = $model->default_model_name(
+        instrument_data => $genome_instrument_data,
+        capture_target => $target_region_set_name,
+        roi => lc($roi),
+    );
+    unless ($roi_model_name) {
+        $deletion_message->('failed to resolve default model name');
+        $model->delete;
+        return;
+    }
+
+    unless ($model->name($roi_model_name)) {
+        $deletion_message->('failed to rename to default model name');
+        $model->delete;
+        return;
+    }
+
+    unless($self->assign_capture_inputs($model, $target_region_set_name, $region_of_interest_set_name)) {
+        $deletion_message->('failed to assign capture inputs');
+        $model->delete;
+        return;
+    }
+
+    return $model;
 }
 
 sub get_build36_to_37_rois {
@@ -1515,6 +1549,11 @@ sub add_processing_profiles_to_pse {
                 push @processing_profile_ids_to_add, $pp_id;
                 $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
             }
+            elsif ($taxon->species_latin_name =~ /zea mays/i) {
+                my $pp_id = $self->_default_ref_align_processing_profile_id;
+                push @processing_profile_ids_to_add, $pp_id;
+                $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'MGSC-maize-buildB73';
+            }
             elsif ($taxon->domain =~ /bacteria/i) {
                 my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
                 push @processing_profile_ids_to_add, $pp_id;
@@ -1698,8 +1737,8 @@ sub _is_pcgp {
         my $project_id = $work_order->project_id;
         my $project_name = $work_order->research_project_name;
 
-        if ( grep($project_id eq $_, (2230523, 2230525, 2259255, 2342358)) or
-             grep($project_name =~ /$_/, ('^PCGP','^Pediatric Cancer'))) {
+        if (defined($project_id) && grep($project_id eq $_, (2230523, 2230525, 2259255, 2342358))
+            || defined($project_name) && grep($project_name =~ /$_/, ('^PCGP','^Pediatric Cancer'))) {
             return 1;
         }
     }
@@ -1711,7 +1750,7 @@ sub _is_rna {
     my ($self, $instrument_data) = @_;
 
     my $sample = $instrument_data->sample;
-    if(grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
+    if(defined($sample->sample_type) && grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
         return 1;
     }
     return 0;
@@ -1721,7 +1760,7 @@ sub _is_rna_instrument_data {
     my $self = shift;
     my $instrument_data = shift;
     my $sample = $instrument_data->sample;
-    if(grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
+    if(defined($sample->sample_type) && grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
         return 1;
     }
     return 0;

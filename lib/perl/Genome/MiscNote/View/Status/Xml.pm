@@ -13,6 +13,7 @@ class Genome::MiscNote::View::Status::Xml {
             value => [
                 'editor_id',
                 'entry_date',
+                'entry_date_sort',
                 'header_text',
                 'body_text',
                 {

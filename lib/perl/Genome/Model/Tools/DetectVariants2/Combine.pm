@@ -248,6 +248,7 @@ sub params_for_vcf_result {
     my $prev_vcf_result_b = $prev_result_b->get_vcf_result;
 
     my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
+    my $joinx_version = Genome::Model::Tools::Joinx->get_default_version;
 
     unless($prev_vcf_result_a->vcf_version eq $vcf_version){
         die $self->error_message("Couldn't locate a vcf_result with the same vcf_version for result_id: ".$self->input_a_id);
@@ -271,6 +272,7 @@ sub params_for_vcf_result {
         incoming_vcf_result_b => $prev_vcf_result_b,
         vcf_version => $vcf_version,
         variant_type => $self->_variant_type,
+        joinx_version => $joinx_version,
     );
 
     return \%params;
