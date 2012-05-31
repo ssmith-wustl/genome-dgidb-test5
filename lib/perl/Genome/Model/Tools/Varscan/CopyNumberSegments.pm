@@ -33,13 +33,16 @@ class Genome::Model::Tools::Varscan::CopyNumberSegments {
 		min_points_to_plot 	=> { is => 'Text', doc => "Minimum number of points for a chromosome to plot it", is_optional => 0, default => 100 },
 		undo_sd 	=> { is => 'Text', doc => "Remove change-points of less than this number of standard deviations", is_optional => 0, default => 4 },
 		lsf_command 	=> { is => 'Text', doc => "If set to something like bsub -q long, will run bsub", is_optional => 1 },
+		array_data 	=> { is => 'Text', doc => "If set to 1, expect array data in id, chrom, pos, value format", is_optional => 1 },
+		plot_y_min 	=> { is => 'Text', doc => "The minimum value on y-axis in CN plots", is_optional => 0, default => -5 },		
+		plot_y_max 	=> { is => 'Text', doc => "The minimum value on y-axis in CN plots", is_optional => 0, default => 5 },		
 	],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Generate plots of exome copy number from Varscan copyCaller calls"                 
+    "Generate plots of exome copy number from Varscan copyCaller or SNP array calls"                 
 }
 
 sub help_synopsis {
@@ -100,8 +103,23 @@ sub execute {                               # replace with real execution logic.
 		## Parse newer output ##
 		($chrom, $chr_start, $chr_stop, my $num_positions, $normal, $tumor, $log_value) = split(/\t/, $line) if($numContents > 6);
 		
-		if($lineCounter > 1 || $chrom ne "chrom")
+		
+		if($lineCounter <= 2 && $line =~ 'REF')
 		{
+			# Skip SNP array headers #
+		}
+		elsif($lineCounter > 1 || $chrom ne "chrom")
+		{
+			if($self->array_data)
+			{
+				(my $id, $chrom, $chr_start, $log_value) = split(/\t/, $line);
+				$chr_stop = $chr_start + 1;
+				$num_positions = 1;
+				$normal = $min_depth + 1;
+				$tumor = $min_depth + 1;
+			}
+
+
 			## Process the previous chromosome ##
 			if($current_chrom && $chrom ne $current_chrom)
 			{
@@ -129,10 +147,14 @@ sub execute {                               # replace with real execution logic.
 				{
 					my $midpoint = sprintf("%d", ($chr_start + $chr_stop) / 2);
 
-					if($midpoint > $chr_start && $midpoint < $chr_stop)
+					if($midpoint >= $chr_start && $midpoint <= $chr_stop)
 					{
 						$current_chrom_results .= join("\t", $chrom, $chr_stop, $num_positions, $normal, $tumor, $log_value);
-					}					
+					}
+					else
+					{
+						warn "no Midpoint $midpoint $chr_start $chr_stop\n";
+					}
 				}
 				
 				## Otherwise, report both start and stop ##
@@ -326,11 +348,12 @@ p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)
 #plot(segment.smoothed.CNA.object, type="w", cex=0.5, cex.axis=1.5, cex.lab=1.5, ylim=c(-4,4))
 #write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_value")
 #};
-
+		my $ymin = $self->plot_y_min;
+		my $ymax = $self->plot_y_max;
 		print SCRIPT qq{
 detach(package:DNAcopy)
 par(mar=c(4,4,2,2))
-plot(segment.smoothed.CNA.object\$data\$maploc, segment.smoothed.CNA.object\$data\$Chromosome.$chrom, pch=19, cex=0.25, cex.axis=1.25, cex.lab=1.5, col="cornflowerblue", ylim=c(-5,5), main="Chromosome $chrom", xlab="Position", ylab="Copy Number Change (log2)")
+plot(segment.smoothed.CNA.object\$data\$maploc, segment.smoothed.CNA.object\$data\$Chromosome.$chrom, pch=19, cex=0.25, cex.axis=1.25, cex.lab=1.5, col="cornflowerblue", ylim=c($ymin,$ymax), main="Chromosome $chrom", xlab="Position", ylab="Copy Number Change (log2)")
 segments(segment.smoothed.CNA.object\$output\$loc.start, segment.smoothed.CNA.object\$output\$seg.mean, segment.smoothed.CNA.object\$output\$loc.end, segment.smoothed.CNA.object\$output\$seg.mean, col="red", lwd=2)
 write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_value")
 };
