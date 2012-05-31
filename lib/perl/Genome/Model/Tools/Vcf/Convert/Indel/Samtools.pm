@@ -216,5 +216,12 @@ sub get_record {
     return $lines;
 }
 
+sub get_format_meta {
+    my $self   = shift;
+    my $MQ_tag = {MetaType => "FORMAT", ID => "MQ",  Number => 1, Type => "Integer", Description => "Average Mapping Quality"};
+
+    return ($self->common_format_meta, $MQ_tag);
+}
+
 1;
 

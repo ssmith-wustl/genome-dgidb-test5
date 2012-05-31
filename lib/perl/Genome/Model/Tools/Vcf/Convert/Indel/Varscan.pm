@@ -88,7 +88,7 @@ sub get_format_meta {
     my $self = shift;
 
     # Get all of the base FORMAT lines
-    my @tags = ($self->SUPER::get_format_meta, $self->SUPER::extra_format_meta); 
+    my @tags = ($self->common_format_meta, $self->extra_format_meta); 
 
     my $fet = {MetaType => "FORMAT", ID => "FET", Number => 1, Type => "String", Description => "P-value from Fisher's Exact Test"};
 
