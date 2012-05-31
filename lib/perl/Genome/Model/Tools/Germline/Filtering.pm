@@ -192,7 +192,7 @@ sub execute {
             $sets = join(",",$sets,$annotation_set);
         }
 
-        # use lift-over-multiple-columns tool
+        # use lift-over-multiple-columns tool #FIXME MOVE TO TOP NOT FINISHED
         my $lift_cmd = Genome::Model::Tools::LiftOverMultipleColumns->create(
             source_file => $trunc_file,
            destination_file => $build37_trunc_file,
