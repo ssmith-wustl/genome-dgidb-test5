@@ -16,6 +16,9 @@ use Carp;
 UR::Object::Type->define(
     class_name => __PACKAGE__,
     has => [
+        reference_sequence_id => {
+            is => "Text",
+        },
         codon_translator => {
             is => 'Bio::Tools::CodonTable',
             is_constant => 1,
@@ -324,6 +327,10 @@ sub transcripts {
             data_directory => $self->data_directory,
             chrom_name => $variant{chromosome_name},
         );
+        Genome::ExternalGeneId->get(
+            data_directory => $self->data_directory,
+            reference_build_id => $self->reference_sequence_id,
+        );
     }
 
     my $variant_start = $variant{'start'};
@@ -517,12 +524,52 @@ sub _transcript_substruct_annotation {
     my $conservation = $self->_ucsc_conservation_score(\%variant, $substruct);
 
     my $gene_name = $substruct->transcript_gene_name;
+    my $dumper_string = $substruct->id;
     unless ($gene_name) {
-        $self->warning_message("Gene name missing for substruct: ",Data::Dumper::Dumper($substruct));
+        $self->warning_message("Gene name missing for substruct: $dumper_string");
         my $gene = Genome::Gene->get(data_directory => $substruct->data_directory,
                                      id => $substruct->transcript_gene_id,
-                                     reference_build_id => $self->build->reference_sequence_id);
+                                     reference_build_id => $self->reference_sequence_id);
         $gene_name = $gene->name;
+    }
+    #my $gene = Genome::Gene->get(data_directory => $substruct->data_directory,
+    #                             id => $substruct->transcript_gene_id,
+    #                             reference_build_id => $self->reference_sequence_id);
+    my @e1 = Genome::ExternalGeneId->get(data_directory => $substruct->data_directory,
+                                         gene_id => $substruct->transcript_gene_id,
+                                         reference_build_id => $self->reference_sequence_id,
+                                         id_type => "ensembl_default_external_name");
+    my $default_gene_name;
+    if ($e1[0]) {
+        $default_gene_name = $e1[0]->id_value;
+    }
+    unless ($default_gene_name) {
+        $self->warning_message("Ensembl gene name missing for substruct: $dumper_string");
+        $default_gene_name = "Unknown";
+    }
+    my @e2 = Genome::ExternalGeneId->get(data_directory => $substruct->data_directory,
+                                         gene_id => $substruct->transcript_gene_id,
+                                         reference_build_id => $self->reference_sequence_id,
+                                         id_type => "ensembl");
+    my $ensembl_gene_id;
+    if ($e2[0]) {
+       $ensembl_gene_id = $e2[0]->id_value;
+    }
+    unless ($ensembl_gene_id) {
+        $self->warning_message("Ensembl stable gene id missing for substruct: $dumper_string");
+        $ensembl_gene_id = "Unknown";
+    }
+    my @e3 = Genome::ExternalGeneId->get(data_directory => $substruct->data_directory,
+                                         gene_id => $substruct->transcript_gene_id,
+                                         reference_build_id => $self->reference_sequence_id,
+                                         id_type => "ensembl_default_external_name_db");
+    my $gene_name_source;
+    if ($e3[0]) {
+        $gene_name_source = $e3[0]->id_value;
+    }
+    unless ($gene_name_source) {
+        $self->warning_message("Ensembl gene name source missing for substruct: $dumper_string");
+        $gene_name_source = "Unknown";
     }
 
     return (
@@ -537,6 +584,9 @@ sub _transcript_substruct_annotation {
         gene_name  => $gene_name,
         amino_acid_length => $substruct->transcript_amino_acid_length,
         ucsc_cons => $conservation,
+        default_gene_name => $default_gene_name,
+        gene_name_source => $gene_name_source,
+        ensembl_gene_id => $ensembl_gene_id,
     );
 }
 
