@@ -6,9 +6,6 @@ use Genome;
 
 class Genome::File::Base {
     is => 'UR::Value',
-    has => [
-        id => { is => 'Text' },
-    ],
 };
 
 sub path {
