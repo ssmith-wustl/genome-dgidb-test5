@@ -10,72 +10,63 @@ use List::Util qw(sum);
 class Genome::Model::Tools::Validation::SvCalls {
     is => 'Command',
     has_input => [
-        output_filename_prefix => {
-            is => 'String',
-            doc => 'path and prefix to specify output files (which will include *.csv, *.fasta, etc.)',
-        },   
-        ],
+    output_filename_prefix => {
+        is => 'String',
+        doc => 'path and prefix to specify output files (which will include *.csv, *.fasta, etc.)',
+    },
+    tumor_val_bam => {
+        is => 'String',
+        doc => 'path to tumor validation .bam file',
+    },
+    normal_val_bam => {
+        is => 'String',
+        doc => 'path to normal validation .bam file',
+    },
+    patient_id => {
+        is => 'String',
+        doc => 'string to describe patient, such as LUC5',
+    },
+    ],
     has_optional_input => [
-        somatic_validation_model_id => {
-            is => 'String',
-            doc => 'model id for a somatic-validation model. If specified, most of the validation params will be pulled from the model (bam-paths, build)',
-        },
-        somatic_variation_model_id => {
-            is => 'String',
-            doc => 'model id for a somatic-validation model. If specified, most of the wgs params will be pulled from the model (bam-paths, breakdancer and squaredancer files)',
-
-        },
-        patient_id => {
-            is => 'String',
-            doc => 'string to describe patient, such as LUC5',
-        },
-        tumor_val_bam => {
-            is => 'String',
-            doc => 'path to tumor validation .bam file',
-        },
-        normal_val_bam => {
-            is => 'String',
-            doc => 'path to normal validation .bam file',
-        },
-        tumor_wgs_bam => {
-            is => 'String',
-            doc => 'path to tumor WGS .bam file',
-        },
-        normal_wgs_bam => {
-            is => 'String',
-            doc => 'path to normal WGS .bam file',
-        },
-        normal_wgs_reads_cutoff => {
-            is => 'Number',
-            doc => 'Somatic sites are allowed to have this many reads in the normal wgs BAM',
-            default => '0',
-        },
-        assembled_call_files => {
-            is => 'String',
-            doc => 'Comma-delimited list of assembled BreakDancer and/or SquareDancer callset filenames to assemble',
-        },
-        squaredancer_files => {
-            is => 'String',
-            doc => 'Comma-delimited list of SquareDancer files to assemble',
-        },
-        build => {
-            is => 'Integer',
-            doc => 'Human build number; either \'36\' (for NCBI-human-build36) or \'37\' (for GRCh37-lite-build37)',
-            default => '36',
-        },
-        tumor_purity_file => { 
-            is => 'Text',
-            #doc => "File with two columns; patientId and fraction of tumor cells in tumor sample (1 is pure tumor).",
-            doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and tumor purity expressed as fraction of tumor cells in tumor sample (1 is pure tumor).",
-            is_optional => 1 
-        },
-        tumor_in_normal_file => { 
-            is => 'Text',
-            #doc => "File with two columns; patientId and fraction of normal contamination in tumor (0 is no contamination)."
-            doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and amount of tumor contamination in normal (0 is no contamination)."
-        },
-        ],
-        doc => 'Validate SV predictions.',
+    tumor_wgs_bam => {
+        is => 'String',
+        doc => 'path to tumor WGS .bam file',
+    },
+    normal_wgs_bam => {
+        is => 'String',
+        doc => 'path to normal WGS .bam file',
+    },
+    normal_wgs_reads_cutoff => {
+        is => 'Number',
+        doc => 'Somatic sites are allowed to have this many reads in the normal wgs BAM',
+        default => '0',
+    },
+    assembled_call_files => {
+        is => 'String',
+        doc => 'Comma-delimited list of assembled BreakDancer and/or SquareDancer callset filenames to assemble',
+    },
+    squaredancer_files => {
+        is => 'String',
+        doc => 'Comma-delimited list of SquareDancer files to assemble',
+    },
+    build => {
+        is => 'Integer',
+        doc => 'Human build number; either \'36\' (for NCBI-human-build36) or \'37\' (for GRCh37-lite-build37)',
+        default => '36',
+    },
+    tumor_purity_file => { 
+        is => 'Text',
+        #doc => "File with two columns; patientId and fraction of tumor cells in tumor sample (1 is pure tumor).",
+        doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and tumor purity expressed as fraction of tumor cells in tumor sample (1 is pure tumor).",
+        is_optional => 1 
+    },
+    tumor_in_normal_file => { 
+        is => 'Text',
+        #doc => "File with two columns; patientId and fraction of normal contamination in tumor (0 is no contamination)."
+        doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and amount of tumor contamination in normal (0 is no contamination)."
+    },
+    ],
+    doc => 'Validate SV predictions.',
 };
 
 sub help_detail {
@@ -87,94 +78,30 @@ EOS
 sub execute {
     
     my $self = shift;
-    my $tumor_val_bam;
-    my $normal_val_bam; 
-    my $ref_build = $self->build;
-    my $ref_seq;
-    my $patient_id;
 
     #parse input params
-    if(defined($self->somatic_validation_model_id)){        
-        my $model = Genome::Model->get($self->somatic_validation_model_id) or
-            die "Could not find model ($self->somatic_validation_model_id\n";
-        
-        my $mbuild = $model->last_succeeded_build or
-            die "Could not find last succeeded build from model $self->normal_val_model_id.\n";
-        
-        $tumor_val_bam = $mbuild->tumor_bam;
-        $normal_val_bam = $mbuild->normal_bam;
-
-        #get refseq build id from model unless already defined
-        my $ref_seq_build_id = $model->reference_sequence_build->build_id;
-        my $ref_seq_build = Genome::Model::Build->get($ref_seq_build_id);
-        my $ref_seq_fasta = $ref_seq_build->full_consensus_path('fa');
-
-        my $patient_id = $mbuild->tumor_sample->name;
-
-
-    } else { #no som-val model, grab manually specified params
-        unless(defined($self->tumor_val_bam) && defined($self->normal_val_bam)){
-            $self->error_message('must provide either a somatic validation model id or paths to tumor and normal validation bams');
-            return;
-        }        
-        $tumor_val_bam = $self->tumor_val_bam;
-        $normal_val_bam = $self->normal_val_bam;    
-        if ($ref_build eq '36') {
-            $ref_seq = '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa';
-        }
-        elsif ($ref_build eq '37') {
-            $ref_seq = '/gscmnt/ams1102/info/model_data/2869585698/build106942997/all_sequences.fa';
-        } else {
-            $self->error_message('Please input either "36", "37", or the path to the refseq fasta for the --build parameter.');
-            return;
-        }
-        
-        if(defined($self->patient_id)){
-            $patient_id = $self->patient_id;
-        } else {
-            $self->error_message('no patient_id specified');
-            return;
-        }
+    my @assembled_call_files = split(",",$self->assembled_call_files) if $self->assembled_call_files;
+    my @sd_files = split(",",$self->squaredancer_files) if $self->squaredancer_files;
+    my $ref_build = $self->build;
+    my $ref_seq;
+    if ($ref_build eq '36') {
+        $ref_seq = '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa';
     }
-
-    my $tumor_wgs_bam;
-    my $normal_wgs_bam;
-    my @assembled_call_files;
-    my @sd_files;
-    
-    if(defined($self->assembled_call_files)){
-        @assembled_call_files = split(",",$self->assembled_call_files)
+    elsif ($ref_build eq '37') {
+        $ref_seq = '/gscmnt/ams1102/info/model_data/2869585698/build106942997/all_sequences.fa';
     }
-    if(defined($self->squaredancer_files)){
-        @sd_files = split(",",$self->squaredancer_files);
-    }
-
-    if(defined($self->somatic_variation_model_id)){
-        #get the bams
-        my $model = Genome::Model->get($self->somatic_variation_model_id);        
-        my $mbuild = $model->last_succeeded_build;
-        my $tumor_build=$model->tumor_model->last_succeeded_build;
-        my $normal_build=$model->normal_model->last_succeeded_build;
-        $tumor_wgs_bam = $tumor_build->whole_rmdup_bam_file;
-        $normal_wgs_bam = $normal_build->whole_rmdup_bam_file;
-
-        #get svs file - treat as squaredancer calls, since the format is the same
-        my $dir = $mbuild->data_directory;
-        if( -s "$dir/variants/svs.hq"){
-            push(@sd_files,"$dir/variants/svs.hq");
-        }
-    }
-
-    if((@assembled_call_files + @sd_files) == 0){
-        $self->error_message('no bd/sd calls to operate on');
+    else {
+        $self->error_message('Please input either "36" or "37" for the --build parameter.');
         return;
     }
-
-   
     my $file_prefix = $self->output_filename_prefix;
     my $assembly_input = $file_prefix . ".assembly_input";
+    my $patient_id = $self->patient_id;
+    my $tumor_val_bam = $self->tumor_val_bam;
+    my $normal_val_bam = $self->normal_val_bam;
+    my $tumor_wgs_bam = $self->tumor_wgs_bam;
+    my $normal_wgs_bam = $self->normal_wgs_bam;
     my $normal_wgs_reads_cutoff = $self->normal_wgs_reads_cutoff;
-
 
     #concatenate calls for assembly input
     #my $ass_in_fh = Genome::Sys->open_file_for_writing($assembly_input);
