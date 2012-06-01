@@ -4,26 +4,47 @@ use strict;
 use warnings;
 use Genome;
 
+my $DEFAULT_VERSION = '2.6';
+my $METHRATIO_COMMAND = 'methratio.py';
+
 class Genome::Model::Tools::Bsmap::MethRatio {
     is => 'Command',
     has => [
         bam_file => {
             is => 'Text',
             doc => 'The bam file to do the counting on (must be a product of bsmap alignment',
+            is_input => 1,
         },
         output_file => {
             is => 'Text',
             doc => 'Where to output the methyl counts',
+            is_output => 1,
+            is_input => 1,
+        },
+        output_directory => {
+            is => 'Text',
+            doc => 'Where to output the methyl counts',
+            is_output => 1,
+            is_input => 1,
         },
         reference => {
             is => 'Text',
             doc => '36, 37, or a path to the reference fasta',
-        }
+            is_input => 1,
+        },
+        version => {
+            is => 'Version',
+            is_optional => 1,
+            is_input => 1,
+            default_value => $DEFAULT_VERSION,
+            doc => "Version of methratio to use",
+        },
     ],
     has_optional => [
         chromosome => {
             is => 'Text',
             doc => 'process only this chromosome',
+            is_input => 1,
         },
         output_zeros => {
             is => 'Boolean',
@@ -57,7 +78,7 @@ sub execute {
     elsif ($self->reference eq "37") {
         my $reference_build_fasta_object = Genome::Model::Build::ReferenceSequence->get(name => "GRCh37-lite-build37");
         $fasta = $reference_build_fasta_object->data_directory . "/all_sequences.fa";
-    } else {
+    } else { #path to fasta
         if( -s $self->reference){
             $fasta = $self->reference;
         } else {
@@ -77,7 +98,7 @@ sub execute {
     }
     $cmd .= " " . $self->bam_file;
     
-    $self->error_message("Running command: $cmd");
+    $self->status_message("Running command: $cmd");
 
     my $return = Genome::Sys->shellcmd(
         cmd => "$cmd",
@@ -91,3 +112,12 @@ sub execute {
 }
 
 1;
+
+my %METHRATIO_VERSIONS = (
+    '2.6' => '/gscuser/cmiller/usr/src/bsmap-2.6/' . $METHRATIO_COMMAND,
+);
+
+sub available_methratio_versions {
+    my $self = shift;
+    return keys %METHRATIO_VERSIONS;
+}

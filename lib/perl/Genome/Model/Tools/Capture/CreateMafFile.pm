@@ -174,7 +174,8 @@ sub execute {                               # replace with real execution logic.
         }
 
         my ( $var_type, $gene, $trv_type ) = split( /\t/, $annotations{$key} );
-        $annotations{$key} =~ s/$var_type\t$gene\t$trv_type\t//;
+        my $annoline = $annotations{$key};
+        $annoline =~ s/$var_type\t$gene\t$trv_type\t//;
         my $var_class = trv_to_mutation_type( $trv_type );
         my $maf_line = "$gene\t0\t$center\t$genome_build\t$chrom\t$chr_start\t$chr_stop\t+\t";
         $maf_line .=  "$var_class\t$var_type\t$ref\t";
@@ -187,7 +188,7 @@ sub execute {                               # replace with real execution logic.
         $maf_line .=  "\t"; # Val method
         $maf_line .=  "1\t"; # Score
         $maf_line .=  "dbGAP\t";
-        $maf_line .=  "$platform\t" . $annotations{$key} . "\n";
+        $maf_line .=  "$platform\t" . $annoline . "\n";
 
         print OUTFILE "$maf_line";
       }
@@ -234,7 +235,8 @@ sub execute {                               # replace with real execution logic.
       if($annotations{$key})
       {
           my ( $var_type, $gene, $trv_type ) = split( /\t/, $annotations{$key} );
-          $annotations{$key} =~ s/$var_type\t$gene\t$trv_type\t//;
+          my $annoline = $annotations{$key};
+          $annoline =~ s/$var_type\t$gene\t$trv_type\t//;
           my $var_class = trv_to_mutation_type( $trv_type );
 
           my $tumor_allele1 = $ref;
@@ -291,7 +293,7 @@ sub execute {                               # replace with real execution logic.
           $maf_line .=  "\t"; # Val method
           $maf_line .=  "1\t"; # Score
           $maf_line .=  "dbGAP\t";
-          $maf_line .=  "$platform\t" . $annotations{$key} . "\n";
+          $maf_line .=  "$platform\t" . $annoline . "\n";
           print OUTFILE "$maf_line";
       }
       else
@@ -326,7 +328,7 @@ sub load_annotations
         my $line = $_;
         next if( $line =~ m/chromosome_name/ );
         $lineCounter++;
-
+             
         my @lineContents = split( /\t/, $line );
         my $chrom = $lineContents[0];
         my $chr_start = $lineContents[1];
@@ -342,6 +344,7 @@ sub load_annotations
         my $trv_type = $lineContents[13];
         my $key = "$chrom\t$chr_start\t$chr_stop\t$ref\t$var";
         $annotations{$key} = "$var_type\t$gene_name\t$trv_type\t$line";
+
     }
 
     close( $input );
@@ -355,7 +358,6 @@ sub load_annotations
 sub trv_to_mutation_type
 {
     my $trv_type = shift;
-
     return( "Missense_Mutation" ) if( $trv_type eq "missense" );
     return( "Nonsense_Mutation" ) if( $trv_type eq "nonsense" );
     return( "Nonstop_Mutation" ) if( $trv_type eq "nonstop" );
