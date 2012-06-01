@@ -260,6 +260,11 @@ sub _load_genotyopes {
     }
     $self->status_message('Open genotype file...OK');
 
+    my $snp_id_mapping = eval{ 
+        Genome::InstrumentData::Microarray->get_snpid_hash_for_variant_list($instrument_data, $self->variation_list_build);
+    };
+    $self->status_message(( $snp_id_mapping ? 'Got' : 'No' ).' snp id mapping...OK');
+
     $self->status_message('Load genotypes...');
     my $header_line;
     do { $header_line = $genotype_fh->getline; } until not $header_line or $header_line =~ /,/;
@@ -279,7 +284,11 @@ sub _load_genotyopes {
         chomp $line;
         my %genotype;
         @genotype{@headers} = split(',', $line);
-        $genotype{id} = $genotype{snp_name};
+        # The id is from the snp mapping or the genotype's snp_name
+        $genotype{id} = ( $snp_id_mapping and $snp_id_mapping->{ $genotype{snp_name} } )
+        ? $snp_id_mapping->{ $genotype{snp_name} }
+        : $genotype{snp_name};
+        # Filter...
         for my $filter ( @$filters ) {
             next GENOTYPE if not $filter->filter(\%genotype);
             #print $filter->class." => $line\n" and next GENOTYPE if not $filter->filter(\%genotype);
