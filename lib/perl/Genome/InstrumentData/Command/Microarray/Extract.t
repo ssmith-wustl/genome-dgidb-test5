@@ -14,15 +14,14 @@ use above 'Genome';
 use Data::Dumper;
 require File::Temp;
 require File::Compare;
-require Test::MockObject;
 use Test::More;
 
 use_ok('Genome::InstrumentData::Command::Microarray::Extract') or die;
 
-
 my $testdir = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Command-Microarray';
+my $testdir_version = $testdir.'/v2';
 my $dbsnp_file = $testdir.'/dbsnp.132';
-my $expected_output = $testdir.'/expected.output';
+my $expected_output = $testdir_version.'/expected.output';
 my $fl = Genome::Model::Tools::DetectVariants2::Result::Manual->__define__(
     description => '__TEST__DBSNP132__',
     username => 'apipe-tester',
@@ -53,11 +52,23 @@ my $instrument_data = Genome::InstrumentData::Imported->__define__(
     sequencing_platform => 'infinium',
 );
 ok(
-    $instrument_data->add_attribute(attribute_label => 'genotype_file', attribute_value => $testdir.'/snpreport/-7777'),
+    $instrument_data->add_attribute(attribute_label => 'genotype_file', attribute_value => $testdir_version.'/snpreport/-7777'),
     'add attr to inst data for genotype file',
 );
 ok($instrument_data, 'create instrument data');
+$instrument_data->add_attribute(attribute_label => 'chip_name', attribute_value => 'test');
+is($instrument_data->attributes(attribute_label => 'chip_name')->attribute_value, 'test', 'add attribute for chip name');
+$instrument_data->add_attribute(attribute_label => 'version', attribute_value => '1');
+is($instrument_data->attributes(attribute_label => 'version')->attribute_value, '1', 'add attribute for version');
 $sample->default_genotype_data_id($instrument_data->id);
+
+my $alloc_for_snpid_mapping = Genome::Disk::Allocation->__define__(
+    disk_group_name => 'info_alignments',
+    group_subdirectory => '',
+    mount_path => $testdir_version,
+    allocation_path => 'microarray_data/infinium-test-1',
+);
+ok($alloc_for_snpid_mapping, 'define snpid mapping allocation');
 
 no warnings;
 *Genome::FeatureList::file_path = sub{ return $dbsnp_file };
@@ -78,6 +89,7 @@ ok($cmd, 'create');
 ok($cmd->execute, 'execute');
 is(File::Compare::compare($output, $expected_output), 0, 'output file matches');
 
+#print "gvimdiff $output $expected_output\n"; <STDIN>;
 done_testing();
 exit;
 
