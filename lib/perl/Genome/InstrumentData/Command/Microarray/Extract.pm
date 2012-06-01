@@ -260,9 +260,9 @@ sub _load_genotyopes {
     }
     $self->status_message('Open genotype file...OK');
 
-    my $snp_id_mapping = eval{ 
-        Genome::InstrumentData::Microarray->get_snpid_hash_for_variant_list($instrument_data, $self->variation_list_build);
-    };
+    my $snp_id_mapping = Genome::InstrumentData::Microarray->get_snpid_hash_for_variant_list(
+        $instrument_data, $self->variation_list_build
+    );
     $self->status_message(( $snp_id_mapping ? 'Got' : 'No' ).' snp id mapping...OK');
 
     $self->status_message('Load genotypes...');
