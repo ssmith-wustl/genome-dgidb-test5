@@ -15,9 +15,9 @@ sub get_snpid_hash_for_variant_list {
 
     my $platform = lc($instrument_data->sequencing_platform);
     my $chip_attribute = $instrument_data->attributes(attribute_label => 'chip_name');
-    my $chip = ( $chip_attribute ? $chip_attribute->attribute_value : '' );
+    my $chip = ( $chip_attribute ? lc($chip_attribute->attribute_value) : '' );
     my $version_attribute = $instrument_data->attributes(attribute_label => 'version');
-    my $version = ( $chip_attribute ? $chip_attribute->attribute_value : '' );
+    my $version = ( $chip_attribute ? lc($chip_attribute->attribute_value) : '' );
 
     my $allocation = Genome::Disk::Allocation->get(allocation_path => "microarray_data/$platform-$chip-$version");
     return if not $allocation;
