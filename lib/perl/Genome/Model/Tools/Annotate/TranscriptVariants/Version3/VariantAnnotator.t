@@ -60,8 +60,10 @@ sub check_prioritization {
             reference_transcripts => "NCBI-human.ensembl/".$ensembl_version,
             use_version => $annotator_version,
             variant_file => $variants,
+            benchmark => 1,
         );
         ok (defined $annotator, "successfully created variant annotator command");
+        $annotator->dump_status_messages(1);
         ok ($annotator->execute, "successfully ran annotator command");
 
         compare_annotations($annotations->{$filter}, $temp);
