@@ -22,7 +22,7 @@ class Genome::InstrumentData::IntermediateAlignmentResult {
                                     is => 'Genome::Model::Build::ReferenceSequence::AlignerIndex',
                                     id_by => 'aligner_index_id',
                                 },
-        reference_name          => { via => 'reference_build', to => 'name', is_mutable => 0, is_optional => 1 },
+        reference_name          => { via => 'aligner_index', to => 'reference_name', is_mutable => 0, is_optional => 1 },
 
         aligner                 => { 
                                     calculate_from => [qw/aligner_name aligner_version aligner_params/], 

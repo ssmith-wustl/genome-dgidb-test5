@@ -121,6 +121,7 @@ sub execute {
 
     my $model_id = $model->genome_model_id;
     my $subject_name = $model->subject_name;
+    my $genotype_model_id = $model->genotype_microarray_model_id;
 
     ## TCGA FIX ##
     if($self->tcga_fix)

@@ -27,7 +27,8 @@ my $refbuild_id = 101947881;
 my $input_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-LibrarySupport/";
 
 # Updated to .v2 for correcting an error with newlines
-my $expected_dir = $input_directory . "/expected.v2/";
+# Updated to .v3 for an insertion bed bug fix
+my $expected_dir = $input_directory . "/expected.v3/";
 my $tumor_bam_file  = $input_directory. '/tumor.tiny.bam';
 my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-LibrarySupport-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $test_output_dir = $test_output_base . '/filter';

@@ -50,7 +50,8 @@ my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 # Updated to .v3 for correcting the output of insertions in the bed file
 # Updated to .v4 for correcting the sort order of snvs.hq and indels.hq
 # Updated to .v5 for adding 1 to the start and stop positions of insertions
-my $expected_dir = $test_dir . '/expected.v5/';
+# Updated to .v6 for TCGA-compliance vcf header
+my $expected_dir = $test_dir . '/expected.v6/';
 ok(-d $expected_dir, "expected results directory exists");
 
 my @versions = qw(r613 r963);
