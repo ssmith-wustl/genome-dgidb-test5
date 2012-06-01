@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+# FIXME: become aware of compression types and watch out for input filenames
+# that may collide with standard filenames
 class Genome::Model::Tools::DetectVariants2::Result::Manual {
     is => ['Genome::Model::Tools::DetectVariants2::Result::Base'],
     has_input => [
@@ -179,9 +181,9 @@ sub generate_standard_files {
         vcf => 'Genome::Model::Tools::Vcf::Convert::' . ucfirst($self->variant_type) . '::' . ucfirst($self->format),
     );
 
-    if(lc($self->format) eq 'bed') {
-        Genome::Sys->create_symlink($source, $source . '.bed');
-    } elsif($converters{bed}->isa('Command')) {
+    Genome::Sys->create_symlink($source, $source . '.' . lc($self->format));
+
+    if(lc($self->format) ne 'bed' and $converters{bed}->isa('Command')) {
         Genome::Model::Tools::DetectVariants2::Base->class; #autoload
         die($self->error_message('Conversion to bed failed')) unless Genome::Model::Tools::DetectVariants2::Base::_run_bed_converter($self, $converters{bed}, $source);
     }
