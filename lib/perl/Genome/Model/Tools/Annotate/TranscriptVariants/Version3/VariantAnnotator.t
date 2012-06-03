@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More;
+use Test::More 'skip_all';
 use Storable 'retrieve';
 use above "Genome";
 use Genome::Info::UCSCConservation;
