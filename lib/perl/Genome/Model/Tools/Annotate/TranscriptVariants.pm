@@ -256,7 +256,10 @@ sub transcript_attributes {
     my @attrs = qw( gene_name transcript_name transcript_species transcript_source
                     transcript_version strand transcript_status trv_type c_position
                     amino_acid_change ucsc_cons domain all_domains deletion_substructures
-                    transcript_error );
+                    transcript_error);
+    if ($self->use_version >= 3) {
+        push @attrs, qw( default_gene_name gene_name_source ensembl_gene_id);
+    }
     if ($self->extra_details) {
         push @attrs, qw( flank_annotation_distance_to_transcript
                          intron_annotation_substructure_ordinal intron_annotation_substructure_size
@@ -505,12 +508,22 @@ sub execute {
     eval {
         if ($self->use_version == 0) {
             $annotator = $self->_create_old_annotator($annotator_version_subclass);
-        } else {
+        } 
+        elsif ($self->use_version < 3) {
             my @directories = $self->build->determine_merged_data_directory($self->cache_annotation_data_directory);
             $annotator = $annotator_version_subclass->create(
                 data_directory => \@directories,
                 check_variants => $self->check_variants,
                 get_frame_shift_sequence => $self->get_frame_shift_sequence,
+            );
+        }
+        else {
+            my @directories = $self->build->determine_merged_data_directory($self->cache_annotation_data_directory);
+            $annotator = $annotator_version_subclass->create(
+                data_directory => \@directories,
+                check_variants => $self->check_variants,
+                get_frame_shift_sequence => $self->get_frame_shift_sequence,
+                reference_sequence_id => $self->build->reference_sequence_id,
             );
         }
     };

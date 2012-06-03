@@ -7,7 +7,7 @@ use above "Genome";
 use File::Temp;
 
 #This script is inteded to test the --get_frame_shift_sequence flag
-my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Transcript-VariantAnnotator/get_frame_shift_sequence';
+my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Transcript-VariantAnnotator/get_frame_shift_sequence/v3';
 ok (-e $test_dir, "test data directory exists at $test_dir");
 
 my $test_variants_file = $test_dir . "/variants.tsv";
@@ -15,23 +15,24 @@ ok (-s $test_variants_file, "test variants file exists and has size");
 
 my $annotation_file = $test_dir . "/annotation_output.tsv";
 ok (-s $annotation_file, "annotation file exists and has size");
-my @relevant_annotation = `cat $annotation_file | grep "XM_001717859\\|NM_022552\\|NM_002520"`;
+my @relevant_annotation = `cat $annotation_file | grep "ENST00000301067\\|ENST00000342783\\|ENST00000375547\\|ENST00000563486"`;
 ok (scalar @relevant_annotation > 0, "successfully grabbed variants from file");
 
-my $temp = File::Temp->new();
+my $temp = Genome::Sys->create_temp_file_path;
 ok($temp, "temp file successfully created");
-my $temp_filename = $temp->filename;
 
 Genome::Model::Tools::Annotate::TranscriptVariants->execute(
     variant_file => $test_variants_file,
-    reference_transcripts => "NCBI-human.combined-annotation/54_36p_v2",
+    reference_transcripts => "NCBI-human.ensembl/67_37l",
     get_frame_shift_sequence => 1,
-    output_file => $temp_filename, 
+    output_file => $temp, 
     annotation_filter => "none",
-    use_version => 2,
+    use_version => 3,
 );
 
-my @relevant_new_annotation = `cat $temp_filename | grep "XM_001717859\\|NM_022552\\|NM_002520"`;
+`cp $temp /gscuser/aregier/newout`;
+
+my @relevant_new_annotation = `cat $temp | grep "ENST00000301067\\|ENST00000342783\\|ENST00000375547\\|ENST00000563486"`;
 ok (scalar @relevant_new_annotation == scalar @relevant_annotation, "New annotation count matches old annotation count");
 
 for(my $i = 1; $i < scalar @relevant_new_annotation; $i++){ #the first line is headers, so skip it
@@ -44,7 +45,3 @@ for(my $i = 1; $i < scalar @relevant_new_annotation; $i++){ #the first line is h
 
 done_testing();
 exit;
-
-sub variant_headers {
-    return Genome::Model::Tools::Annotate->variant_attributes;
-}

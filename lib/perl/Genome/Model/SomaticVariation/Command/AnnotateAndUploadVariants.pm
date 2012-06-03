@@ -23,6 +23,11 @@ class Genome::Model::SomaticVariation::Command::AnnotateAndUploadVariants{
         lsf_queue => {
             default => 'apipe',
         },
+        annotator_version => {
+            doc => 'Version of the "annotate transcript-variants" tool to run   during the annotation step',
+            default_value => Genome::Model::Tools::Annotate::TranscriptVariants->default_annotator_version,
+            valid_values => [ 0,1,2,3],
+        },
     ],
 };
 
@@ -71,7 +76,7 @@ sub execute{
     }
 
     #annotate variants
-    my $annotator_version = 2; #TODO hardcoded for now, but should be an input on the build, or maybe a processing profile param
+    my $annotator_version = $self->annotator_version;
     unless($annotator_version){
         die $self->error_message("No variant annotator version for build!");
     }
