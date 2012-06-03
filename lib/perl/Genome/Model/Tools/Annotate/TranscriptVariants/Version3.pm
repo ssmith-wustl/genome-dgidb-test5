@@ -324,27 +324,30 @@ sub transcripts {
     if (!defined $self->{_cached_chromosome} or $self->{_cached_chromosome} ne $variant{chromosome_name}) {
         Genome::InterproResult->unload();
         $self->transcript_structure_class_name->unload();
-
-        $self->{_cached_chromosome} = $variant{chromosome_name};
+        
         Genome::InterproResult->get(
             data_directory => $self->data_directory,
             chrom_name => $variant{chromosome_name},
         );
-        Genome::ExternalGeneId->get(
-            data_directory => $self->data_directory,
-            reference_build_id => $self->reference_sequence_id,
-            id_type => "ensembl",
-        );
-        Genome::ExternalGeneId->get(
-            data_directory => $self->data_directory,
-            reference_build_id => $self->reference_sequence_id,
-            id_type => "ensembl_default_external_name",
-        );
-        Genome::ExternalGeneId->get(
-            data_directory => $self->data_directory,
-            reference_build_id => $self->reference_sequence_id,
-            id_type => "ensembl_default_external_name_db",
-        );
+
+        if (!defined $self->{_cached_chromosome}) {
+            Genome::ExternalGeneId->get(
+                data_directory => $self->data_directory,
+                reference_build_id => $self->reference_sequence_id,
+                id_type => "ensembl",
+            );
+            Genome::ExternalGeneId->get(
+                data_directory => $self->data_directory,
+                reference_build_id => $self->reference_sequence_id,
+                id_type => "ensembl_default_external_name",
+            );
+            Genome::ExternalGeneId->get(
+                data_directory => $self->data_directory,
+                reference_build_id => $self->reference_sequence_id,
+                id_type => "ensembl_default_external_name_db",
+            );
+        }
+        $self->{_cached_chromosome} = $variant{chromosome_name};
     }
 
     my $variant_start = $variant{'start'};
