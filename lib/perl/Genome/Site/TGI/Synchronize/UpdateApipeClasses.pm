@@ -99,13 +99,16 @@ sub execute {
 
     # An unlock observer is added at end of execute (not here) because
     # this command periodically commits (which triggers the observer).
-    my $lock = Genome::Sys->lock_resource(
-        resource_lock => '/gsc/var/lock/sychronize-update-apipe-classes',
-        max_try => 1,
-    );
-    if ( not $lock ) {
-        $self->error_message("Could not lock sync cron!");
-        return;
+    my $lock;
+    unless ($ENV{UR_DBI_NO_COMMIT}) {
+        $lock = Genome::Sys->lock_resource(
+            resource_lock => '/gsc/var/lock/sychronize-update-apipe-classes',
+            max_try => 1,
+        );
+        if ( not $lock ) {
+            $self->error_message("Could not lock sync cron!");
+            return;
+        }
     }
 
     # Suppress overly talkative classes
@@ -216,12 +219,14 @@ sub execute {
         $self->status_message("Done syncning $new_type and $old_type");
     }
 
-    UR::Context->current->add_observer(
-        aspect => 'commit',
-        callback => sub{
-            Genome::Sys->unlock_resource(resource_lock => $lock);
-        }
-    );
+    unless ($ENV{UR_DBI_NO_COMMIT}) {
+        UR::Context->current->add_observer(
+            aspect => 'commit',
+            callback => sub{
+                Genome::Sys->unlock_resource(resource_lock => $lock);
+            }
+        );
+    }
 
     $self->_report(\%report);
     return 1;
