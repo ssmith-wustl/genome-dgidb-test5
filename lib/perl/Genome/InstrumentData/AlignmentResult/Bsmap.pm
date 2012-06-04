@@ -282,12 +282,10 @@ sub prepare_reference_sequence_index {
     return 0;
 }
 
-# TODO assume yes?
 sub fillmd_for_sam {
-    return 1;
+    return 0;
 }
 
-# TODO assume yes?
 sub requires_read_group_addition {
     return 1;
 }
@@ -298,7 +296,6 @@ sub accepts_bam_input {
     return $self->force_fragment ? 0 : 1;
 }
 
-# TODO this might be something to turn on...
 sub supports_streaming_to_bam {
     return 0;
 }
