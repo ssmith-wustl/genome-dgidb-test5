@@ -40,6 +40,7 @@
 
   <operationtype typeClass="Workflow::OperationType::Model">
     <inputproperty>build_id</inputproperty>
+    <inputproperty>annotator_version</inputproperty>
     <outputproperty>build_id</outputproperty>
   </operationtype>
 

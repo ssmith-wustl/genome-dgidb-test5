@@ -65,10 +65,7 @@ sub _filter_variants {
     unless ($header_line) {
         die $self->error_message("Could not get the header line with subject names using $header_cmd");
     }
-    #my @previous_alignment_result_ids = $self->previous_result->alignment_results;
-    #my @previous_alignment_results = Genome::InstrumentData::AlignmentResult::Merged->get(\@previous_alignment_result_ids);
-    #my @alignment_results = $self->sort_alignment_results_by_header($header_line, @previous_alignment_results);
-    my @alignment_results = $self->sort_alignment_results_by_header($header_line, $self->alignment_results);
+    @alignment_results = $self->sort_alignment_results_by_header($header_line, @alignment_results);
 
 ###prepare readcounts
     my $ref_fasta=$self->reference_sequence_input;
