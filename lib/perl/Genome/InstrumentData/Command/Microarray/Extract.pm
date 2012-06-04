@@ -57,7 +57,6 @@ class Genome::InstrumentData::Command::Microarray::Extract {
             doc => "Filter genotypes. Give name and parameters, if required. Filters:\n gc_scrore => filter by min gc score (Ex: gc_score:min=0.7)\n invalid_iscan_ids => list of invalid iscan snvs compiled by Nate",
         },
         _filters => { is_transient => 1 },
-        _output_fh => { is_transient => 1 },
     ],
     has => [
         variation_list_build => {
@@ -95,8 +94,11 @@ sub execute {
     my $filters = $self->_create_filters;
     return if not $filters;
 
-    my $output_fh = $self->_open_output;
-    return if not $output_fh;
+    my $output_ok = eval{ Genome::Sys->validate_file_for_writing_overwrite($self->output); };
+    if ( not $output_ok ) {
+        $self->error_message('Failed to validate output ('.$self->output.') for over write!');
+        return;
+    }
 
     my $genotypes = $self->_load_genotyopes;
     return if not $genotypes;
@@ -230,8 +232,7 @@ sub _open_output {
 
     $self->status_message('Open output file...OK');
 
-    $self->_output_fh($output_fh);
-    return 1;
+    return $output_fh;
 }
 
 sub _load_genotyopes {
@@ -265,7 +266,7 @@ sub _load_genotyopes {
     );
     $self->status_message(( $snp_id_mapping ? 'Got' : 'No' ).' snp id mapping...OK');
 
-    $self->status_message('Load genotypes...');
+    $self->status_message('Load and filter genotypes...');
     my $header_line;
     do { $header_line = $genotype_fh->getline; } until not $header_line or $header_line =~ /,/;
     if ( not $header_line ) {
@@ -359,20 +360,25 @@ sub _annotate_genotypes {
         $annotated_genotypes{$variant_id} = $genotype;
     }
 
+    if ( not %annotated_genotypes ) {
+        $self->error_message("None of the ".keys(%$genotypes)." genotypes survived annotation!");
+        return;
+    }
+
     $self->status_message("Annotate ".keys(%annotated_genotypes)." genotypes...OK");
     return \%annotated_genotypes;
 }
 
 sub _output_genotypes {
     my ($self, $genotypes) = @_;
-
     Carp::confess('No genotypes!') if not $genotypes;
-
     $self->status_message('Output genotypes...');
+
+    my $output_fh = $self->_open_output;
+    return if not $output_fh;
 
     my $sep = ( $self->separator eq 'tab' ? "\t" : $self->separator );
     my @fields = $self->fields;
-    my $output_fh = $self->_output_fh;
     $output_fh->print( join($sep, @fields)."\n" ) if $self->headers;
 
     my $cnt = 0;
