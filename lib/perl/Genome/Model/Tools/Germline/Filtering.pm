@@ -194,13 +194,11 @@ sub execute {
 
         # use lift-over-multiple-columns tool #FIXME MOVE TO TOP NOT FINISHED
         my $lift_cmd = Genome::Model::Tools::LiftOverMultipleColumns->create(
-            source_file => $trunc_file,
-           destination_file => $build37_trunc_file,
-          columns_to_lift => $sets,
-         header_id_string => "Chromosome| "#FIXME 
-
-
-
+            source_file      => $trunc_file,
+            destination_file => $build37_trunc_file,
+            columns_to_lift  => $sets,
+            header_id_string => "Chromosome| "#FIXME
+        );
     }
     else { $build37_trunc_file = $trunc_file; }
 
