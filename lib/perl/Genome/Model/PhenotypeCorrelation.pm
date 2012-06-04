@@ -171,6 +171,10 @@ EOS
 sub __profile_errors__ {
     my $self = shift;
     my @errors;
+
+    # this is currently broken --ssmith
+    return;
+
     if ($self->alignment_strategy) {
         my $strategy = Genome::InstrumentData::Composite::Strategy->create(
             strategy => $self->strategy,
