@@ -141,6 +141,14 @@ class Genome::Model {
     doc => 'a versioned data model describing one the sequence and features of a genome'
 };
 
+# this is called whenever a processing profile is created
+# override to do additonal error checking for new profiles
+sub __profile_errors__ {
+    #my $class = shift;
+    #my $pp = shift;
+    return;
+}
+
 # Override in subclasses to have additional stuff appended to the model's default name
 # FIXME This will probably go away when the default_name method is overhauled
 sub _additional_parts_for_default_name { return; }

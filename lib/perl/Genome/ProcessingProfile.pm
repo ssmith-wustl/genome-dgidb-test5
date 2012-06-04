@@ -256,7 +256,10 @@ sub create {
     # Create
     my $self = $class->SUPER::create(%params)
        or return;
-   
+ 
+    # TODO: lean on the __errors__ method instead.
+    # It calls Genome::Model::* __profile_errors__ with the profile object.
+    # Relocate the validate_created_object calls from PP subclasses into their model subclass.
     unless ($self->validate_created_object) {
         $self->error_message("Could not validate processing profile!");
         $self->delete;
@@ -264,6 +267,23 @@ sub create {
     }
 
     return $self;
+}
+
+sub _model_subclass_name {
+    my $self = shift;
+    my $model_subclass_name = $self->class;
+    $model_subclass_name =~ s/Genome::ProcessingProfile/Genome::Model/;
+    return $model_subclass_name;
+}
+
+sub __errors__ {
+    my $self = shift;
+    my @general_errors = $self->SUPER::__errors__(@_);
+   
+    my $model_subclass_name = $self->_model_subclass_name;
+    
+    my @pipeline_specific_errors = $model_subclass_name->__profile_errors__($self, @_);
+    return (@general_errors, @pipeline_specific_errors);
 }
 
 sub _validate_name_and_uniqueness {
