@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Rna::ModelGroupRnaSeqMetrics;
+package Genome::Model::RnaSeq::Command::RnaSeqMetrics;
 
 use strict;
 use warnings;
@@ -6,13 +6,14 @@ use warnings;
 use Genome;
 use Statistics::Descriptive;
 
-class Genome::Model::Tools::Rna::ModelGroupRnaSeqMetrics {
+class Genome::Model::RnaSeq::Command::RnaSeqMetrics {
     is => 'Genome::Command::Base',
     has => [
-        model_group => {
-            is => 'Genome::ModelGroup',
+        models => {
+            is => 'Genome::Model::RnaSeq',
+            is_many => 1,
             shell_args_position => 1,
-            doc => 'Model group of RNAseq models to generate expression matrix.',
+            doc => 'RNAseq models to generate expression matrix.',
         },
         metrics_tsv_file => {
             doc => '',
@@ -30,12 +31,12 @@ class Genome::Model::Tools::Rna::ModelGroupRnaSeqMetrics {
 
 sub help_synopsis {
     return <<"EOS"
-    gmt rna model-group-rna-seq-metrics --model-group 2
+    genome model rna-seq rna-seq-metrics --metrics-tsv-file=FILE MODELS
 EOS
 }
 
 sub help_brief {
-    return "Accumulate RNAseq metrics for model group.";
+    return "Accumulate RNAseq metrics for models.";
 }
 
 sub help_detail {
@@ -46,7 +47,7 @@ EOS
 
 sub execute {
     my $self = shift;
-    my @models = $self->model_group->models;
+    my @models = $self->models;
     my @non_rna_models = grep { !$_->isa('Genome::Model::RnaSeq') } @models;
     if (@non_rna_models) {
         die('Found a non-RNAseq model: '. Data::Dumper::Dumper(@non_rna_models));

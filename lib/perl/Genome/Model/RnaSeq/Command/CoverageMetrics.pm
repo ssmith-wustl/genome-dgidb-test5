@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Rna::ModelGroupCoverageMetrics;
+package Genome::Model::RnaSeq::Command::CoverageMetrics;
 
 use strict;
 use warnings;
@@ -6,11 +6,12 @@ use warnings;
 use Genome;
 use Statistics::Descriptive;
 
-class Genome::Model::Tools::Rna::ModelGroupCoverageMetrics {
+class Genome::Model::RnaSeq::Command::CoverageMetrics {
     is => 'Genome::Command::Base',
     has => [
-        model_group => {
-            is => 'Genome::ModelGroup',
+        models => {
+            is => 'Genome::Model::RnaSeq',
+            is_many => 1,
             shell_args_position => 1,
             doc => 'Model group of RNAseq models to generate expression matrix.',
         },
@@ -24,12 +25,12 @@ class Genome::Model::Tools::Rna::ModelGroupCoverageMetrics {
 
 sub help_synopsis {
     return <<"EOS"
-    gmt rna model-group-coverage-metrics --model-group 2
+    genome model rna coverage-metrics
 EOS
 }
 
 sub help_brief {
-    return "Accumulate RNA-seq coverage metrics for model group.";
+    return "Accumulate RNA-seq coverage metrics for models.";
 }
 
 sub help_detail {
@@ -40,7 +41,7 @@ EOS
 
 sub execute {
     my $self = shift;
-    my @models = $self->model_group->models;
+    my @models = $self->models;
     my @non_rna_models = grep { !$_->isa('Genome::Model::RnaSeq') } @models;
     if (@non_rna_models) {
         die('Found a non-RNAseq model: '. Data::Dumper::Dumper(@non_rna_models));

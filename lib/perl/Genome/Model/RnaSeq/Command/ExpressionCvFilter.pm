@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Rna::ModelGroupFpkmMatrix;
+package Genome::Model::RnaSeq::Command::ExpressionCvFilter;
 
 use strict;
 use warnings;
@@ -6,43 +6,51 @@ use warnings;
 use Genome;
 use Statistics::Descriptive;
 
-class Genome::Model::Tools::Rna::ModelGroupFpkmMatrix {
+class Genome::Model::RnaSeq::Command::ExpressionCvFilter {
     is => 'Genome::Command::Base',
     has => [
-        model_group => {
-            is => 'Genome::ModelGroup',
+        models => {
+            is => 'Genome::Model::RnaSeq',
+            is_many => 1,
             shell_args_position => 1,
-            doc => 'Model group of RNAseq models to generate expression matrix.',
+            doc => 'RNAseq models to generate expression matrix.',
         },
         fpkm_tsv_file => {
             doc => 'The output tsv file of genes passing the CV filter with FPKMvalues per sample.',
         },
+        cv_tsv_file => {
+            doc => 'An output tsv file with per gene FPKM metrics, like mean, standard_deviation, coefficient_of_variation(CV)',
+        },
     ],
     has_optional => [
+        standard_deviations => {
+            doc => 'The number or ratio of standard deviations from the mean to keep.',
+            default_value => '1',
+        },
     ],
 
 };
 
 sub help_synopsis {
     return <<"EOS"
-    gmt rna model-group-fpkm-matrix --model-group 2
+    genome model rna-seq expression-cv-filter
 EOS
 }
 
 sub help_brief {
-    return "Accumulate RNAseq FPKM values into a matrix.";
+    return "Filter RNAseq FPKM values by CV.";
 }
 
 sub help_detail {
     return <<EOS
-Accumulate FPKM values for genes across all samples for an RNAseq model-group.
+Filter FPKM values for genes across all samples by the coefficient of variation (CV) for RNAseq models.
 EOS
 }
 
 
 sub execute {
     my $self = shift;
-    my @models = $self->model_group->models;
+    my @models = $self->models;
     my @non_rna_models = grep { !$_->isa('Genome::Model::RnaSeq') } @models;
     if (@non_rna_models) {
         die('Found a non-RNAseq model: '. Data::Dumper::Dumper(@non_rna_models));
@@ -89,6 +97,11 @@ sub execute {
         separator => "\t",
         headers => \@headers,
     );
+    my $cv_writer = Genome::Utility::IO::SeparatedValueWriter->create(
+        output => $self->cv_tsv_file,
+        separator => "\t",
+        headers => ['gene_id','mean','standard_deviation','coefficient_of_variation'],
+    );
     my $gtf_path = $annotation_build->annotation_file('gtf',$reference_build->id);
     my $gff_reader = Genome::Utility::IO::GffReader->create(
         input => $gtf_path,
@@ -126,6 +139,7 @@ sub execute {
         }
         $self->status_message('There are '. $match .' matching genes in FPKM file: '. $gene_fpkm_tracking);
     }
+    my $cv_stats = Statistics::Descriptive::Sparse->new();
     for my $gene (sort keys %genes) {
         my %data = %{$genes{$gene}};
         # Depending on the mode cufflinks was run, there may not be an entry for all genes in every FPKM file,  stick to reference only mode
@@ -133,15 +147,43 @@ sub execute {
             my @values = map { $data{$_} } @subjects;
             my $stat = Statistics::Descriptive::Sparse->new();
             $stat->add_data(@values);
+            # Coefficient of Variation
+            my $cv = 0;
+            if ($stat->mean) {
+                $cv = $stat->standard_deviation / $stat->mean;
+                $cv_stats->add_data($cv);
+            }
+            my %cv_data = (
+                gene_id => $gene,
+                mean => $stat->mean,
+                standard_deviation => $stat->standard_deviation,
+                coefficient_of_variation => $cv,
+            );
+            $cv_writer->write_one(\%cv_data);
         } else {
             #is there a minimum number of samples(90%) that is required....
         }
     }
+    my $min_cv_filter = $cv_stats->mean - ($cv_stats->standard_deviation * $self->standard_deviations);
+    my $max_cv_filter = $cv_stats->mean + ($cv_stats->standard_deviation * $self->standard_deviations);
+    $self->status_message('The mean coefficient of variation is: '. $cv_stats->mean);
+    $self->status_message('The standard deviation from the mean coefficient of variation is: '. $cv_stats->standard_deviation);
+    $self->status_message('The minimum coefficient of variation is: '. $min_cv_filter);
+    $self->status_message('The maximum coefficient of variation is: '. $max_cv_filter);
     for my $gene (sort keys %genes) {
         my %data = %{$genes{$gene}};
         # Depending on the mode cufflinks was run, there may not be an entry for all genes in every FPKM file,  stick to reference only mode
         if (scalar(keys %data) == (scalar(@headers))) {
-            $tsv_writer->write_one(\%data);
+            my @values = map { $data{$_} } @subjects;
+            my $stat = Statistics::Descriptive::Sparse->new();
+            $stat->add_data(@values);
+            # Coefficient of Variation
+            if ($stat->mean) {
+                my $cv = $stat->standard_deviation / $stat->mean;
+                if ( ($cv >= $min_cv_filter) && ($cv <= $max_cv_filter) ){
+                    $tsv_writer->write_one(\%data);
+                }
+            }
         }
     }
     return 1;
