@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 
-class Genome::Site::TGI::InstrumentData::IlluminaGenotyping {
+class Genome::Site::TGI::InstrumentData::IlluminaGenotyping {# EX: 2883765759
     table_name => <<SQL
     (
         select g.seq_id id, g.status status, g.organism_sample_id sample_id,
@@ -24,6 +24,8 @@ SQL
         sample_id => { is => 'Text', },
         sample_name => { is => 'Text', },
         platform_name => { is_constant => 1, calculate => q| return 'infinium'; |, },
+        chip_name => { is_constant => 1, calculate => q| return 'HumanOmniExpress'; |, },
+        version => { is_constant => 1, calculate => q| return '12v1_A'; |, },
         import_source_name => { is_constant => 1, calculate => q| return 'wugc'; |, },
     ],
     data_source => 'Genome::DataSource::GMSchema',
