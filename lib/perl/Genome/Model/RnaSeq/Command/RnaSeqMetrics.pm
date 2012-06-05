@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Rna::ModelGroupRnaSeqMetrics;
+package Genome::Model::RnaSeq::Command::RnaSeqMetrics;
 
 use strict;
 use warnings;
@@ -6,13 +6,14 @@ use warnings;
 use Genome;
 use Statistics::Descriptive;
 
-class Genome::Model::Tools::Rna::ModelGroupRnaSeqMetrics {
+class Genome::Model::RnaSeq::Command::RnaSeqMetrics {
     is => 'Genome::Command::Base',
     has => [
-        model_group => {
-            is => 'Genome::ModelGroup',
+        models => {
+            is => 'Genome::Model::RnaSeq',
+            is_many => 1,
             shell_args_position => 1,
-            doc => 'Model group of RNAseq models to generate expression matrix.',
+            doc => 'RNAseq models to generate expression matrix.',
         },
         metrics_tsv_file => {
             doc => '',
@@ -30,12 +31,12 @@ class Genome::Model::Tools::Rna::ModelGroupRnaSeqMetrics {
 
 sub help_synopsis {
     return <<"EOS"
-    gmt rna model-group-rna-seq-metrics --model-group 2
+    genome model rna-seq rna-seq-metrics --metrics-tsv-file=FILE MODELS
 EOS
 }
 
 sub help_brief {
-    return "Accumulate RNAseq metrics for model group.";
+    return "Accumulate RNAseq metrics for models.";
 }
 
 sub help_detail {
@@ -46,7 +47,7 @@ EOS
 
 sub execute {
     my $self = shift;
-    my @models = $self->model_group->models;
+    my @models = $self->models;
     my @non_rna_models = grep { !$_->isa('Genome::Model::RnaSeq') } @models;
     if (@non_rna_models) {
         die('Found a non-RNAseq model: '. Data::Dumper::Dumper(@non_rna_models));
@@ -61,11 +62,16 @@ sub execute {
         if ( defined($model_metrics{$model->name}) ) {
             die('Multiple models with name: '. $model->name);
         }
-        my $build = $model->last_succeeded_build;
-        unless ($build) {
-            $build = $model->latest_build;
-            unless ($build) {
-                die('Failed to find build for model: '. $model->id);
+        my @model_builds = reverse($model->sorted_builds);
+        my $build;
+        my $metrics_directory;
+        my $metrics_file;
+        for (my $i = 0; $i < scalar(@model_builds); $i++) {
+            $build = $model_builds[$i];
+            $metrics_directory = $build->data_directory .'/metrics';
+            $metrics_file = $metrics_directory .'/PicardRnaSeqMetrics.txt';
+            if (-s $metrics_file) {
+                last;
             }
         }
         push @builds, $build;
@@ -87,12 +93,10 @@ sub execute {
         } else {
             $annotation_build = $model_annotation_build;
         }
-        my $metrics_directory = $build->data_directory .'/metrics';
         unless (-d $metrics_directory) {
             $self->error_message('Missing metrics directory: '. $metrics_directory);
             die($self->error_message);
         }
-        my $metrics_file = $metrics_directory .'/PicardRnaSeqMetrics.txt';
         unless (-e $metrics_file) {
             $self->error_message('Missing Picard RNAseq metrics file: '. $metrics_file);
             die($self->error_message);
