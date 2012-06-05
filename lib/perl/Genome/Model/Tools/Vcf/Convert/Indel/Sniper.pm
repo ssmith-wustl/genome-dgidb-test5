@@ -42,12 +42,17 @@ sub parse_line {
     $rv = $self->_convert_indel($chr, $pos, $call_2, $len_2, $t_gt, $n_gt, $t_dp, $n_dp, $t_read_2, $n_read_2, $t_ss, $n_ss);
     return $rv if $rv;
 
-    die $self->error_message("$line can not be parsed to vcf format");
+    $self->warning_message("$line can not be parsed to vcf format");
+    return;
 }
 
 
 sub _convert_indel {
     my ($self, $chr, $pos, $call, $length, $t_gt, $n_gt, $t_dp, $n_dp, $t_read_ct, $n_read_ct, $t_ss, $n_ss) = @_;
+    unless($call) {
+        $self->warning_message("No call made");
+        return;
+    }
     return if $call eq '*'; #Indicates only one indel call...and this isn't it!
 
     my $ref_seq      = $self->reference_sequence_input;
