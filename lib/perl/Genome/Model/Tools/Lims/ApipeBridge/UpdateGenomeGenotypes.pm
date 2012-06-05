@@ -59,38 +59,46 @@ sub _update_genotype {
         return;
     }
 
+    if ( not $platform->chip_type ) { # some platforms do not have this information
+        $self->status_message( join(' ', $instrument_data->id, 'chip-type-na', 'na', 'version-na', 'na' ) );
+        return 1;
+    }
+
     my $chip_attribute = $instrument_data->attributes(attribute_label => 'chip_name');
+    my $chip_status = 'ok';
     if ( not $chip_attribute ) {
-        $self->status_message( join(' ', $instrument_data->id, 'chip-name-create', $platform->chip_type) );
+        $chip_status = 'create';
         $chip_attribute = $instrument_data->add_attribute(attribute_label => 'chip_name', attribute_value => $platform->chip_type);
     }
     elsif ( $chip_attribute->attribute_value ne $platform->chip_type ) {
-        $self->status_message( join(' ', $instrument_data->id, 'chip-name-update', $platform->chip_type) );
+        $chip_status = 'update';
         $chip_attribute->delete;
         $chip_attribute = $instrument_data->add_attribute(attribute_label => 'chip_name', attribute_value => $platform->chip_type);
     }
-    else {
-        $self->status_message( join(' ', $instrument_data->id, 'chip-name-ok', $platform->chip_type) );
+    if ( not $chip_attribute or $chip_attribute->attribute_value ne $platform->chip_type ) {
+        $self->error_message('Failed to add attribute for chip_name! '.$genotype_id);
+        return;
     }
-    die 'Failed to add attribute for chip_name!' if not $chip_attribute or $chip_attribute->attribute_value ne $platform->chip_type;
 
     my $version_attribute = $instrument_data->attributes(attribute_label => 'version');
+    my $verion_status = 'ok';
     if ( not $version_attribute ) {
-        $self->status_message( join(' ', $instrument_data->id, 'version-create', $platform->version) );
+        $verion_status = 'create';
         $version_attribute = $instrument_data->add_attribute(attribute_label => 'version', attribute_value => $platform->version);
     }
     elsif ( $version_attribute->attribute_value ne $platform->version ) {
-        $self->status_message( join(' ', $instrument_data->id, 'version-update', $platform->version) );
+        $verion_status = 'update';
         $version_attribute->delete;
         $version_attribute = $instrument_data->add_attribute(attribute_label => 'version', attribute_value => $platform->version);
-    }
-    else {
-        $self->status_message( join(' ', $instrument_data->id, 'version-ok', $platform->version) );
     }
     if ( not $version_attribute or $version_attribute->attribute_value ne $platform->version ) {
         $self->error_message('Failed to add attribute for version! '.$genotype_id);
         return;
     }
+
+    $self->status_message( 
+        join(' ', $instrument_data->id, 'chip-'.$chip_status, $chip_attribute->attribute_value, 'version-'.$verion_status, $version_attribute->attribute_value)
+    );
 
     return 1;
 }
