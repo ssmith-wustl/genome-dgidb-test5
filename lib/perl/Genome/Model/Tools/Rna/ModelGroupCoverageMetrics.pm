@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Rna::ModelGroupRnaSeqMetrics;
+package Genome::Model::Tools::Rna::ModelGroupCoverageMetrics;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Statistics::Descriptive;
 
-class Genome::Model::Tools::Rna::ModelGroupRnaSeqMetrics {
+class Genome::Model::Tools::Rna::ModelGroupCoverageMetrics {
     is => 'Genome::Command::Base',
     has => [
         model_group => {
@@ -14,15 +14,9 @@ class Genome::Model::Tools::Rna::ModelGroupRnaSeqMetrics {
             shell_args_position => 1,
             doc => 'Model group of RNAseq models to generate expression matrix.',
         },
-        metrics_tsv_file => {
+        coverage_tsv_file => {
             doc => '',
             default_value => 'RnaSeqMetrics.tsv',
-        },
-    ],
-    has_optional => [
-        normalized_transcript_coverage_file => {
-            doc => '',
-            default_value => 'NormalizedTranscriptCoverage.tsv',
         },
     ],
 
@@ -30,12 +24,12 @@ class Genome::Model::Tools::Rna::ModelGroupRnaSeqMetrics {
 
 sub help_synopsis {
     return <<"EOS"
-    gmt rna model-group-rna-seq-metrics --model-group 2
+    gmt rna model-group-coverage-metrics --model-group 2
 EOS
 }
 
 sub help_brief {
-    return "Accumulate RNAseq metrics for model group.";
+    return "Accumulate RNA-seq coverage metrics for model group.";
 }
 
 sub help_detail {
@@ -54,22 +48,22 @@ sub execute {
     my @builds;
     my $annotation_build;
     my $reference_build;
-    my %model_metrics;
-    my @metric_headers = qw/LABEL TOTAL_READS TOTAL_READS_MAPPED TOTAL_READS_UNMAPPED PCT_READS_MAPPED/;
-    my @model_metric_keys;
+    my %model_coverage;
+    my @coverage_headers = qw/LABEL TOTAL_READS TOTAL_READS_MAPPED TOTAL_READS_UNMAPPED PCT_READS_MAPPED/;
+    my @model_coverage_keys;
     for my $model (@models) {
-        if ( defined($model_metrics{$model->name}) ) {
+        if ( defined($model_coverage{$model->name}) ) {
             die('Multiple models with name: '. $model->name);
         }
         my @model_builds = reverse($model->sorted_builds);
         my $build;
-        my $metrics_directory;
-        my $metrics_file;
+        my $coverage_directory;
+        my $coverage_file;
         for (my $i = 0; $i < scalar(@model_builds); $i++) {
             $build = $model_builds[$i];
-            $metrics_directory = $build->data_directory .'/metrics';
-            $metrics_file = $metrics_directory .'/PicardRnaSeqMetrics.txt';
-            if (-s $metrics_file) {
+            $coverage_directory = $build->data_directory .'/coverage';
+            $coverage_file = $coverage_directory .'/annotation_squashed_by_gene_STATS.txt';
+            if (-s $coverage_file) {
                 last;
             }
         }
@@ -92,42 +86,38 @@ sub execute {
         } else {
             $annotation_build = $model_annotation_build;
         }
-        unless (-d $metrics_directory) {
-            $self->error_message('Missing metrics directory: '. $metrics_directory);
+        unless (-d $coverage_directory) {
+            $self->error_message('Missing coverage directory: '. $coverage_directory);
             die($self->error_message);
         }
-        unless (-e $metrics_file) {
-            $self->error_message('Missing Picard RNAseq metrics file: '. $metrics_file);
+        unless (-e $coverage_file) {
+            $self->error_message('Missing RefCov RNAseq coverage file: '. $coverage_file);
             die($self->error_message);
         }
-        my $metrics = Genome::Model::Tools::Picard::CollectRnaSeqMetrics->parse_file_into_metrics_hashref($metrics_file);
-        unless ($metrics) {
-            die('Failed to parse metrics file: '. $metrics_file);
+        my $coverage_reader = Genome::Utility::IO::SeparatedValueReader->new(input => $coverage_file, separator=> "\t",);
+        unless ($coverage_reader) {
+            die('Failed to parse coverage file: '. $coverage_file);
         }
-        if ( !@model_metric_keys ) {
-            @model_metric_keys = sort keys %{$metrics};
-            push @metric_headers, @model_metric_keys;
+        # Presumes these are one line files
+        my $coverage = $coverage_reader->next;
+        if ( !@model_coverage_keys ) {
+            @model_coverage_keys = sort keys %{$coverage};
+            push @coverage_headers, @model_coverage_keys;
         } else {
             #TODO: Check that all metrics files have the same headers...
         }
-        $model_metrics{$model->name}{metrics} = $metrics;
-        my $histo = Genome::Model::Tools::Picard::CollectRnaSeqMetrics->parse_metrics_file_into_histogram_hashref($metrics_file);
-        # This is only available in picard v1.52 or greater
-        if ($histo) {
-            $model_metrics{$model->name}{histogram} = $histo;
-        }
+        $model_coverage{$model->name}{coverage} = $coverage;
     }
 
-    my $metrics_writer = Genome::Utility::IO::SeparatedValueWriter->create(
-        output => $self->metrics_tsv_file,
+    my $coverage_writer = Genome::Utility::IO::SeparatedValueWriter->create(
+        output => $self->coverage_tsv_file,
         separator => "\t",
-        headers => \@metric_headers,
+        headers => \@coverage_headers,
     );
 
-    my %transcript_coverage;
     for my $build (@builds) {
         my $name = $build->model->name;
-        my $metrics = $model_metrics{$name}{'metrics'};
+        my $coverage = $model_coverage{$name}{'coverage'};
 
         my $tophat_stats =  $build->data_directory .'/alignments/alignment_stats.txt';
         my $tophat_fh = Genome::Sys->open_file_for_reading($tophat_stats);
@@ -150,38 +140,14 @@ sub execute {
             TOTAL_READS_UNMAPPED => ($tophat_metrics{'TOTAL_READS'} - $tophat_metrics{'TOTAL_READS_MAPPED'}),
             PCT_READS_MAPPED => ($tophat_metrics{'TOTAL_READS_MAPPED'} / $tophat_metrics{'TOTAL_READS'}),
         );
-        for my $header (@metric_headers) {
+        for my $header (@coverage_headers) {
             # This assumes all other values have been set
             if ( !defined($summary{$header}) ) {
-                $summary{$header} = $metrics->{$header};
+                $summary{$header} = $coverage->{$header};
             }
         }
-        $metrics_writer->write_one(\%summary);
-        if (defined($model_metrics{$name}{'histogram'}) ) {
-            my $histo = $model_metrics{$name}{'histogram'};
-            for my $position (keys %{$histo}) {
-                $transcript_coverage{$position}{$name} = $histo->{$position}{normalized_coverage};
-            }
-        }
+        $coverage_writer->write_one(\%summary);
     }
 
-    if ($self->normalized_transcript_coverage_file) {
-        my @models = sort keys %model_metrics;
-        my @coverage_headers = ('POSITION',@models);
-        my $coverage_writer = Genome::Utility::IO::SeparatedValueWriter->create(
-            output => $self->normalized_transcript_coverage_file,
-            separator => "\t",
-            headers => \@coverage_headers,
-        );
-        for my $position (sort {$a <=> $b} keys %transcript_coverage) {
-            my %data = (
-                POSITION => $position,
-            );
-            for my $label (@models) {
-                $data{$label} = $transcript_coverage{$position}{$label};
-            }
-        $coverage_writer->write_one(\%data);
-        }
-    }
     return 1;
 }
