@@ -108,7 +108,7 @@ sub execute {
         $cmd .= " -z";
     }
     if($self->chromosome){
-        $cmd .= " -c" . $self->chromosome;
+        $cmd .= " -c " . $self->chromosome;
     }
     if($self->no_header){
         $cmd .= " -n";
