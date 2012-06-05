@@ -185,6 +185,11 @@ sub execute {
                 ) ) {
                     die('Failed to randomly revert BAM : '. $previous_bam);
                 }
+                # Remove the previous temporary MarkDuplicate BAM file to save /tmp disk space
+                # However, check to be sure the original is never removed (just in case...)
+                if ($previous_bam ne $self->input_file) {
+                    unlink($previous_bam) || die('Failed to remove BAM file : '. $previous_bam);
+                }
 
                 # TODO: Remove the sorting if RandomRevertSam can output a sorted BAM file by default
                 # SortSam
@@ -222,12 +227,6 @@ sub execute {
                 # Parse the MarkDuplicates metrics
                 my $metrics_hash_ref = Genome::Model::Tools::Picard::MarkDuplicates->parse_file_into_metrics_hashref($tmp_mrkdup_metrics);
                 $metrics{$probability} = $metrics_hash_ref;
-
-                # Remove the previous temporary MarkDuplicate BAM file to save /tmp disk space
-                # However, check to be sure the original is never removed (just in case...)
-                if ($previous_bam ne $self->input_file) {
-                    unlink($previous_bam) || die('Failed to remove BAM file : '. $previous_bam);
-                }
                 $previous_bam = $tmp_mrkdup_bam;
             } else {
                 # TODO: shortcut and get existing duplication metrics based on each library name
