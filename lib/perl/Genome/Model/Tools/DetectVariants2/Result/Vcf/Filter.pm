@@ -95,6 +95,7 @@ sub _run_vcf_converter {
         bed_input => 1,
     );
 
+    #Make sure the input vcf does not have multiple indels in ALT column
     my $vcf_filter_cmd = Genome::Model::Tools::Vcf::VcfFilter->create(%params);
     unless($vcf_filter_cmd->execute){
         die $self->error_message("Could not complete call to gmt vcf vcf-filter!");

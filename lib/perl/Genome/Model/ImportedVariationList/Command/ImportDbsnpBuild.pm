@@ -57,29 +57,24 @@ sub execute {
         die($self->error_message("VCF file download and merge failed"));
     }
 
-    my $manual_result = Genome::Model::Tools::DetectVariants2::Result::Manual->create(
-        reference_build_id => $self->reference_sequence_build->id,
-        variant_type => 'snv',
-        format => 'vcf',
-        original_file_path => $allocation->absolute_path . '/merged_dbsnp.vcf',
+    my $original_file_path = $allocation->absolute_path . '/merged_dbsnp.vcf';
+    my $import_cmd = Genome::Model::ImportedVariationList::Command::ImportVariants->create(
+        input_path => $original_file_path,
+        reference_sequence_build => $self->reference_sequence_build,
+        source_name => "dbsnp",
+        description => "this had better work!",
         description => 'Imported VCF file from DBSnp ' . $self->vcf_file_url,
-    );
-
-    my $imported_variationlist_definition = Genome::Model::Command::Define::ImportedVariationList->create(
-        version => $self->version,
-        prefix => 'dbSNP',
-        snv_result => $manual_result,
+        variant_type => "snv",
+        format => "vcf",
+        version => $self->version
     );
 
 
-    unless($imported_variationlist_definition->execute()){
-        die($self->error_message("ImportedVariationList creation commanad failed"));
-    }
-
-    $self->build($imported_variationlist_definition->build);
+    my $rv = $import_cmd->execute;
+    $self->build($import_cmd->build);
     
     $allocation->delete;
-    return 1;
+    return $rv;
 }
 
 1;

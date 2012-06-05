@@ -5,7 +5,7 @@ use warnings;
 
 use above "Genome";
 use File::Temp;
-use Test::More tests => 12;
+use Test::More tests => 13;
 use Data::Dumper;
 use File::Compare;
 
@@ -85,3 +85,12 @@ for my $output_file (@expected_output_files){
 }
 
 ok(-s $test_output_dir."/snvs.vcf.gz", "Found snvs.vcf.gz");
+
+my $expected_vcf = "$expected_directory/snvs.vcf.gz";
+my $output_vcf   = "$test_output_dir/snvs.vcf.gz";
+my $expected     = `zcat $expected_vcf | grep -v fileDate`;
+my $output       = `zcat $output_vcf | grep -v fileDate`;
+my $diff = Genome::Sys->diff_text_vs_text($output, $expected);
+ok(!$diff, 'snvs.vcf.gz output matched expected output')
+    or diag("diff results:\n" . $diff);
+done_testing();

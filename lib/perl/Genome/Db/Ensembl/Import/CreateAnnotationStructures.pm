@@ -70,6 +70,7 @@ sub execute
     my $gene_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Gene' );
     my $transcript_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Transcript' );
     my $slice_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Slice');
+    my $assembly_exception_feature_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'AssemblyExceptionFeature');
 
     my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, 1, 1, 1) };
 
@@ -102,8 +103,26 @@ sub execute
         $self->status_message("Importing transcripts for $chromosome");
         my @ensembl_transcripts = @{ $transcript_adaptor->fetch_all_by_Slice($slice)};
         $self->status_message("Importing ".scalar @ensembl_transcripts." transcripts\n");
+        #We are included duplicate regions (like PARs and HAPs) in order
+        #to get the coordinate system right.  However, we don't actually
+        #want to import duplicate transcripts.
+        #Keep track of which regions are duplicates and don't import
+        #those transcripts.
+        my @assembly_exceptions = @{ $assembly_exception_feature_adaptor->fetch_all_by_Slice($slice)};
+        #Ensembl api returns assembly exception two assembly exception features
+        #for each assembly exception, one going each way.  We only want to
+        #exclude transcripts from the non-REF copy
+        @assembly_exceptions = grep {!($_->type =~ /REF/)} @assembly_exceptions;
 
-        foreach my $ensembl_transcript (@ensembl_transcripts) {
+        TRANSCRIPT: foreach my $ensembl_transcript (@ensembl_transcripts) {
+            foreach my $assembly_exception (@assembly_exceptions) {
+                if ($assembly_exception->overlaps($ensembl_transcript)) {
+                    my $print_name = $ensembl_transcript->stable_id;
+                    $self->warning_message("Skipping transcript $print_name because it is on an assembly_exception");
+                    next TRANSCRIPT;
+                }
+            }
+
             $count++;
             my $biotype = $ensembl_transcript->biotype(); #used in determining rna sub_structures and pseudogene status
             my $ensembl_gene  = $gene_adaptor->fetch_by_transcript_id( $ensembl_transcript->dbID );

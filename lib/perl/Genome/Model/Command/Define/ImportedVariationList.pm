@@ -27,6 +27,10 @@ class Genome::Model::Command::Define::ImportedVariationList {
         },
     ],
     has_optional => [
+        source_name => {
+            is => 'Text',
+            doc => 'The name of the source of the imported variants (e.g., dbsnp, 1kg)',
+        },
         snv_result => {
             is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
             doc => 'The result for snvs to import',
@@ -141,6 +145,11 @@ sub _check_existing_builds {
         return;
     }
 
+    if (defined $self->source_name and $model->source_name ne $self->source_name) {
+        $self->error_message("Existing model '" . $model->__display_name__ . "' has source name " . $model->source_name
+            . " which conflicts with specified value of " . $self->source_name);
+    }
+
     my @builds = Genome::Model::Build::ImportedVariationList->get(model_id => $model->id, version => $self->version);
     if (scalar(@builds) > 0) {
         my $plural = scalar(@builds) > 1 ? 's' : ''; 
@@ -191,6 +200,7 @@ sub _get_or_create_model {
             processing_profile_id => $ivl_pp->id,
         );
 
+        $create_params{source_name} = $self->source_name if $self->source_name;
         $model = Genome::Model::ImportedVariationList->create(%create_params);
 
         if($model) {

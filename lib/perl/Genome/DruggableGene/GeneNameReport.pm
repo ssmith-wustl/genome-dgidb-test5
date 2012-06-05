@@ -71,7 +71,7 @@ class Genome::DruggableGene::GeneNameReport {
         },
         is_kinase => {
             calculate => q{
-                return 1 if grep($_->alternate_name =~ /kinase/, $self->gene_alt_names);
+                return 1 if grep($_->alternate_name =~ /kinase/i, $self->gene_alt_names);
                 return 0;
             },
         },

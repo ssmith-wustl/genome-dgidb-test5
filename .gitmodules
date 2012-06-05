@@ -187,3 +187,9 @@
 [submodule "vendor/MetaVelvet"]
 	path = vendor/MetaVelvet
 	url = git@github.com:genome-vendor/MetaVelvet.git
+[submodule "vendor/Statistics-TTest"]
+	path = vendor/Statistics-TTest
+	url = git@github.com:genome-vendor/Statistics-TTest.git
+[submodule "vendor/bedtools"]
+	path = vendor/bedtools
+	url = git@github.com:genome-vendor/bedtools.git

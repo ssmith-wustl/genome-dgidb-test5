@@ -57,14 +57,14 @@ sub _import_run {
         $created = 1;
     }
 
-    my $library_ids = $self->_dump_to_file_system($sanger);
-    if ( not $library_ids ) {
+    my $reads = $self->_dump_to_file_system($sanger);
+    if ( not $reads ) {
         $self->error_message('Failed to dump lims sanger reads to file system!');
         $sanger->delete if $created;
         return;
     }
 
-    my $library = $self->_set_unique_read_library($sanger, $library_ids);
+    my $library = $self->_set_unique_read_library($sanger, $reads);
     if ( not $library ) {
         $sanger->delete if $created;
         return;
@@ -77,6 +77,7 @@ sub _dump_to_file_system {
     my ($self, $sanger) = @_;
     $self->status_message('Dump reads to file system...');
 
+    # Allocation get/create
     my $disk_allocation = $sanger->disk_allocation;
     unless ( $disk_allocation ) {
         $disk_allocation = Genome::Disk::Allocation->allocate(
@@ -100,6 +101,7 @@ sub _dump_to_file_system {
     }
     $self->status_message('Directory: '.$data_dir);
 
+    # Read iterator
     my $reads = App::DB::TableRow::Iterator->new(
         class => 'GSC::Sequence::Read',
         params => {
@@ -112,11 +114,9 @@ sub _dump_to_file_system {
     }
 
     $self->status_message('Go through read iterator...');
-    my $read_cnt = 0;
-    my %library_ids;
+    my %reads; # read_name => library_id
     while ( my $read = $reads->next ) {
-        $library_ids{$read->library_id}++ if $read->library_id;
-        $read_cnt++;
+        $reads{$read->trace_name} = $read->library_id || 'NA';
         my $scf_name = $read->default_file_name('scf');
         my $scf_file = sprintf('%s/%s.gz', $data_dir, $scf_name);
         my $size = -s $scf_file;
@@ -132,20 +132,33 @@ sub _dump_to_file_system {
         $self->error_message("No scf content for $scf_name") unless -s $scf_file;
     }
 
-    unless ( $read_cnt ) {
+    unless ( %reads ) {
         $self->error_message("No reads found for run ".$sanger->run_name);
         return;
     }
 
-    $self->status_message("Read count: $read_cnt");
+    # Remove any other files from the directory
+    my $dh = eval{ Genome::Sys->open_directory($data_dir); };
+    if ( not $dh ) {
+        $self->error_message('Failed to open directory! '.$data_dir);
+        return;
+    }
+    for (1..2) { $dh->read; } # . and ..
+    while ( my $file = $dh->read ) {
+        my $read_name = $file;
+        $read_name =~ s/\.gz$//;
+        unlink $data_dir.'/'.$file if not exists $reads{$read_name};
+    }
+
+    $self->status_message("Read count: ".scalar(keys %reads) );
     $self->status_message("Dump reads to file system...OK");
-    return \%library_ids;
+    return \%reads;
 }
 
 sub _set_unique_read_library {
-    my ($self, $sanger, $library_ids) = @_;
+    my ($self, $sanger, $reads) = @_;
 
-    my @library_ids = grep { $_ =~ /^$RE{num}{int}$/ }  keys %$library_ids;
+    my @library_ids = grep { $_ =~ /^$RE{num}{int}$/ }  values %$reads;
     $self->status_message('Found '.@library_ids.' libraries');
     $self->status_message('Using library id: '.$library_ids[0]);
     my $library = Genome::Library->get(id => $library_ids[0]);

@@ -56,7 +56,7 @@ $aligner_label =~ s/\./\_/g;
 
 #was the path for BSMAP2.1 - new path is in the more canonical location
 #my $expected_shortcut_path = "/gscmnt/sata828/info/alignment_data/$aligner_label/TEST-human/test_run_name/4_-123456",
-my $expected_shortcut_path = "/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Bsmap/v1/results";
+my $expected_shortcut_path = "/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Bsmap/v2.6/results";
 
 my $FAKE_INSTRUMENT_DATA_ID=-123456;
 eval "use $alignment_result_class_name";
@@ -127,8 +127,7 @@ sub test_alignment {
 
         system("rsync -a $dir/* $expected_shortcut_path");
     } 
-########
-#    system("cp $dir/all_sequences.bam wherver...");
+
     if ($validate_against_shortcut) {
         my $generated_bam_md5 = Genome::Sys->md5sum($dir . "/all_sequences.bam");
         my $to_validate_bam_md5 = Genome::Sys->md5sum($expected_shortcut_path  . "/all_sequences.bam");

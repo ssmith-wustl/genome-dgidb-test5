@@ -55,7 +55,6 @@ sub help_detail {
 sub execute {
     my $self = shift;
     my $tier1_positions_bed = $self->find_tier1($self->input_family_vcf);
-    my $tier1_vcf = $self->subset_vcf($self->input_family_vcf, $tier1_positions_bed);
     my $tier1_vcf = "12937.tier1.vcf"; 
 #  my $annotation_file= $self->run_vep($tier1_vcf);
     my $annotation_file = "/gscuser/charris/git/new_pipeline/genome/lib/perl/Genome/Model/Tools/Relationship/12937.tier1.vcf.annotated";

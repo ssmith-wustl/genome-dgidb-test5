@@ -7,8 +7,8 @@ use POSIX 'strftime';
 use Genome::Info::IUB;
 
 class Genome::Model::Tools::Vcf::Convert::Snv::Samtools {
-    is => 'Genome::Model::Tools::Vcf::Convert::Base',
-    doc => 'Generate a VCF file from samtools output'
+    is  => 'Genome::Model::Tools::Vcf::Convert::Base',
+    doc => 'Generate a VCF file from samtools output',
 };
 
 sub help_synopsis {
@@ -24,59 +24,14 @@ HELP
 }
 
 sub source {
-    my $self = shift;
-    return "Samtools";
+    return 'Samtools';
 }
 
+#single sample for now
 sub _get_header_columns {
     my $self = shift;
     my @header_columns = ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT",$self->aligned_reads_sample);
     return @header_columns;
-}
-
-sub print_header {
-    my $self = shift;
-    my $input_file = $self->input_file;
-
-    my $token = `head -1 $input_file`;
-
-    if ($token =~ /^#/) {  #mpileup
-        my (@header, @new_header);
-        my $input_fh = $self->_input_fh;
-        while (my $line = $input_fh->getline) {
-            push @header, $line if $line =~ /^#/;
-        }
-        $input_fh->close;
-
-        #reintialized the file handle to be used next step
-        my $new_fh = Genome::Sys->open_file_for_reading($input_file) or die "Failed to open $input_file\n";
-        $self->_input_fh($new_fh); 
-
-        while (@header) {
-            last if $header[0] =~ /^##INFO/; #split original vcf header
-            push @new_header, shift @header;
-        }
-
-        my @extra_info  = $self->_extra_header_info;
-        push @new_header, @extra_info, @header;
-        
-        my $output_fh = $self->_output_fh;
-        map{$output_fh->print($_)}@new_header;
-    }
-    else { #pileup
-        return $self->SUPER::print_header;
-    }
-
-    return 1;
-}
-
-sub _extra_header_info {
-    my $self = shift;
-    my $date = strftime("%Y%m%d", localtime);
-    my $source     = $self->source;
-    my $public_ref = $self->_get_public_ref;
-
-    return ("##fileDate=$date\n", "##source=$source\n", "##reference=$public_ref\n", "##phasing=none\n");
 }
 
 
@@ -86,8 +41,24 @@ sub parse_line {
     my @columns = split("\t", $line);
 
     if ($columns[4] =~ /^[A-Z]+/) { #mpileup output vcf format already
+        my @alt = split /,/, $columns[4];
+        pop @alt if $alt[$#alt] eq 'X';  #remove the silly X in ALT colum if it exists
+
+        my ($dp, $fa, $ad_str, $mq) = $columns[7] =~ /DP=(\d+);AF1=(\S+?);\S+DP4=(\S+?);MQ=(\d+);/;
+        my @ad = split /,/, $ad_str;
+        my $ad = $ad[2] + $ad[3];
+
+        my @sample = split /:/, $columns[9];
+        my ($gt, $gq) = ($sample[0], $sample[-1]);
+
+        $columns[4] = join ',', @alt;
         $columns[6] = 'PASS';
-        my $new_line = join "\t", @columns;
+        $columns[7] = '.';
+        $columns[8] = 'GT:GQ:DP:MQ:AD:FA'; #no way to calculate BQ, VAQ(snp quality)
+        $columns[9] = join ':', $gt, $gq, $dp, $mq, $ad, $fa;
+
+        my $col_ct   = scalar $self->_get_header_columns;
+        my $new_line = join "\t", splice(@columns, 0, $col_ct); #remove some unwanted columns in test
         return $new_line;
     }
 

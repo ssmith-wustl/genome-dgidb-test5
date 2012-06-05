@@ -348,7 +348,7 @@ sub _create_genotype_microarray {
         $new_object_class->create(
             id => $original_object->id,
             library => $library,
-            sequencing_platform => $original_object->platform_name,
+            sequencing_platform => lc($original_object->platform_name),
             import_format => 'genotype file',
             import_source_name => $original_object->import_source_name,
         );

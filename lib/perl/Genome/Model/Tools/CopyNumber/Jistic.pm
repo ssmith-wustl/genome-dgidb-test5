@@ -326,7 +326,7 @@ sub execute {
     
     
     #construct the command
-    my $cmd = "java -Xmx1500m -classpath /gscuser/cmiller/usr/src/JISTIC/JISTIC.jar JISTIC.Distribution spec=specs copynumber=" . $copy_number_matrix;
+    my $cmd = "java -Xmx5000m -Xms5000m -classpath /gscuser/cmiller/usr/src/JISTIC/JISTIC.jar JISTIC.Distribution spec=specs copynumber=" . $copy_number_matrix;
     if(defined($gene_annotations_file)){
         $cmd = $cmd . " locations=" . $gene_annotations_file;
     }

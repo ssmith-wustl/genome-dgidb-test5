@@ -17,6 +17,11 @@ class Genome::Model::Build::ImportedVariationList {
             where => [ name => 'version', value_class_name => 'UR::Value'], 
             is_mutable => 1 
         },
+        source_name => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            via => 'model',
+            to => 'source_name',
+        },
         reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             via => 'model',

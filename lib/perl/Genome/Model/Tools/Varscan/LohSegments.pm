@@ -104,7 +104,8 @@ sub execute {                               # replace with real execution logic.
             my $treads2 = $lineContents[10];
             my $tfreq = $lineContents[11];
             my $status = $lineContents[13];
-
+            my $diff_p_value = $lineContents[15];
+            
             my $normal_cov = $nreads1 + $nreads2;
             my $tumor_cov = $treads1 + $treads2;
             
@@ -123,7 +124,23 @@ sub execute {                               # replace with real execution logic.
                 }
                 else
                 {
-                    $status = 0;
+                    ## Determine if there's evidence for partial LOH - say 5% frequency difference away from het  ##
+                    
+                    my $norm_diff_from_het = abs($nfreq - 50);
+                    my $tum_diff_from_het = abs($tfreq - 50);
+                    
+                    ## Determine if tumor is farther from het and if the diff is significant ##
+                    
+                    if($tum_diff_from_het > $norm_diff_from_het && $diff_p_value < 0.05)
+                    {
+                        $status = 1;
+                    }
+                    else
+                    {
+                        $status = 0;                        
+                    }
+                    
+
                 }
 
                 print OUTFILE join("\t", $chrom, $pos, $nfreq, $tfreq, $status) . "\n";

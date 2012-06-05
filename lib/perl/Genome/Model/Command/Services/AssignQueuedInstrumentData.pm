@@ -1549,6 +1549,11 @@ sub add_processing_profiles_to_pse {
                 push @processing_profile_ids_to_add, $pp_id;
                 $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
             }
+            elsif ($taxon->species_latin_name =~ /zea mays/i) {
+                my $pp_id = $self->_default_ref_align_processing_profile_id;
+                push @processing_profile_ids_to_add, $pp_id;
+                $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'MGSC-maize-buildB73';
+            }
             elsif ($taxon->domain =~ /bacteria/i) {
                 my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
                 push @processing_profile_ids_to_add, $pp_id;

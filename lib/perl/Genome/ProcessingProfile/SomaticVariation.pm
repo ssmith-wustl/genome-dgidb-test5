@@ -45,6 +45,12 @@ class Genome::ProcessingProfile::SomaticVariation{
             is_optional => 1,
             doc => "Version of loh used for this build. If none is specified, no loh detection will be done.",
         },
+        transcript_variant_annotator_version => {
+            doc => 'Version of the "annotate transcript-variants" tool to run during the annotation step',
+            is_optional => 1,
+            default_value => Genome::Model::Tools::Annotate::TranscriptVariants->default_annotator_version,
+            valid_values => [ 0,1,2,3],
+        },
    ],
 };
 
@@ -280,6 +286,7 @@ sub _map_workflow_inputs {
     }
 
     push @inputs, build_id => $build->id;
+    push @inputs, annotator_version => $self->transcript_variant_annotator_version;
 
     return @inputs;
 }

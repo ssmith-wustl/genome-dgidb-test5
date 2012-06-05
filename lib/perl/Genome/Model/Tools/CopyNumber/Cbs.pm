@@ -41,6 +41,13 @@ class Genome::Model::Tools::CopyNumber::Cbs {
 	    doc => 'File containing 3-column array data (chr, pos, log-ratio)',           
         },
 
+
+        tcga_array_file => {
+            is => 'String',
+	    is_optional => 1,
+	    doc => 'File containing 4-column array data (sample, chr, pos, log-ratio)',           
+        },
+
         output_R_object => {
             is => 'String',
 	    is_optional => 1,
@@ -104,6 +111,7 @@ sub execute {
     my $bamwindow_file = $self->bamwindow_file;    
     my $bam2cna_file = $self->bam2cna_file;
     my $array_file = $self->array_file;    
+    my $tcga_array_file = $self->tcga_array_file;    
     my $output_R_object = $self->output_R_object;
     my $output_file = $self->output_file;
     my $convert_names = $self->convert_names;
@@ -115,7 +123,7 @@ sub execute {
         die $self->error_message("You must specify either the output_file OR output_R_object file");
     }
 
-    unless( (defined($bamwindow_file)) || (defined($bam2cna_file)) || (defined($array_file))){
+    unless( (defined($bamwindow_file)) || (defined($bam2cna_file)) || (defined($array_file) || (defined($tcga_array_file)))){
         die $self->error_message("You must specify either a bamwindow file, a bam2cna file, or an array file");
     }
     
@@ -143,6 +151,8 @@ sub execute {
         print R_COMMANDS 'cn <- read.table("' . $bam2cna_file . '", header=T, sep="\t", comment.char="#", colClasses=c("character","numeric","numeric","numeric","numeric"))' . "\n";
     } elsif(defined($array_file)) {
         print R_COMMANDS 'cn <- read.table("' . $array_file . '", header=F, sep="\t", comment.char="#", colClasses=c("character","numeric","numeric"))' . "\n";
+    } elsif(defined($tcga_array_file)) {
+        print R_COMMANDS 'cn <- read.table("' . $tcga_array_file . '", header=F, sep="\t", comment.char="#", colClasses=c("character","character","numeric","numeric"))[,2:4]' . "\n";
     }
 
     if($convert_names){            
@@ -158,6 +168,8 @@ sub execute {
         print R_COMMANDS "log2(cn[,3]/cn[,4])";
     } elsif(defined($array_file)) {
         print R_COMMANDS "cn[,3]";
+    } elsif(defined($tcga_array_file)) {
+        print R_COMMANDS "cn[,3]";
     }
     
     print R_COMMANDS ", chrom = cn[,1], maploc = cn[,2], data.type = 'logratio'";
@@ -169,7 +181,7 @@ sub execute {
 
     
     #if array data, smooth it
-    if(defined($array_file)) {
+    if(defined($array_file) || defined($tcga_array_file)) {
         print R_COMMANDS "CNA.object <- smooth.CNA(CNA.object)" . "\n";
     }
 

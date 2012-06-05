@@ -17,6 +17,11 @@ class Genome::MiscNote {
         subject            => { is => 'UR::Object', id_class_by => 'subject_class_name', id_by => 'subject_id' },
         editor_id          => { is => 'Text' },
         entry_date         => { is => 'DateTime' },
+        entry_date_sort    => { 
+            is => 'Number',
+            calculate_from => ['entry_date'],
+            calculate => q{ (my $sort_date = $entry_date) =~ s/[-: ]//g; return $sort_date; } # for easier XSLT sorting
+        },
         auto_truncate_body_text => { is => 'Boolean', default => '1', is_transient => 1},
     ],
     has_optional => [

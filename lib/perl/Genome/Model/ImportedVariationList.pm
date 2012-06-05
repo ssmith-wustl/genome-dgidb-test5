@@ -21,6 +21,11 @@ class Genome::Model::ImportedVariationList {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'reference_id',
         },
+        source_name => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'The name of the source of the imported variants (e.g., dbsnp, 1kg)',
+        }
     ],
 };
 
