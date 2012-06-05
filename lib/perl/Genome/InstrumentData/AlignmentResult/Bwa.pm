@@ -48,7 +48,7 @@ sub required_rusage {
 
     #check to see if our resource requests are feasible (This uses "maxmem" to check theoretical availability)
     #factor of four is based on current six jobs per host policy this should be revisited later
-    my $select_check = "select[ncpus >= $cpus && maxmem >= " . ($mem_mb * 4) . " && gtmp >= $tmp_gb] span[hosts=1]";
+    my $select_check = "select[ncpus >= $cpus && maxmem >= " . ($mem_mb * 4) . " && maxgtmp >= $tmp_gb] span[hosts=1]";
 
     my @selected_blades = `bhosts -R '$select_check' $host_groups | grep ^blade`;
 
