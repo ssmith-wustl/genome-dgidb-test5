@@ -62,7 +62,6 @@ my $rv = $methratio->execute;
 is($rv, 1, 'Testing for successful execution.  Expecting 1.  Got: '.$rv);
 
 my $output_snv_file = $methratio->output_directory . "/snvs.hq";
-`cp $output_snv_file /gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-MethRatio/`;
 
 
 ok(-s $output_snv_file,'Testing success: Expecting a snv output file exists');
