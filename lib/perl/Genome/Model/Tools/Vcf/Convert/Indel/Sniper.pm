@@ -31,7 +31,7 @@ sub source {
 sub parse_line {
     my ($self, $line) = @_;
 
-    my @columns = split /\s+/, $line;
+    my @columns = split /\t/, $line;
     my ($chr, $pos, $call_1, $call_2, $len_1, $len_2, $t_gt, $t_dp, $t_read_1, $t_read_2, $n_gt, $n_dp, $n_read_1, $n_read_2) = map{$columns[$_]}qw(0 1 4 5 6 7 8 12 13 14 21 25 26 27);
     
     my ($t_ss, $n_ss) = _parse_ss($t_gt, $n_gt);
