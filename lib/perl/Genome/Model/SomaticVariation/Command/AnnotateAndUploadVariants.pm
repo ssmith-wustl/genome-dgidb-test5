@@ -18,6 +18,7 @@ class Genome::Model::SomaticVariation::Command::AnnotateAndUploadVariants{
             doc => 'Version of the "annotate transcript-variants" tool to run   during the annotation step',
             default_value => Genome::Model::Tools::Annotate::TranscriptVariants->default_annotator_version,
             valid_values => [ 0,1,2,3],
+            is_optional => 1,
             is_input => 1,
         },
         build => {
