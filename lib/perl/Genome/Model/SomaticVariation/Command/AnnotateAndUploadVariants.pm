@@ -14,6 +14,13 @@ class Genome::Model::SomaticVariation::Command::AnnotateAndUploadVariants{
             is_output => 1,
             doc => 'build id of SomaticVariation model',
         },
+        annotator_version => {
+            doc => 'Version of the "annotate transcript-variants" tool to run   during the annotation step',
+            default_value => Genome::Model::Tools::Annotate::TranscriptVariants->default_annotator_version,
+            valid_values => [ 0,1,2,3],
+            is_optional => 1,
+            is_input => 1,
+        },
         build => {
             is => 'Genome::Model::Build::SomaticVariation',
             id_by => 'build_id',
@@ -22,11 +29,6 @@ class Genome::Model::SomaticVariation::Command::AnnotateAndUploadVariants{
     has_param => [
         lsf_queue => {
             default => 'apipe',
-        },
-        annotator_version => {
-            doc => 'Version of the "annotate transcript-variants" tool to run   during the annotation step',
-            default_value => Genome::Model::Tools::Annotate::TranscriptVariants->default_annotator_version,
-            valid_values => [ 0,1,2,3],
         },
     ],
 };

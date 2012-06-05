@@ -1208,7 +1208,7 @@ sub add_model_to_default_modelgroups {
         $self->error_message('Unhandled subject for model--not adding to common name model-groups');
     }
 
-    my @groups = $self->_resolve_projects_and_work_orders($pse);
+    my @groups = $self->_resolve_projects_and_work_orders($pse, $instrument_data);
     my $pooled_sample_name = $self->_resolve_pooled_sample_name_for_instrument_data($instrument_data);
     if ($pooled_sample_name){
         if ($model->name =~ /\.wu-space$/) {
@@ -1291,12 +1291,10 @@ sub add_model_to_default_modelgroups {
 sub _resolve_projects_and_work_orders{
     my $self = shift;
     my $pse = shift;
+    my $instrument_data = shift;
 
-    my @names = ();
     my @work_orders;
-    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
-    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
-    if($index_illumina){
+    if( $instrument_data->isa('Genome::InstrumentData::Solexa') and my $index_illumina = GSC::IndexIllumina->get($instrument_data->id) ){
         @work_orders = $index_illumina->get_work_orders;
     } else {
         @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
@@ -1642,15 +1640,8 @@ sub _is_454_16s {
     my $self = shift;
     my $pse = shift;
 
-    my @work_orders;
-
     my ($instrument_data_id) = $pse->added_param('instrument_data_id');
-    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
-    if($index_illumina){
-        @work_orders = $index_illumina->get_work_orders;
-    } else{
-        @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
-    }
+    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
 
     foreach my $work_order (@work_orders) {
         my $pipeline_string = $work_order->pipeline();
@@ -1671,15 +1662,8 @@ sub _is_unknown_454_pipeline {
     my $self = shift;
     my $pse = shift;
 
-    my @work_orders;
-
     my ($instrument_data_id) = $pse->added_param('instrument_data_id');
-    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
-    if($index_illumina){
-        @work_orders = $index_illumina->get_work_orders;
-    } else{
-        @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
-    }
+    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
 
     unless (@work_orders > 0) {
         $self->error_message('454 instrument_data ' . $pse->added_param('instrument_data_id') . ' has no work order(s)');
