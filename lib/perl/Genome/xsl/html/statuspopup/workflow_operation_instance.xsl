@@ -78,8 +78,8 @@ xmlns:rest="urn:rest">
 
           <td class="right">
             <xsl:choose>
-              <xsl:when test="normalize-space(aspect[@name='start_time']/value)">
-                <xsl:value-of select="aspect[@name='start_time']/value"/>
+              <xsl:when test="normalize-space(aspect[@name='start_time_nice']/value)">
+                <xsl:value-of select="aspect[@name='start_time_nice']/value"/>
               </xsl:when>
               <xsl:otherwise>
                 --
