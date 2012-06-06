@@ -70,7 +70,12 @@ class Genome::Model::Tools::Analysis::Coverage::BamReadcount{
 	    doc => 'maximum variant allele frequency allowed for a site to be reported (0-100)',
         },
 
-
+        indel_size_limit => {
+            is => 'Integer',
+            is_optional => 1,
+	    doc => 'maximum indel size to grab readcounts for. (The larger the indel, the more skewed the readcounts due ot mapping problems)',
+            default => 2,
+        }
 
         ]
 };
@@ -157,26 +162,51 @@ sub execute {
     my %varHash;
     
     #read in all the snvs and hash both the ref and var allele by position
+    #also dump the indels in a seperate file for readcounting with varscan
     my $inFh = IO::File->new( $snv_file ) || die "can't open file\n";
+    open(INDELFILE,">$tempdir/indelpos");
     while( my $sline = $inFh->getline )
     {
         chomp($sline);
         my @fields = split("\t",$sline);
 
-        #skip indels
-        if (($fields[3] eq "0") || 
-            ($fields[3] eq "-") || 
-            ($fields[4] eq "0") || 
-            ($fields[4] eq "-") || 
-            (length($fields[3]) > 1) || 
-            (length($fields[4]) > 1)){
-            next;
+        #is it an indel?
+        if (($fields[3] eq "-") || ($fields[4] =~ /0|-|*/) || 
+            (length($fields[3]) > 1) || (length($fields[4]) > 1)){
+            #is it longer than the max length?
+            if((length($fields[3]) > $self->indel_size_limit) || (length($fields[4]) > $self->indel_size_limit)){
+                next;
+            }
+            print INDELFILE join("\t",($fields[0],$fields[1],$fields[2])) . "\n";
         }
 
         $refHash{$fields[0] . "|" . $fields[1]} = $fields[3];
         $varHash{$fields[0] . "|" . $fields[1]} = $fields[4]
     }
+    close(INDELFILE)
     
+    #convert the indel file to bed
+    my $cmd = Genome::Model::Tools::Bed::Convert::Indel::AnnotationToBed->create(
+        source => "$tempdir/indelpos",
+        output => "$tempdir/indelpos.bed",
+        );
+    unless ($cmd->execute) {
+        die "converting indels to bed failed";
+    } 
+   
+    
+    #run mpileup/varscan to get the readcounts for the indels:
+    my $cmd = "samtools mpileup -f $fasta -l $tempdir/indelpos.bed $bam_file | java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.9.jar pileup2cns >$tempdir/indels.varscan";
+    my $return = Genome::Sys->shellcmd(
+	cmd => "$cmd",
+        );
+    unless($return) {
+	$self->error_message("Failed to execute: Returned $return");
+	die $self->error_message;
+    }
+
+
+
 
     #convert iub bases to lists
     sub convertIub{
