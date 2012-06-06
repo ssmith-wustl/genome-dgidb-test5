@@ -10,43 +10,47 @@ use POSIX;
 class Genome::Model::Tools::Validation::SvManualReviewContigs {
     is => 'Command',
     has_input => [
-    merged_sv_calls_file => {
-        is => 'String',
-        doc => 'path to SV calls that should be reviewed using contig alignments (in "merged" format)',
-    },
-    merged_assembly_fasta_file => {
-        is => 'String',
-        doc => 'path to assembly output fasta file associated with sv_calls_file (in "merged" format)',
-    },
-    tumor_val_model_id => {
-        is => 'Number',
-        doc => 'tumor validation model to copy for alignment to new reference',
-    },
-    normal_val_model_id => {
-        is => 'Integer',
-        doc => 'normal validation model to copy for alignment to new reference',
-    },
-    contigs_output_file => {
-        is => 'String',
-        doc => 'output file of contigs which will be appended to reference sequence for realignment',
-    },
-    manual_review_output_file => {
-        is => 'String',
-        doc => 'contig alignment summary file to be used for manual review',
-    },
-    sample_identifier => {
-        is => 'String',
-        doc => 'some string to use in model names, etc, such as "BRC2"',
-    },
-    ],
+        merged_sv_calls_file => {
+            is => 'String',
+            doc => 'path to SV calls that should be reviewed using contig alignments (in "merged" format)',
+        },
+        merged_assembly_fasta_file => {
+            is => 'String',
+            doc => 'path to assembly output fasta file associated with sv_calls_file (in "merged" format)',
+        },
+        contigs_output_file => {
+            is => 'String',
+            doc => 'output file of contigs which will be appended to reference sequence for realignment',
+        },
+        manual_review_output_file => {
+            is => 'String',
+            doc => 'contig alignment summary file to be used for manual review',
+        },
+        sample_identifier => {
+            is => 'String',
+            doc => 'some string to use in model names, etc, such as "BRC2"',
+        },
+        ],
     has_optional_input => [
-    reference_sequence_build_id => {
-        is => 'Integer',
-        doc => 'reference sequence path (default: NCBI-human-build36 reference sequence build_id 101947881)',
-        default => '101947881'
-    },
-    ],
-    doc => 'create and align validation data to an SV contig reference',
+        somatic_validation_model_id => {
+            is => 'Number',
+            doc => 'somatic-validation build ID (contains both tumor and normal)',
+        },
+        tumor_val_model_id => {
+            is => 'Number',
+            doc => 'tumor validation model to copy for alignment to new reference',
+        },
+        normal_val_model_id => {
+            is => 'Integer',
+            doc => 'normal validation model to copy for alignment to new reference',
+        },
+        reference_sequence_build_id => {
+            is => 'Integer',
+            doc => 'reference sequence path (default: NCBI-human-build36 reference sequence build_id 101947881)',
+            default => '101947881'
+        },
+        ],
+                doc => 'create and align validation data to an SV contig reference',
 };
 
 sub help_detail {
@@ -65,6 +69,17 @@ sub execute {
     my $contigs_file = $self->contigs_output_file;
     my $review_file = $self->manual_review_output_file;
     my $sample_id = $self->sample_identifier;
+
+    my $input_model_type;
+
+    if(defined($self->somatic_validation_model_id)){
+        $input_model_type = "somval";
+    } elsif(defined($self->tumor_val_model_id) && defined($self->normal_val_model_id)){
+        $input_model_type = "pairedref";
+    } else {
+        $self->error_message("you mush specify either a somatic_validation_model_id or tumor_val_model_id, normal_val_model_id, and reference_sequence_build_id");
+        return 0;
+    }
 
     #put calls into a hash for use when parsing fasta input file
     my %calls;
@@ -172,10 +187,27 @@ sub execute {
     $contig_fh->close;
     $review_fh->close;
 
-    #create reference sequence using new contigs (define new reference and track new reference build)
-    my $ref_seq_build_id = $self->reference_sequence_build_id;
-    my $ref_seq_build = Genome::Model::Build->get($ref_seq_build_id);
 
+    #-------------------------------------------------------
+    #get refseq build id from model unless already defined
+    my $ref_seq_build;
+    if(defined($self->reference_sequence_build_id)){
+        $ref_seq_build = Genome::Model::Build->get($self->reference_sequence_build_id);
+    } else {
+        if($input_model_type eq "somval"){
+            my $model = Genome::Model->get($self->somatic_validation_model_id) or
+                die "Could not find model ($self->somatic_validation_model_id)\n";
+
+            my $ref_seq_build_id = $model->reference_sequence_build->build_id;
+            $ref_seq_build = Genome::Model::Build->get($ref_seq_build_id);
+        } else {
+            my $model = Genome::Model->get($self->tumor_val_model_id);
+            my $ref_seq_build_id = $model->reference_sequence_build->build_id;
+            $ref_seq_build = Genome::Model::Build->get($ref_seq_build_id);
+        }
+    }
+
+    #create reference sequence using new contigs (define new reference and track new reference build)
     my $ref_model_id = $ref_seq_build->model_id;
 
     my $version = "500bp_assembled_contigs_sv";
@@ -209,59 +241,156 @@ sub execute {
         return;
     }
 
-    #copy tumor and normal validation models to align data to new reference
 
-    #make sure these model names aren't taken. If they are, add a digit to the end
-    my $new_tumor_model_name = $sample_id . "-Tumor-SV-Validation-ManRevContigs";
-    my $new_normal_model_name = $sample_id . "-Normal-SV-Validation-ManRevContigs";
-    
-    $new_tumor_model_name = checkModelName($new_tumor_model_name);
-    $new_normal_model_name = checkModelName($new_normal_model_name);
-
-    print STDERR "creating models $new_normal_model_name and $new_tumor_model_name\n";
+    my $new_tumor_model_id;
+    my $new_normal_model_id;
 
 
-    #my $new_pp = "dlarson bwa0.5.9 -q 5 indel contig test picard1.42";
-    #my $new_pp = Genome::ProcessingProfile->get("2599983");
-    my $new_pp = 2599983;
-    my $tumor_model = Genome::Model->get($self->tumor_val_model_id) or die "Could not find tumor model with id $self->tumor_val_model_id.\n";
-    my $normal_model = Genome::Model->get($self->normal_val_model_id) or die "Could not find normal model with id $self->normal_val_model_id.\n";
+    if($input_model_type eq "somval"){
+        #create new tumor and normal validation models to align data to new reference
 
-    #new tumor model
-    my $tumor_copy = Genome::Model::Command::Copy->create(
-        model => $tumor_model,
-        overrides => [
-        'name='.$new_tumor_model_name,
-        'auto_build_alignments=0',
-        'processing_profile='.$new_pp,
-        'reference_sequence_build='.$new_ref_build_id,
-        'annotation_reference_build=',
-        'region_of_interest_set_name=',
-        'dbsnp_build=',
-        ],
-    );
-    $tumor_copy->dump_status_messages(1);
-    $tumor_copy->execute or die "copy failed";
-    my $new_tumor_model = $tumor_copy->_new_model;
-    my $new_tumor_model_id = $new_tumor_model->id;
+        #first, grab a bunch of params we need:
+        my $model = Genome::Model->get($self->somatic_validation_model_id) or
+            die "Could not find model ($self->somatic_validation_model_id\n";
 
-    #new normal model
-    my $normal_copy = Genome::Model::Command::Copy->create(
-        model => $normal_model,
-        overrides => [
-        'name='.$new_normal_model_name,
-        'auto_build_alignments=0',
-        'processing_profile='.$new_pp,
-        'reference_sequence_build='.$new_ref_build_id,
-        'annotation_reference_build=',
-        'region_of_interest_set_name=',
-        'dbsnp_build=',
-        ],
-    );
-    $normal_copy->dump_status_messages(1);
-    $normal_copy->execute or die "copy failed";
-    my $new_normal_model = $normal_copy->_new_model;
-    my $new_normal_model_id = $new_normal_model->id;
+        my $build = $model->last_succeeded_build or
+            die "Could not find last succeeded build from somatic model $self->somatic_validation_model_id.\n";
+
+        my $tumor_sample = $build->tumor_sample;
+        my $tumor_sample_id = $build->tumor_sample->sample_id;
+        my $tumor_subject = Genome::Subject->get($tumor_sample->subject_id);
+        
+        my $normal_sample = $build->normal_sample;
+        my $normal_sample_id = $build->normal_sample->sample_id;
+        my $normal_subject = Genome::Subject->get($normal_sample->subject_id);
+        #instrument data ids, sample ids
+        my @tumor_instrument_data;
+        my @normal_instrument_data;
+        my @instrument_data_ids = $build->instrument_data_ids;
+        foreach my $instid (@instrument_data_ids){
+            my $inst_data = Genome::InstrumentData->get($instid);
+            my $library_id = $inst_data->library_id;
+            my $library = Genome::Library->get($library_id);
+            my $sample_id = $library->sample_id;
+            
+            if($sample_id eq $tumor_sample_id){
+                push(@tumor_instrument_data,$inst_data);
+            } elsif ($sample_id eq $normal_sample_id){
+                push(@normal_instrument_data,$inst_data);
+                
+            } else {
+                die "sample id $sample_id from instrument data does not match sample id from either tumor (" . $build->tumor_sample->sample_id . ") or normal (" . $build->normal_sample->sample_id . ")\n";
+            }
+        }
+       
+        #make sure these model names aren't taken. If they are, add a digit to the end
+        my $new_tumor_model_name = $sample_id . "-Tumor-SV-Validation-ManRevContigs";
+        my $new_normal_model_name = $sample_id . "-Normal-SV-Validation-ManRevContigs";
+        
+        $new_tumor_model_name = checkModelName($new_tumor_model_name);
+        $new_normal_model_name = checkModelName($new_normal_model_name);
+        
+        print STDERR "creating models $new_normal_model_name and $new_tumor_model_name\n";
+
+        my $new_pp = Genome::ProcessingProfile->get("2599983");
+        print STDERR "---\n";
+        print STDERR join("\n",($new_ref_build,join("|",@tumor_instrument_data),$tumor_subject,$new_tumor_model_name,$new_pp)) . "\n";
+        print STDERR "---\n";
+        
+
+
+        #new tumor model
+        my $tumor_copy = Genome::Model::Command::Define::ReferenceAlignment->create(
+            reference_sequence_build => $new_ref_build,
+            auto_build_alignments => 0,
+            auto_assign_inst_data => 0,
+            instrument_data => \@tumor_instrument_data,
+            subject => $tumor_subject,
+            model_name => $new_tumor_model_name,
+            processing_profile => $new_pp
+            );
+        $tumor_copy->dump_status_messages(1);
+        $tumor_copy->execute or die "tumor define failed";
+        $new_tumor_model_id = $tumor_copy->result_model_id;
+        my $new_tumor_model = Genome::Model->get($new_tumor_model_id);
+        print STDERR "tumor model defined: $new_tumor_model_id\n";
+
+        #new normal model
+        my $normal_copy = Genome::Model::Command::Define::ReferenceAlignment->create(
+            reference_sequence_build => $new_ref_build,
+            auto_build_alignments => 0,
+            auto_assign_inst_data => 0,
+            instrument_data => \@normal_instrument_data,
+            subject => $normal_subject,
+            model_name => $new_normal_model_name,
+            processing_profile => $new_pp
+            );
+        $normal_copy->dump_status_messages(1);
+        $normal_copy->execute or die "copy failed";
+        $new_normal_model_id = $normal_copy->result_model_id;
+        my $new_normal_model = Genome::Model->get($new_normal_model_id);
+        print STDERR "normal model defined: $new_normal_model_id\n";
+
+        UR::Context->commit;
+
+
+    #-------------------------------------------------------
+    } else { # $input_model_type eq "pairedref"
+
+        #copy tumor and normal validation models to align data to new reference
+
+        #make sure these model names aren't taken. If they are, add a digit to the end
+        my $new_tumor_model_name = $sample_id . "-Tumor-SV-Validation-ManRevContigs";
+        my $new_normal_model_name = $sample_id . "-Normal-SV-Validation-ManRevContigs";
+        
+        $new_tumor_model_name = checkModelName($new_tumor_model_name);
+        $new_normal_model_name = checkModelName($new_normal_model_name);
+        
+        print STDERR "creating models $new_normal_model_name and $new_tumor_model_name\n";
+        
+        
+        #my $new_pp = "dlarson bwa0.5.9 -q 5 indel contig test picard1.42";
+        #my $new_pp = Genome::ProcessingProfile->get("2599983");
+        my $new_pp = 2599983;
+        my $tumor_model = Genome::Model->get($self->tumor_val_model_id) or die "Could not find tumor model with id $self->tumor_val_model_id.\n";
+        my $normal_model = Genome::Model->get($self->normal_val_model_id) or die "Could not find normal model with id $self->normal_val_model_id.\n";
+        
+        #new tumor model
+        my $tumor_copy = Genome::Model::Command::Copy->create(
+            model => $tumor_model,
+            overrides => [
+                'name='.$new_tumor_model_name,
+                'auto_build_alignments=0',
+                'processing_profile='.$new_pp,
+                'reference_sequence_build='.$new_ref_build_id,
+                'annotation_reference_build=',
+                'region_of_interest_set_name=',
+                'dbsnp_build=',
+            ],
+            );
+        $tumor_copy->dump_status_messages(1);
+        $tumor_copy->execute or die "copy failed";
+        my $new_tumor_model = $tumor_copy->_new_model;
+        my $new_tumor_model_id = $new_tumor_model->id;
+
+        #new normal model
+        my $normal_copy = Genome::Model::Command::Copy->create(
+            model => $normal_model,
+            overrides => [
+                'name='.$new_normal_model_name,
+                'auto_build_alignments=0',
+                'processing_profile='.$new_pp,
+                'reference_sequence_build='.$new_ref_build_id,
+                'annotation_reference_build=',
+                'region_of_interest_set_name=',
+                'dbsnp_build=',
+            ],
+            );
+        $normal_copy->dump_status_messages(1);
+        $normal_copy->execute or die "copy failed";
+        my $new_normal_model = $normal_copy->_new_model;
+        my $new_normal_model_id = $new_normal_model->id;
+    }
 
     #final notices to user
     print "\n\n\n###################### IMPORTANT INFORMATION ######################\n\n";
