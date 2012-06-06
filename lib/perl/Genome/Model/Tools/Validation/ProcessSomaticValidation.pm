@@ -752,7 +752,11 @@ sub execute {
   if(defined($self->somatic_variation_model_id)){
       $somvarid = $self->somatic_variation_model_id;
   } else {
-      $somvarid = $model->snv_variant_list->source_build->model->id;
+      if(defined($model->snv_variant_list)){
+          if(defined($model->snv_variant_list->source_build)){
+              $somvarid = $model->snv_variant_list->source_build->model->id;
+          }
+      }
   }
 
   my $som_var_model = Genome::Model->get($somvarid);
