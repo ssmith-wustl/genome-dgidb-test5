@@ -133,7 +133,7 @@ sub _import_drug {
     my @drug_synonyms = split(', ', $interaction->{drug_synonyms});
     for my $drug_synonym (@drug_synonyms){
         next if $drug_synonym eq 'na';
-        my $drug_name_association = $self->_create_drug_alternate_name_report($drug_name, $drug_synonym, 'DrugBank primary name to synonym association', '');
+        my $drug_name_association = $self->_create_drug_alternate_name_report($drug_name, $drug_synonym, 'drug_synonym', '');
     }
 
     my @drug_brands = split(', ', $interaction->{drug_brands});
