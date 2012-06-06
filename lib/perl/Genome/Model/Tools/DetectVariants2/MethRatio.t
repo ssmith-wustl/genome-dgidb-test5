@@ -19,12 +19,8 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 }
-else {
-    if(not $ENV{UR_RUN_LONG_TESTS}) {
-        plan skip_all => 'This test takes up to an hour to run and thus is skipped.  Use `ur test run --long` to enable.';
-    }
-}
 
+my @chromosomes_to_test = (22);
 use_ok('Genome::Model::Tools::DetectVariants2::MethRatio');
 
 my $refbuild_id = 106942997;
@@ -44,6 +40,7 @@ my $tmpbase = File::Temp::tempdir('MethRatioXXXXX', DIR => '/gsc/var/cache/tests
 my $tmpdir = "$tmpbase/output";
 
 my $methratio = Genome::Model::Tools::DetectVariants2::MethRatio->create(
+    chromosome_list => @chromosomes_to_test,
     aligned_reads_input=>$testbam, 
     reference_build_id => $refbuild_id,
     output_directory => $tmpdir, 

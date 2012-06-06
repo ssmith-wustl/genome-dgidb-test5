@@ -164,8 +164,12 @@ sub execute {
             }
         }
 
-        # Ensure that insertions are zero-based
-        $start-- if($start == $stop);
+		# Ensure that insertions are zero-based
+	if($indel_type eq "INSERTION")
+	{
+		$start-- if($start == $stop);		
+	}
+
 
         # Construct the reformatted line and buffer it up for output
         $line = "$chrom\t$start\t$stop\t$allele1\t$allele2";

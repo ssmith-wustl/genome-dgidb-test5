@@ -171,7 +171,7 @@ sub execute {
             die "Could not find model ($self->somatic_validation_model_id\n";
 
         my $build = $model->last_succeeded_build or
-            die "Could not find last succeeded build from normal model $self->normal_val_model_id.\n";
+            die "Could not find last succeeded build from somatic model $self->somatic_validation_model_id.\n";
 
         #get refseq build id from model unless already defined
         $ref_seq_build_id = $model->reference_sequence_build->build_id;
@@ -366,8 +366,6 @@ sub execute {
         my $new_tumor_model_name = $sample_id . "-Tumor-3bpIndel-Validation";
         my $new_normal_model_name = $sample_id . "-Normal-3bpIndel-Validation";
 
-
-        print STDERR join(",",($new_ref_build_id, $tumor_sample_id, $new_tumor_model_name)) . "\n";
 
         #new tumor model
         my $tumor_copy = Genome::Model::Command::Define::ReferenceAlignment->create(
