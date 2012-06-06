@@ -35,12 +35,23 @@ sub process_source {
         chomp $line;
         my ($chromosome, $start, $stop, $reference, $consensus, $type, @extra) = split("\t", $line);
         # convert from 1-based to 0 based
-        if ($type eq "INS") {
-            --$stop;
-        } elsif ($type eq "DEL") {
-            --$start;
+        if(defined($type)){
+            if ($type eq "INS") {
+                --$stop;
+            } elsif ($type eq "DEL") {
+                --$start;
+            } else {
+                next;
+            }
         } else {
-            next;
+            if ($reference =~ /0|\-|\*/){ ##INS
+                --$stop;
+            } elsif ($consensus =~ /0|\-|\*/){ ##DEL
+                --$start;
+            } else {
+                $self->error_message("not recognized as an indel: $reference $consensus");
+                next
+            }
         }
         #my $depth = 0;
         #my $qual = 0;
