@@ -18,8 +18,7 @@ class Genome::Model::Tools::DetectVariants2::MethRatio {
         chromosome_list => {
             is => 'ARRAY',
             is_optional => 1,
-            doc => 'list of chromosomes to run on.',
-            default_value => [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y','MT'],
+            doc => 'list of chromosomes to run on. This will run on a default set of chromosomes from the reference sequence if not set.',
         },
    ],
     has_transient_optional => [
@@ -40,10 +39,15 @@ class Genome::Model::Tools::DetectVariants2::MethRatio {
 
 sub _detect_variants {
     my $self = shift;
+
+    # Set the chromosome_list if it is not already
+    unless ($self->chromosome_list) {
+        $self->chromosome_list($self->default_chromosomes);
+    }
+
     # Obtain bam and check it.
     my ($build, $bam_file);
     $bam_file = $self->aligned_reads_input;
-
 
     # Set default params
     unless ($self->snv_output) { 
@@ -71,7 +75,7 @@ sub _detect_variants {
         $self->error_message(@errors);
         die "Errors validating workflow\n";
     }
-    my @chrom_list = $self->default_chromosomes;
+    my @chrom_list = $self->chromosome_list;
 
     # Collect and set input parameters
     $input{chromosome_list} = \@chrom_list;
@@ -122,8 +126,7 @@ sub _generate_standard_files {
     my $self = shift;
     my $staging_dir = $self->_temp_staging_directory;
     my $output_dir  = $self->output_directory;
-    my @chrom_list = $self->default_chromosomes;
-    my $test_chrom = $chrom_list[21];
+    my @chrom_list = $self->chromosome_list;
     my $raw_output_file = $output_dir."/snvs.hq";
     my @raw_inputs = map { $output_dir."/".$_."/snvs.hq" } @chrom_list;
     my $cat_raw = Genome::Model::Tools::Cat->create( dest => $raw_output_file, source => \@raw_inputs);
@@ -227,7 +230,11 @@ sub params_for_detector_result {
     my $self = shift;
     my ($params) = $self->SUPER::params_for_detector_result;
 
-    $params->{chromosome_list} = $self->default_chromosomes_as_string;
+    if ($self->chromosome_list) {
+        $params->{chromosome_list} = $self->chromosome_list;
+    } else {
+        $params->{chromosome_list} = $self->default_chromosomes_as_string;
+    }
 
     return $params;
 }
