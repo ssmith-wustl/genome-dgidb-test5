@@ -205,7 +205,6 @@ sub import_interactions {
         my $is_known_action = $self->_create_interaction_report_attribute($drug_gene_interaction, 'is_known_action', $interaction->{'known_action'});
         my @interaction_types = split(', ', $interaction->{target_actions});
         for my $interaction_type (@interaction_types){
-            next if $interaction_type eq 'na';
             my $type_attribute = $self->_create_interaction_report_attribute($drug_gene_interaction, 'interaction_type', $interaction_type);
         }
     }
