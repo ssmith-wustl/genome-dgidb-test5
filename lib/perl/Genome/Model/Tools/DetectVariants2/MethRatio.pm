@@ -127,7 +127,6 @@ sub _generate_standard_files {
     my $staging_dir = $self->_temp_staging_directory;
     my $output_dir  = $self->output_directory;
     my @chrom_list = $self->chromosome_list;
-    my $test_chrom = $chrom_list[21];
     my $raw_output_file = $output_dir."/snvs.hq";
     my @raw_inputs = map { $output_dir."/".$_."/snvs.hq" } @chrom_list;
     my $cat_raw = Genome::Model::Tools::Cat->create( dest => $raw_output_file, source => \@raw_inputs);
