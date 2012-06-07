@@ -14,7 +14,7 @@ class Genome::Model::Tools::Analysis::Coverage::AddReadcounts{
 	    doc => 'path to the bam file (to get readcounts)',
 	},
 
-	snv_file => {
+	variant_file => {
 	    is => 'String',
 	    is_optional => 0,
 	    doc => 'File containing snvs in annotation format (1-based, first 5-cols =  [chr, st, sp, var, ref]). indels will be skipped and output with NA',
@@ -70,7 +70,12 @@ class Genome::Model::Tools::Analysis::Coverage::AddReadcounts{
 	    doc => 'maximum variant allele frequency allowed for a site to be reported (0-100)',
         },
 
-
+        indel_size_limit => {
+            is => 'Integer',
+            is_optional => 1,
+	    doc => 'maximum indel size to grab readcounts for. (The larger the indel, the more skewed the readcounts due ot mapping problems)',
+            default => 2,
+        },
 
         ]
 };
@@ -88,7 +93,7 @@ sub help_detail {
 sub execute {
     my $self = shift;
     my $bam_file = $self->bam_file;
-    my $snv_file = $self->snv_file;
+    my $variant_file = $self->variant_file;
     my $output_file = $self->output_file;
     my $genome_build = $self->genome_build;
     my $min_quality_score = $self->min_quality_score;
@@ -97,6 +102,7 @@ sub execute {
     my $max_vaf = $self->max_vaf;
     my $min_depth = $self->min_depth;
     my $max_depth = $self->max_depth;
+    my $indel_size_limit = $self->indel_size_limit;
 
     my $chrom = $self->chrom;
 
@@ -143,6 +149,9 @@ sub execute {
     }
     unless(defined($genome_build)){
         $genome_build = "36";
+    }    
+    unless(defined($indel_size_limit)){
+        $indel_size_limit = 2;
     }
     unless(defined($chrom)){
         $chrom = "all";
@@ -153,13 +162,14 @@ sub execute {
     my $cmd = Genome::Model::Tools::Analysis::Coverage::BamReadcount->create(
         bam_file => $bam_file,
         output_file =>  "$tempdir/rcfile",
-        snv_file => $snv_file,
+        variant_file => $variant_file,
         genome_build => $genome_build, 
         chrom => $chrom,
         min_depth  => $min_depth,
         max_depth => $max_depth,
         min_vaf => $min_vaf,
         max_vaf => $max_vaf,
+        indel_size_limit => $indel_size_limit,
         );
     unless ($cmd->execute) {
         die "Bam-readcount failed";
@@ -184,7 +194,7 @@ sub execute {
     open(OUTFILE,">$output_file") || die "can't open $output_file for writing\n";
 
     #read in all the snvs and hash both the ref and var allele by position
-    my $inFh = IO::File->new( $snv_file ) || die "can't open file\n";
+    my $inFh = IO::File->new( $variant_file ) || die "can't open file\n";
     while( my $sline = $inFh->getline )
     {
         chomp($sline);
