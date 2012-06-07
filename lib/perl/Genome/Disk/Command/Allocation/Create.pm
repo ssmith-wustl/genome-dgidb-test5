@@ -22,10 +22,12 @@ class Genome::Disk::Command::Allocation::Create {
         },
         owner_class_name => {
             is => 'Text',
+            default_value => 'Genome::Sys::User',
             doc => 'Class name of entity that owns the allocations (eg, Genome::Sys::User for users, or Genome::Model::Build::* for builds.',
         },
         owner_id => {
             is => 'Text',
+            default_value => $ENV{USER} . '@genome.wustl.edu',
             doc => 'The ID used to retrieve the owner (in conjunction with owner_class_name), e.g. bdericks@genome.wustl.edu for Genome::Sys::User or build_id for Genome::Model::Build.',
         },
     ],
