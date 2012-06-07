@@ -8,7 +8,7 @@ use Genome;
 use Regexp::Common;
 
 class Genome::Model::Tools::Sx::Limit::ByCount {
-    is => 'Genome::Model::Tools::Sx::Limit',
+    is => 'Genome::Model::Tools::Sx::Limit::Base',
     has => [
         count => {
             is => 'Number',
@@ -18,9 +18,9 @@ class Genome::Model::Tools::Sx::Limit::ByCount {
     ],
 };
 
-sub help_synopsis {
-    return 'Limit sequences by count';
-}
+sub help_brief { return 'Limit sequences by count'; }
+sub help_detail { help_brief(); }
+sub help_synopsis { help_brief(); }
 
 sub __errors__ {
     my $self = shift;

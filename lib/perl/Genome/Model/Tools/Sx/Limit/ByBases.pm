@@ -8,19 +8,19 @@ use Genome;
 use Regexp::Common;
 
 class Genome::Model::Tools::Sx::Limit::ByBases {
-    is => 'Genome::Model::Tools::Sx::Limit',
+    is => 'Genome::Model::Tools::Sx::Limit::Base',
     has => [
         bases => {
             is => 'Number',
             is_optional => 1,
-            doc => 'The maximum number of bases (for each sequence) to write. When this amount is exceeded, writing will be concluded.',
+            doc => 'The maximum number of total bases to write. When this amount is exceeded, writing will be concluded.',
         },
     ],
 };
 
-sub help_synopsis {
-    return 'Limit sequences by bases';
-}
+sub help_brief { return 'Limit sequences by bases'; }
+sub help_detail { help_brief(); }
+sub help_synopsis { help_brief(); }
 
 sub __errors__ {
     my $self = shift;
