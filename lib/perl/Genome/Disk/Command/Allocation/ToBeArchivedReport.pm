@@ -24,15 +24,16 @@ sub help_synopsis { return help_detail() . "\n" };
 
 sub output_fields {
     return qw/
-        allocation_id
-        absolute_path
-        kilobytes_requested
-        model_ids
-        model_names
-        model_subjects
+        model_id
+        model_name
+        model_subject
+        last_complete_build_timestamp
         model_groups
         group_owners
-        last_complete_build_timestamps
+        allocation_id
+        absolute_path
+        allocation_owner_class
+        allocation_owner_id
     /;
 }
         
@@ -47,27 +48,36 @@ sub execute {
             my %fields;
             $fields{allocation_id} = $allocation->id;
             $fields{absolute_path} = $allocation->absolute_path;
-            $fields{kilobytes_requested} = $allocation->kilobytes_requested;
+            $fields{allocation_owner_class} = $allocation->owner_class_name;
+            $fields{allocation_owner_id} = $allocation->owner_id;
 
             my @models = $self->resolve_models_from_allocation($allocation);
-            $self->_print_line(%fields) unless @models;
-
-            $fields{model_ids} = join('|', map { $_->id } @models);
-            $fields{model_names} = join('|', map { $_->name } @models);
-            $fields{model_subjects} = join('|', map { $_->subject->name } @models);
-
-            my @groups = grep { defined $_ } map { $_->model_groups } @models;
-            if (@groups) {
-                $fields{model_groups} = join('|', map { $_->name } @groups);
-                $fields{group_owners} = join('|', map { $_->user_name } @groups);
+            unless (@models) {
+                $self->_print_line(%fields);
+                no warnings 'exiting'; # Without this, executing the next will result in the warning "Exiting eval via next..."
+                                       # This can be unexpected and hence the warning, but in this case it's what I want to do.
+                next;
             }
 
-            my @builds = grep { defined $_ } map { $_->last_complete_build } @models;
-            if (@builds) {
-                $fields{last_complete_build_timestamps} = join('|', map { $_->date_completed } @builds);
-            }
+            for my $model (@models) {
+                my %model_fields = %fields;
+                $model_fields{model_id} = $model->id;
+                $model_fields{model_name} = $model->name;
+                $model_fields{model_subject} = $model->subject->name;
 
-            $self->_print_line(%fields);
+                my $build = $model->last_complete_build;
+                if ($build) {
+                    $model_fields{last_complete_build_timestamp} = $build->date_completed;
+                }
+
+                my @groups = $model->model_groups;
+                if (@groups) {
+                    $model_fields{model_groups} = join('|', map { $_->name } @groups);
+                    $model_fields{group_owners} = join('|', map { $_->user_name } @groups);
+                }
+
+                $self->_print_line(%model_fields);
+            }
         };
 
         my $error = $@;
@@ -105,12 +115,12 @@ sub resolve_models_from_allocation {
     my ($self, $allocation) = @_;
 
     my $class = $allocation->owner_class_name;
-    eval { require $class };
+    eval "require $class";
     my $error = $@;
     if (defined $error and $error =~ /Can't locate $class/) {
         return;
     }
-    elsif (defined $error) { # Rethrow
+    elsif ($error) { # Rethrow
         die "Unexpected error while attempting to load class $class: $error";
     }
 
