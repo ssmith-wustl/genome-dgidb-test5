@@ -1,11 +1,11 @@
-package Genome::Model::Tools::Vcf::Convert::Indel::Sniper;
+package Genome::Model::Tools::Vcf::Convert::Indel::SniperSlow;
 
 use strict;
 use warnings;
 use Genome;
 use File::Basename;
 
-class Genome::Model::Tools::Vcf::Convert::Indel::Sniper {
+class Genome::Model::Tools::Vcf::Convert::Indel::SniperSlow {
     is  => 'Genome::Model::Tools::Vcf::Convert::Base',
     doc => 'Generate a VCF file from Sniper indel output',
 };
