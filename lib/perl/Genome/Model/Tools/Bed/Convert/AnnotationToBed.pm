@@ -1,16 +1,16 @@
-package Genome::Model::Tools::Bed::Convert::Indel::AnnotationToBed;
+package Genome::Model::Tools::Bed::Convert::AnnotationToBed;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::Bed::Convert::Indel::AnnotationToBed {
+class Genome::Model::Tools::Bed::Convert::AnnotationToBed {
     is => ['Genome::Model::Tools::Bed::Convert::Indel'],
 };
 
 sub help_brief {
-    "Tools to convert Annotation indel format to BED.",
+    "Tools to convert Annotation snv or indel format to BED.",
 }
 
 sub help_synopsis {
@@ -38,19 +38,17 @@ sub process_source {
         if(defined($type)){
             if ($type eq "INS") {
                 --$stop;
-            } elsif ($type eq "DEL") {
+            } elsif ($type eq "DEL|SNP") {
                 --$start;
-            } else {
-                next;
-            }
-        } else {
+            } 
+
+        } else { #5col format without type
             if ($reference =~ /0|\-|\*/){ ##INS
                 --$stop;
             } elsif ($consensus =~ /0|\-|\*/){ ##DEL
                 --$start;
-            } else {
-                $self->error_message("not recognized as an indel: $reference $consensus");
-                next
+            } else { #SNP
+                --$start;
             }
         }
         #my $depth = 0;
