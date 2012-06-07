@@ -33,7 +33,7 @@ sub execute {
 
     my $role = $self->role;
     for my $user ($self->users) {
-        my $rv = $user->add_role($role);
+        my $rv = $user->add_user_role($role);
         unless ($rv) {
             Carp::confess "Could not add role " . $role->name . " to user " . $user->username;
         }

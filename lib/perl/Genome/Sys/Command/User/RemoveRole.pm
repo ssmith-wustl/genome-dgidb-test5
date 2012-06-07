@@ -31,7 +31,7 @@ sub execute {
     my $self = shift;
 
     for my $user ($self->users) {
-        my $rv = $user->remove_role($self->role);
+        my $rv = $user->remove_user_role($self->role);
         unless ($rv) {
             Carp::confess "Could not remove role " . $self->role->name . " from user " . $self->user->username;
         }
