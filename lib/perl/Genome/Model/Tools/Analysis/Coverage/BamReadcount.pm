@@ -14,7 +14,7 @@ class Genome::Model::Tools::Analysis::Coverage::BamReadcount{
 	    doc => 'path to the bam file (to get readcounts)',
 	},
 
-	snv_file => {
+	variant_file => {
 	    is => 'String',
 	    is_optional => 0,
 	    doc => 'File containing snvs in 1-based, 5-col format (chr, st, sp, var, ref). indels will be skipped and not output',
@@ -70,7 +70,12 @@ class Genome::Model::Tools::Analysis::Coverage::BamReadcount{
 	    doc => 'maximum variant allele frequency allowed for a site to be reported (0-100)',
         },
 
-
+        indel_size_limit => {
+            is => 'Integer',
+            is_optional => 1,
+	    doc => 'maximum indel size to grab readcounts for. (The larger the indel, the more skewed the readcounts due ot mapping problems)',
+            default => 2,
+        }
 
         ]
 };
@@ -88,7 +93,7 @@ sub help_detail {
 sub execute {
     my $self = shift;
     my $bam_file = $self->bam_file;
-    my $snv_file = $self->snv_file;
+    my $variant_file = $self->variant_file;
     my $output_file = $self->output_file;
     my $genome_build = $self->genome_build;
     my $min_quality_score = $self->min_quality_score;
@@ -130,7 +135,7 @@ sub execute {
 
     #split out the chromosome we're working on, if necessary
     if (defined($chrom) && ($chrom ne "all")){
-        my $cmd = "grep \"" . $chrom . "[[:space:]]\" $snv_file>$tempdir/snvfile";
+        my $cmd = "grep \"" . $chrom . "[[:space:]]\" $variant_file>$tempdir/snvfile";
         my $return = Genome::Sys->shellcmd(
             cmd => "$cmd",
             );
@@ -138,12 +143,12 @@ sub execute {
             $self->error_message("Failed to execute: Returned $return");
             die $self->error_message;
         }
-        $snv_file = "$tempdir/snvfile"
+        $variant_file = "$tempdir/snvfile"
     }
 
 
     #now run the readcounting
-    my $cmd = "bam-readcount -q $min_quality_score -f $fasta -l $snv_file $bam_file >$tempdir/readcounts";
+    my $cmd = "bam-readcount -q $min_quality_score -f $fasta -l $variant_file $bam_file >$tempdir/readcounts";
     my $return = Genome::Sys->shellcmd(
 	cmd => "$cmd",
         );
@@ -157,27 +162,93 @@ sub execute {
     my %varHash;
     
     #read in all the snvs and hash both the ref and var allele by position
-    my $inFh = IO::File->new( $snv_file ) || die "can't open file\n";
+    #also dump the indels in a seperate file for readcounting with varscan
+    my $inFh = IO::File->new( $variant_file ) || die "can't open file\n";
+    open(INDELFILE,">$tempdir/indelpos");
     while( my $sline = $inFh->getline )
     {
         chomp($sline);
         my @fields = split("\t",$sline);
 
-        #skip indels
-        if (($fields[3] eq "0") || 
-            ($fields[3] eq "-") || 
-            ($fields[4] eq "0") || 
-            ($fields[4] eq "-") || 
-            (length($fields[3]) > 1) || 
-            (length($fields[4]) > 1)){
-            next;
+        #is it an indel?
+        if (($fields[3] =~ /0|\-|\*/) || ($fields[4] =~ /0|\-|\*/) || 
+            (length($fields[3]) > 1) || (length($fields[4]) > 1)){
+
+            #is it longer than the max length?
+            if((length($fields[3]) > $self->indel_size_limit) || (length($fields[4]) > $self->indel_size_limit)){
+                $refHash{$fields[0] . "|" . $fields[1]} = $fields[3];
+                $varHash{$fields[0] . "|" . $fields[1]} = $fields[4];
+                next;
+            }
+            print INDELFILE join("\t",($fields[0],$fields[1],$fields[2],$fields[3],$fields[4])) . "\n";
         }
 
         $refHash{$fields[0] . "|" . $fields[1]} = $fields[3];
-        $varHash{$fields[0] . "|" . $fields[1]} = $fields[4]
+        $varHash{$fields[0] . "|" . $fields[1]} = $fields[4];
     }
+    close(INDELFILE);
+    close($inFh);
     
+    my %indelReadcounts;
+    if( -s "$tempdir/indelpos"){
+        #convert the indel file to bed
+        $cmd = Genome::Model::Tools::Bed::Convert::Indel::AnnotationToBed->create(
+            source => "$tempdir/indelpos",
+            output => "$tempdir/indelpos.bed",
+            );
+        unless ($cmd->execute) {
+            die "converting indels to bed failed";
+        }   
+        
+        #run mpileup/varscan to get the readcounts for each indel:
+        $inFh = IO::File->new( "$tempdir/indelpos.bed" ) || die "can't open file\n";
+        while( my $line = $inFh->getline )
+        {
+            chomp($line);
+            my @F =  split("\t",$line);
+            my $cmd = "samtools mpileup -f $fasta -q 1 -r $F[0]:$F[1]-$F[2] $bam_file 2>/dev/null | java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.9.jar readcounts --variants-file $tempdir/indelpos.bed --min-coverage 1 --min-base-qual 20 --output-file $tempdir/varout 2>/dev/null";
+            #$self->status_message("Running command: $cmd");
 
+            my $return = Genome::Sys->shellcmd(
+                cmd => "$cmd",
+                );
+            unless($return) {
+                $self->error_message("Failed to execute: Returned $return");
+                die $self->error_message;
+            }
+            `cat $tempdir/varout >>$tempdir/indels.varscan`;
+        }
+        close($inFh);
+
+
+        #clean the indel readcounts up and store them in a hash;
+        $inFh = IO::File->new( "$tempdir/indels.varscan" ) || die "can't open varscan file\n";
+        while( my $line = $inFh->getline )
+        {
+            chomp($line);
+            next if $line =~ /^chrom/;
+            my @F =  split("\t",$line);
+
+            my @bases = split("/",$F[6]);
+
+            my @refdetails = split(":",$F[5]);
+            my $refreads = $refdetails[1];
+            my @vardetails = split(":",$F[13]);
+            my $varreads = $vardetails[1];
+
+            #tweak position of insertions
+            if ($bases[1] eq "-"){
+                $F[1]++;
+            }
+
+            my $key = join("\t",($F[0],$F[1],@bases));
+            $indelReadcounts{$key} = join("\t",$refreads,$varreads,$varreads/$F[3])
+
+        }
+        close($inFh);
+    }
+
+    #----------
     #convert iub bases to lists
     sub convertIub{
         my ($base) = @_;
@@ -282,11 +353,17 @@ sub execute {
                 if ($depth ne '0') {
                     $var_freq = $var_count/$depth * 100;
                 }            
-
-            } else { #is an indel, skip it
-                $ref_count = "NA";
-                $var_count = "NA";
-                $var_freq = "NA";
+                
+            } else { #is an indel, look it up 
+                my $key = join("\t",($chr,$pos,$knownRef,$knownVar));
+                if(defined($indelReadcounts{$key})){                    
+                    ($ref_count,$var_count,$var_freq) = split("\t",$indelReadcounts{$key});
+                    next;
+                } else {
+                    $ref_count = "NA";
+                    $var_count = "NA";
+                    $var_freq = "NA";
+                }
             }
         }
 
