@@ -9,41 +9,38 @@ class Genome::Disk::Command::Allocation::Create {
     has => [
         disk_group_name => {
             is => 'Text',
-            doc => 'Name of the disk group in which the allocation should be made',
+            doc => 'Name of the disk group in which the allocation should be made.',
             valid_values => ['info_apipe', 'info_apipe_ref', 'info_alignments', 'info_genome_models' ],
         },
         allocation_path => {
             is => 'Text',
-            doc => 'Subdirectory of the disk volume for which space is being allocated',
+            doc => 'Subdirectory of the disk volume for which space is being allocated.',
         },
         kilobytes_requested => {
             is => 'Number',
-            doc => 'Number of kilobytes to be reserved',
+            doc => 'Number of kilobytes to be reserved.',
         },
         owner_class_name => {
             is => 'Text',
-            doc => 'Class name of entity that owns the allocations (eg, Genome::Sys::User ' .
-                'for users, or Genome::Model::Build::* for builds',
+            doc => 'Class name of entity that owns the allocations (eg, Genome::Sys::User for users, or Genome::Model::Build::* for builds.',
         },
         owner_id => {
             is => 'Text',
-            doc => 'The ID used to retrieve the owner (in conjunction with owner_class_name (eg, bdericks for ' .
-                'Genome::Sys::User, or build_id for Genome::Model::Build*',
+            doc => 'The ID used to retrieve the owner (in conjunction with owner_class_name), e.g. bdericks@genome.wustl.edu for Genome::Sys::User or build_id for Genome::Model::Build.',
         },
     ],
     has_optional => [
         mount_path => {
             is => 'Text',
-            doc => 'The mount path for the disk volume on which the allocation should be created, if none ' .
-                'is given then one is found and assigned automatically',
+            doc => 'The mount path for the disk volume on which the allocation should be created, if none is given then one is found and assigned automatically.',
         },
         kilobytes_used => {
             is => 'Number',
-            doc => 'The amount of space currently consumed by data within the allocated directory, updated by reallocation',
+            doc => 'The amount of space currently consumed by data within the allocated directory, updated by reallocation.',
             default => 0,
         },
     ],
-    doc => 'creates an allocation for data somewhere on the filesystem'
+    doc => 'Creates an allocation for data somewhere on the filesystem.'
 };
 
 sub help_brief {
