@@ -650,6 +650,13 @@ sub _archive {
         confess "Found no allocation with ID $id";
     }
 
+    # Make sure allocation isn't archived
+    if ($self->is_archived) {
+        $self->status_message("Allocation is already archived");
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
+        return 1;
+    }
+
     # Record current and target paths
     my $current_allocation_path = $self->absolute_path;
     my $archive_allocation_path = join('/', $self->volume->archive_mount_path, $self->group_subdirectory, $self->allocation_path);
@@ -666,7 +673,7 @@ sub _archive {
     }
 
     # Check size of tar_path and abort if "too small" <1GB=1024^3
-    unless (-s $tar_path < 1073741824) {
+    if (-s $tar_path < 1073741824) {
         unlink $tar_path;
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess "Aborting storage of archive that is too small (<1GB)";
@@ -756,15 +763,22 @@ sub _unarchive {
 
     my $archive_path = $self->absolute_path;
 
-    # TODO Could make this allow any viable volume instead of just choosing the active volume paired with the archive volume
-    my $active_path = join('/', $self->volume->active_mount_path, $self->group_subdirectory, $self->allocation_path);
+    # Determine path to which allocation should be unarchived
+    my @candidate_volumes = $class->_get_candidate_volumes(
+        disk_group_name => $self->disk_group_name,
+        kilobytes_requested => $self->kilobytes_requested,
+    );
+    my ($volume, $volume_lock) = $class->_lock_volume_from_list($self->kilobytes_requested, @candidate_volumes);
+    my $target_path = join('/', $volume->mount_path, $self->group_subdirectory, $self->allocation_path);
+
+    # Copy tarball onto spinning disk, untar, and delete tarball
     eval { 
         unless ($self->is_archived) {
             confess "Cannot unarchive an allocation that isn't archived!";
         }
 
         # Copy archived data to active path
-        my $cmd = "mkdir -p $active_path && rsync -rlHpgt $archive_path/* $active_path";
+        my $cmd = "mkdir -p $target_path && rsync -rlHpgt $archive_path/* $target_path";
         if ($ENV{UR_DBI_NO_COMMIT}) {
             Genome::Sys->shellcmd(cmd => $cmd);
         }
@@ -802,6 +816,7 @@ sub _unarchive {
     };
     if (my $error = $@) {
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock) if $allocation_lock;
+        Genome::Sys->unlock_resource(resource_lock => $volume_lock) if $volume_lock;
         confess "Could not unarchive, received error:\n$error";
     }
 
