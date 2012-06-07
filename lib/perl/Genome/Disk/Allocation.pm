@@ -673,7 +673,7 @@ sub _archive {
     }
 
     # Check size of tar_path and abort if "too small" <1GB=1024^3
-    if (-s $tar_path < 1073741824) {
+    if (!$ENV{UR_DBI_NO_COMMIT} and -s $tar_path < 1073741824) {
         unlink $tar_path;
         Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess "Aborting storage of archive that is too small (<1GB)";
@@ -758,6 +758,7 @@ sub _unarchive {
     my $mode = $class->_retrieve_mode;
     my $self = Genome::Disk::Allocation->$mode($id);
     unless ($self) {
+        Genome::Sys->unlock_resource(resource_lock => $allocation_lock);
         confess "Found no allocation with ID $id";
     }
 
@@ -795,7 +796,6 @@ sub _unarchive {
         # Make updates to the allocation
         $self->mount_path($self->volume->active_mount_path);
         $self->_update_owner_for_move;
-        $self->_create_observer($self->_unlock_closure($allocation_lock));
 
         # Untar tarball into allocation directory, and remove the tarball afterward
         my $untar_rv = Genome::Sys->untar(
@@ -1146,7 +1146,7 @@ sub _get_candidate_volumes {
         disk_status => 'active',
     );
     $volume_params{'mount_path not in'} = $exclude if $exclude;
-    my @volumes = Genome::Disk::Volume->get(%volume_params);
+    my @volumes = grep { not $_->is_archive } Genome::Disk::Volume->get(%volume_params);
     unless (@volumes) {
         confess "Did not get any allocatable and active volumes belonging to group $disk_group_name with " .
             "$kilobytes_requested kb of unallocated space!";
