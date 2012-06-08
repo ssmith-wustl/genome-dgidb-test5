@@ -762,14 +762,14 @@ sub _unarchive {
         confess "Found no allocation with ID $id";
     }
 
-    my $archive_path = $self->absolute_path;
-
     # Determine path to which allocation should be unarchived
     my @candidate_volumes = $class->_get_candidate_volumes(
         disk_group_name => $self->disk_group_name,
         kilobytes_requested => $self->kilobytes_requested,
     );
     my ($volume, $volume_lock) = $class->_lock_volume_from_list($self->kilobytes_requested, @candidate_volumes);
+
+    my $archive_path = $self->absolute_path;
     my $target_path = join('/', $volume->mount_path, $self->group_subdirectory, $self->allocation_path);
 
     # Copy tarball onto spinning disk, untar, and delete tarball
@@ -794,7 +794,7 @@ sub _unarchive {
         }
 
         # Make updates to the allocation
-        $self->mount_path($self->volume->active_mount_path);
+        $self->mount_path($volume->mount_path);
         $self->_update_owner_for_move;
 
         # Untar tarball into allocation directory, and remove the tarball afterward
@@ -807,16 +807,19 @@ sub _unarchive {
             confess "Could not untar tarball " . $self->tar_path . " at " . $self->absolute_path;
         }
 
+        # Wouldn't want this to be immediately re-archived... trolololol
         $self->archivable(0, 'allocation was unarchived');
 
-        # Commit changes, which will release locks
         unless (UR::Context->commit) {
             confess "Could not commit!";
         }
     };
-    if (my $error = $@) {
-        Genome::Sys->unlock_resource(resource_lock => $allocation_lock) if $allocation_lock;
-        Genome::Sys->unlock_resource(resource_lock => $volume_lock) if $volume_lock;
+    my $error = $@;
+
+    Genome::Sys->unlock_resource(resource_lock => $allocation_lock) if $allocation_lock;
+    Genome::Sys->unlock_resource(resource_lock => $volume_lock) if $volume_lock;
+
+    if ($error) {
         confess "Could not unarchive, received error:\n$error";
     }
 
