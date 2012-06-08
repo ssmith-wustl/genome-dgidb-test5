@@ -281,37 +281,45 @@ sub add_alt_information_to_vcf_line {
     my @old_alt_values = split ",", $old_alt;
     my @new_alt_values = split ",", $new_alt;
 
-    # Find a unique list of GT values... but exclude 0
-    my @gt_values = sort (split "/", $sample_values{"GT"});
-    my %unique_gt_values;
-    for my $gt_value (@gt_values) {
-        unless ($gt_value eq 0) {
-            $unique_gt_values{$gt_value} = 1;
-        }
-    }
-    @gt_values = keys %unique_gt_values;
-
-    # Make sure the number of values we have for everything checks out
-    unless ( (scalar(@ad_values) == scalar (@bq_values)) && (scalar(@ad_values) == scalar (@gt_values)) ){
-        die $self->error_message("Have differing numbers of values for AD " . $sample_values{"AD"} . " and BQ " . $sample_values{"BQ"}. " and GT" . $sample_values{"GT"});
-    }
-
-    # If we have information for all alts present, return the line as is
-    if (scalar(@new_alt_values) == scalar(@ad_values) && scalar(@new_alt_values) == scalar(@bq_values) ) {
-        #$self->status_message("Information is already present for all alts in $vcf_line");
-        return $vcf_line;
-    }
-
-    # Gather AD and BQ values already present in the line
+    # Find a unique list of GT values... but exclude 0. If the original GT is null we have no pre-existing information to consider
     my (%ad_per_alt, %bq_per_alt);
-    for my $gt (@gt_values ) {
-        my $alt_represented = $old_alt_values[$gt-1]; # GT will be a 1 based index of the alt allele values, since 0 is reference
-        unless ($alt_represented) {
-            die $self->error_message("Could not find an alt to represent gt value $gt");
+    unless ($sample_values{"GT"} eq ".") {
+        my @gt_values = sort (split "/", $sample_values{"GT"});
+
+        # This assumption may change at some point but for now we assume every VCF will have two values in the GT
+        unless (scalar (@gt_values) >= 2) {
+            die $self->error_message("This GT does not appear to have at least two values: " . $sample_values{"GT"});
         }
-        # These should be sorted by GT number already, so shifting should be safe
-        $ad_per_alt{$alt_represented} = shift @ad_values;
-        $bq_per_alt{$alt_represented} = shift @bq_values;
+
+        my %unique_gt_values;
+        for my $gt_value (@gt_values) {
+            unless ($gt_value eq 0) {
+                $unique_gt_values{$gt_value} = 1;
+            }
+        }
+        @gt_values = keys %unique_gt_values;
+
+        # Make sure the number of values we have for everything checks out
+        unless ( (scalar(@ad_values) == scalar (@bq_values)) && (scalar(@ad_values) == scalar (@gt_values)) ){
+            die $self->error_message("Have differing numbers of values for AD " . $sample_values{"AD"} . " and BQ " . $sample_values{"BQ"}. " and GT" . $sample_values{"GT"});
+        }
+
+        # If we have information for all alts present, return the line as is
+        if (scalar(@new_alt_values) == scalar(@ad_values) && scalar(@new_alt_values) == scalar(@bq_values) ) {
+            #$self->status_message("Information is already present for all alts in $vcf_line");
+            return $vcf_line;
+        }
+
+        # Gather AD and BQ values already present in the line
+        for my $gt (@gt_values ) {
+            my $alt_represented = $old_alt_values[$gt-1]; # GT will be a 1 based index of the alt allele values, since 0 is reference
+            unless ($alt_represented) {
+                die $self->error_message("Could not find an alt to represent gt value $gt");
+            }
+            # These should be sorted by GT number already, so shifting should be safe
+            $ad_per_alt{$alt_represented} = shift @ad_values;
+            $bq_per_alt{$alt_represented} = shift @bq_values;
+        }
     }
 
     # Generate AD and BQ information for all alts for which we have no information
@@ -444,8 +452,18 @@ sub chr_cmp {
 sub regenerate_gt {
     my ($self, $reference, $old_alt, $old_gt, $new_alt) = @_;
 
+    # Keep it null if it was null before
+    if ($old_gt eq ".") {
+        return $old_gt;
+    }
+
     my @old_alt = split(",", $old_alt);
     my @old_gt = split("/", $old_gt);
+
+    # This assumption may change at some point but for now we assume every VCF will have two values in the GT
+    unless (scalar (@old_gt) >= 2) {
+        die $self->error_message("This GT does not appear to have at least two values: $old_gt");
+    }
 
     # Translate the old GT string into a list of alleles that sample contained
     my @alleles;
