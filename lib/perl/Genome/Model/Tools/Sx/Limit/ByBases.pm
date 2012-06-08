@@ -33,7 +33,7 @@ sub __errors__ {
         push @errors, UR::Object::Tag->create(
             type => 'invalid',
             properties => [qw/ bases /],
-            desc => "Bases ($bases) must be a positive integer greater than 1",
+            desc => 'Bases ('.(defined $bases ? $bases : 'NULL').') must be a positive integer greater than 1',
         );
     }
 

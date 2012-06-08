@@ -33,7 +33,7 @@ sub __errors__ {
         push @errors, UR::Object::Tag->create(
             type => 'invalid',
             properties => [qw/ count /],
-            desc => "Count ($count) must be a positive integer greater than 1",
+            desc => 'Count ('.( defined $count ? $count : 'NULL' ).') must be a positive integer greater than 1',
         );
     }
 
