@@ -1,0 +1,9 @@
+#notice= notice
+=content_for :title, @title
+
+.container-fluid
+  .row-fluid
+    .span12
+      .hero-unit
+        -@genes.each do |gene|
+          =render gene
